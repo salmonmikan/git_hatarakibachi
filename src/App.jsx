@@ -9,24 +9,34 @@ function App() {
   return (
     <>
       <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+        <header>
+          {/* 右にハンバーガーメニュー、左にロゴ、中央に劇団名 */}
+          <nav className="nav">
+            <div className="nav-left">
+              <img src="/hatarakibachi_logo.jpg" className="logo" alt="Hatarakibachi Logo" />
+            </div>
+            <div className="nav-center">
+              <h1>劇団 はたらきばち</h1>
+            </div>
+            <div className="nav-right">
+              <button className="menu-button" aria-label="Menu">
+                &#9776;
+              </button>
+            </div>
+          </nav>
+            
+        </header>
       </div>
-      <h1>Vite + React</h1>
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
         </button>
         <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
+          develop by React + Vite
         </p>
       </div>
       <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
+        hatarakibachi
       </p>
     </>
   )
