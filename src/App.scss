@@ -11,13 +11,31 @@ nav {
   left: 0;
   right: 0;
   height: 90px;
-  gap: 4rem;
+  gap: 1rem;
   margin-bottom: 2rem;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   z-index: 1000;
   display: flex;
   justify-content: center;
   align-items: center;
+
+  .nav-center {
+    display:flex;
+    align-items:center;
+
+    h1 {
+      margin:0;
+      font-size: clamp(1.5rem,4vw,2rem);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+  }
+
+  .nav-right {
+    padding: 0 1.5rem;
+    gap: 1rem;
+  }
 }
 
 .logo {
