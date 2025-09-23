@@ -5,15 +5,40 @@
   text-align: center;
 }
 
-nav {
+header {
+  // position: sticky;
+  // top: 0;
+  background: #fff;
+  // z-index: 100;
+  // margin-bottom: 2rem;
+  // padding-top: 1rem;
+  // padding-bottom: 1rem;
+  // border-bottom: 1px solid #eee;
+}
+
+main {
+  padding-top: 140px; /* navの高さ + 余白 */
+  padding-bottom: 2rem;
+  min-height: calc(100vh - 140px - 4rem); /* navの高さ + 余白 + footerの高さ */
+}
+
+.site-title {
+  color: #000000;
+  font-size: clamp(1.5rem,4vw,2rem);
+  font-weight: bold;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.main-nav {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   height: 90px;
   gap: 1rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   z-index: 1000;
   display: flex;
   justify-content: center;
@@ -38,17 +63,63 @@ nav {
   }
 }
 
+.sub-nav {
+  position: fixed;
+  top: 90px;
+  left: 0;
+  right: 0;
+  height: 50px;
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+
+  /* aタグ（NavLink）が出す <a> の見た目調整 */
+  a {
+    display: inline-block;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: #222;
+    border-radius: 6px;
+
+    /* アクティブリンク */
+    &.active {
+      background: #111827;
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+
+    /* フォーカス時の見た目（アクセシビリティ） */
+    &:focus {
+      outline: 3px solid rgba(59,130,246,0.4);
+      outline-offset: 2px;
+    }
+  }
+}
+
+
 .logo {
   height: 4em;
   padding: 1.5em;
   will-change: filter;
   transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #fbff17aa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #fbff17aa);
+
+  &:hover {
+    filter: drop-shadow(0 0 2em #fbff17aa);
+  }
+
+  &.react:hover {
+    filter: drop-shadow(0 0 2em #fbff17aa);
+  }
 }
 
 @keyframes logo-spin {
