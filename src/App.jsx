@@ -3,7 +3,7 @@ import { Routes, Route, NavLink } from "react-router-dom";
 import About from "./pages/Aboutus.jsx";
 import Archive from "./pages/Archive.jsx";
 import Contact from "./pages/Contact.jsx";
-import Home from "./pages/home.jsx";
+import Home from "./pages/Home.jsx";
 import './App.scss'
 
 function App() {
