@@ -1,16 +1,21 @@
-import { useState } from 'react'
-import { Routes, Route, NavLink } from "react-router-dom";
+import { useState, useRef } from 'react'
+import { Routes, Route, NavLink, useLocation } from "react-router-dom";
 import About from "./pages/Aboutus.jsx";
 import Archive from "./pages/Archive.jsx";
 import Contact from "./pages/Contact.jsx";
 import Home from "./pages/Home.jsx";
+import ScrollToTop from "./components/ScrollToTop.jsx";
+import { AnimatePresence } from "framer-motion";
 import './App.scss'
 
 function App() {
   // const [count, setCount] = useState(0)
+  const location = useLocation();
+  const mainRef = useRef(null);
 
   return (
     <>
+        <ScrollToTop />
         <header>
           <nav className="main-nav">
             <div className="nav-left">
@@ -37,22 +42,16 @@ function App() {
             </ul>
           </nav>
         </header>
-      <main className="content">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="about" element={<About />} />
-          <Route path="archive" element={<Archive />} />
-          <Route path="contact" element={<Contact />} />
-        </Routes>
+      <main className="content" id="main-content" ref={mainRef} tabIndex={-1}>
+        <AnimatePresence mode="wait">
+          <Routes  location={location} key={location.pathname}>
+            <Route path="/" element={<Home onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="about" element={<About onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="archive" element={<Archive onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="contact" element={<Contact onEntered={() => mainRef.current?.focus()} />} />
+          </Routes>
+        </AnimatePresence>
       </main>
-      <div className="card">
-        {/* <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button> */}
-        {/* <p>
-          develop by React + Vite
-        </p> */}
-      </div>
       <p className="read-the-docs">
         hatarakibachi
       </p>
