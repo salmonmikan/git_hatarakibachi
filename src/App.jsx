@@ -6,7 +6,6 @@ import Contact from "./pages/Contact.jsx";
 import Home from "./pages/Home.jsx";
 import Member from "./pages/Member.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
-import FloatingLinks from "./components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
 import './App.scss'
 
@@ -43,7 +42,6 @@ function App() {
             </ul>
           </nav>
         </header>
-      <FloatingLinks behavior="fixed" /> {/* fixed or "sticky" */}
       <main className="content" id="main-content" ref={mainRef} tabIndex={-1}>
         <AnimatePresence mode="wait">
           <Routes  location={location} key={location.pathname}>
