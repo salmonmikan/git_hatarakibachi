@@ -4,12 +4,12 @@ import About from "./pages/Aboutus.jsx";
 import Archive from "./pages/Archive.jsx";
 import Contact from "./pages/Contact.jsx";
 import Home from "./pages/Home.jsx";
+import Member from "./pages/Member.jsx";
 import ScrollToTop from "./components/ScrollToTop.jsx";
 import { AnimatePresence } from "framer-motion";
 import './App.scss'
 
 function App() {
-  // const [count, setCount] = useState(0)
   const location = useLocation();
   const mainRef = useRef(null);
 
@@ -32,11 +32,11 @@ function App() {
               </button> */}
             </div>
           </nav>
-          {/* 3つのリンクを追加（テキストだけのシンプルなもの） */}
           <nav className="sub-nav">
             <ul className="nav-list">
               {/* <li><NavLink to="/" end className={({isActive}) => isActive ? "active" : ""}>Home</NavLink></li> */}
               <li><NavLink to="/about" className={({isActive}) => isActive ? "active" : ""}>About</NavLink></li>
+              <li><NavLink to="/member" className={({isActive}) => isActive ? "active" : ""}>Member</NavLink></li>
               <li><NavLink to="/archive" className={({isActive}) => isActive ? "active" : ""}>Archive</NavLink></li>
               <li><NavLink to="/contact" className={({isActive}) => isActive ? "active" : ""}>Contact</NavLink></li>
             </ul>
@@ -47,6 +47,7 @@ function App() {
           <Routes  location={location} key={location.pathname}>
             <Route path="/" element={<Home onEntered={() => mainRef.current?.focus()} />} />
             <Route path="about" element={<About onEntered={() => mainRef.current?.focus()} />} />
+              <Route path="member" element={<Member onEntered={() => mainRef.current?.focus()} />} />
             <Route path="archive" element={<Archive onEntered={() => mainRef.current?.focus()} />} />
             <Route path="contact" element={<Contact onEntered={() => mainRef.current?.focus()} />} />
           </Routes>
