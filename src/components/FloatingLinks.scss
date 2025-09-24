@@ -1,0 +1,95 @@
+.floating-links {
+  z-index: 1200;
+  &.is-fixed { position: fixed; left: 20px; bottom: 20px; }
+  &.is-sticky { position: sticky; left: 20px; bottom: 20px; }
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+
+  .floating-toggle {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    border: none;
+    background: #111827;
+    color: #fff;
+    display: none; /* shown on touch via media query */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(2,6,23,0.25);
+  }
+
+  .floating-list {
+    list-style: none;
+    margin: 0;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(2,6,23,0.08);
+    min-width: 44px;
+    overflow: hidden;
+    transition: width 220ms cubic-bezier(.2,.8,.2,1), padding 180ms ease;
+  }
+
+  .floating-item { width: 100%; }
+
+  .floating-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    color: #111827;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background 140ms ease, transform 100ms ease;
+  }
+  .floating-link:hover,
+  .floating-link:focus {
+    background: rgba(14,165,233,0.08);
+    transform: translateY(-2px);
+    outline: none;
+  }
+
+  .floating-label {
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: opacity 220ms cubic-bezier(.2,.8,.2,1), transform 220ms cubic-bezier(.2,.8,.2,1);
+  }
+  .fl-icon {
+    width: 18px;
+    height: 18px;
+    color: #0ea5e9;
+    flex: 0 0 18px;
+  }
+
+  /* collapsed state (narrow) */
+  &:not(.is-open) {
+    .floating-list { width: 44px; padding-left: 6px; padding-right: 6px; }
+    .floating-label { opacity: 0; transform: translateX(-6px); }
+  }
+
+  /* expand on hover / focus-within / open */
+  &:hover,
+  &:focus-within,
+  &.is-open {
+    .floating-list { width: 200px; padding: 8px 12px; }
+    .floating-label { opacity: 1; transform: translateX(0); }
+  }
+
+  /* show toggle on touch devices */
+  @media (hover: none) and (pointer: coarse) {
+    .floating-toggle { display: inline-flex; }
+  }
+  @media (max-width: 720px) {
+    .floating-toggle { display: inline-flex; }
+  }
+}
