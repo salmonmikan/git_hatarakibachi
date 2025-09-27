@@ -91,7 +91,7 @@ export default function FloatingLinks({
                             <a
                                 role="menuitem"
                                 className="floating-link"
-            o}
+            href={l.to}
                                 target={isExternal && !l.to.startsWith("mailto:") ? "_blank" : "_self"}
                                 rel={isExternal && !l.to.startsWith("mailto:") ? "noopener noreferrer" : undefined}
                                 onClick={() => setOpen(false)}
