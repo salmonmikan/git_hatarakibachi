@@ -60,8 +60,8 @@ export default function FloatingLinks({
 
     // change these URLs to your actual handles
     const links = [
-        { key: "x", label: "X", to: "https://x.com/hatarakibachi88act", icon: "x" },
-        { key: "ig", label: "Instagram", to: "https://www.instagram.com/hatarakibachi88act", icon: "instagram" },
+        { key: "x", label: "X", to: "https://x.com/Hatarakibachi82", icon: "x" },
+        { key: "ig", label: "Instagram", to: "https://www.instagram.com/hatarakibachi82", icon: "instagram" },
         { key: "mail", label: "Email", to: "mailto:hatarakibachi88act@gmail.com", icon: "mail" },
     ];
 
@@ -91,7 +91,7 @@ export default function FloatingLinks({
                             <a
                                 role="menuitem"
                                 className="floating-link"
-                                href={l.to}
+            o}
                                 target={isExternal && !l.to.startsWith("mailto:") ? "_blank" : "_self"}
                                 rel={isExternal && !l.to.startsWith("mailto:") ? "noopener noreferrer" : undefined}
                                 onClick={() => setOpen(false)}
