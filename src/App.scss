@@ -17,14 +17,16 @@ header {
 }
 
 main {
-  padding-top: 140px; /* navの高さ + 余白 */
+  padding-top: 120px;
+  /* navの高さ + 余白 */
   padding-bottom: 2rem;
-  min-height: calc(100vh - 140px - 4rem); /* navの高さ + 余白 + footerの高さ */
+  min-height: calc(100vh - 140px - 4rem);
+  /* navの高さ + 余白 + footerの高さ */
 }
 
 .site-title {
   color: #000000;
-  font-size: clamp(1.5rem,4vw,2rem);
+  font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: bold;
   text-decoration: none;
   white-space: nowrap;
@@ -45,15 +47,15 @@ main {
   align-items: center;
 
   .nav-center {
-    display:flex;
-    align-items:center;
+    display: flex;
+    align-items: center;
 
     h1 {
-      margin:0;
-      font-size: clamp(1.5rem,4vw,2rem);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
+      margin: 0;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
@@ -95,12 +97,12 @@ main {
     &.active {
       background: #111827;
       color: #fff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
     }
 
     /* フォーカス時の見た目（アクセシビリティ） */
     &:focus {
-      outline: 3px solid rgba(59,130,246,0.4);
+      outline: 3px solid rgba(59, 130, 246, 0.4);
       outline-offset: 2px;
     }
   }
@@ -126,6 +128,7 @@ main {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -143,4 +146,61 @@ main {
 
 .read-the-docs {
   color: #888;
+}
+
+
+/* modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 9999;
+  // width: 100%;
+}
+
+.modal-panel {
+  width: min(80vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+}
+
+.modal-close {
+  padding: 0%;
+  position: sticky;
+  top: 0;
+  float: right;
+  border: 0;
+  background: transparent;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal-photo {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  border-radius: 0.75rem;
+}
+
+.modal-name {
+  font-size: 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.modal-role {
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.modal-bio {
+  margin-top: 0.75rem;
+  line-height: 1.7;
 }
