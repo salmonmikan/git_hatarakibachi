@@ -19,6 +19,8 @@ export default function Home() {
             <section aria-labelledby="about-title">
                 <h2 id="about-title"></h2>
                 <p>はたらきばち準備中...</p>
+                {/* ニュース一覧の画面 */}
+                
             </section>
         </motion.section>
     );
