@@ -54,7 +54,7 @@ button:hover {
 }
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  // outline: 4px auto -webkit-focus-ring-color;
 }
 
 @media (prefers-color-scheme: light) {
@@ -68,4 +68,20 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+/* レスポンシブフォントサイズ */
+/* ベース（スマホ） */
+@media (max-width: 480px) {
+  html { font-size: 15px; }  /* 1rem = 15px */
+}
+
+/* タブレット〜中間 */
+@media (min-width: 768px) and (max-width: 1199px) {
+  html { font-size: 16px; }  /* 1rem = 16px（据え置き） */
+}
+
+/* デスクトップ（少し大きく） */
+@media (min-width: 1200px) {
+  html { font-size: 18px; }  /* 1rem = 18px */
 }

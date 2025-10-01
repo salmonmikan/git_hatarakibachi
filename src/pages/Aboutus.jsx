@@ -18,7 +18,7 @@ export default function About() {
         >
         <section aria-labelledby="about-title">
             <h2 id="about-title">About Us</h2>
-            <p>準備中の劇団です</p>
+            <p>劇団はたらきばちとは？<br/>準備中の劇団です</p>
         </section>
         </motion.section>
     );
