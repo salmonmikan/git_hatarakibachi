@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from "motion/react"
 import { pageVariants, pageTransition } from "../assets/_pageVariants.js";
+import NewsList from "../components/NewsList.jsx";
 
 export default function Home() {
     const reduce = useReducedMotion();
@@ -17,10 +18,10 @@ export default function Home() {
             }}
         >
             <section aria-labelledby="about-title">
-                <h2 id="about-title"></h2>
-                <p>はたらきばち準備中...</p>
+                <h3 id="about-title">最新情報</h3>
+                {/* <p>最新情報</p> */}
                 {/* ニュース一覧の画面 */}
-                
+                <NewsList />
             </section>
         </motion.section>
     );
