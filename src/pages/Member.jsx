@@ -45,7 +45,7 @@ export default function Member() {
 }
 
 const members = [
-    { id: 1, name: 'たちばな', role: '演出・脚本・役者・制作', bio: '', photoUrl: '' },
-    { id: 2, name: 'ゆうき', role: '役者・制作', bio: '' },
+    { id: 1, name: 'たちばな', role: '演出・脚本・役者・広報', bio: '', photoUrl: '' },
+    { id: 2, name: 'ゆうき', role: '役者・広報', bio: '' },
     // ...
 ];
