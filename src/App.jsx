@@ -9,6 +9,7 @@ import ScrollToTop from "./components/ScrollToTop.jsx";
 import FloatingLinks from "./components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
 import './App.scss'
+import BackToTop from './components/BackToTop.jsx';
 
 function App() {
   const location = useLocation();
@@ -58,6 +59,7 @@ function App() {
       <p className="read-the-docs">
         hatarakibachi
       </p>
+      <BackToTop />
     </>
   )
 }
