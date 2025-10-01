@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
+import './MemberModal.scss';
 
 export default function MemberModal({ open, member, onClose }) {
     const backdropRef = useRef(null);
@@ -26,9 +27,9 @@ export default function MemberModal({ open, member, onClose }) {
     if (!open) return null;
     if (typeof document === 'undefined') return null;
 
-    const handleBackdropClick = (e) => {
-        if (e.target === backdropRef.current) onClose?.();
-    };
+    // const handleBackdropClick = (e) => {
+    //     if (e.target === backdropRef.current) onClose?.();
+    // };
 
     const content = (
         <AnimatePresence>
