@@ -40,6 +40,26 @@ const Icon = ({ name }) => {
             </svg>
         );
     }
+    if (name === "youtube") {
+        return (
+            <svg
+                className="fl-icon"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+            >
+                {/* 四角 */}
+                <rect x="1" y="4" width="22" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" />
+                <path d="M8 10L8 17L15 13.5Z" />
+            </svg>
+        );
+    }
     return null;
 };
 
@@ -63,6 +83,7 @@ export default function FloatingLinks({
         { key: "x", label: "X", to: "https://x.com/Hatarakibachi82", icon: "x" },
         { key: "ig", label: "Instagram", to: "https://www.instagram.com/hatarakibachi82", icon: "instagram" },
         { key: "mail", label: "Email", to: "mailto:hatarakibachi88act@gmail.com", icon: "mail" },
+        { key: "yt", label: "youtube", to: "https://youtube.com/@hatarakibachi82", icon: "youtube" }
     ];
 
     return (
@@ -91,7 +112,7 @@ export default function FloatingLinks({
                             <a
                                 role="menuitem"
                                 className="floating-link"
-            href={l.to}
+                                href={l.to}
                                 target={isExternal && !l.to.startsWith("mailto:") ? "_blank" : "_self"}
                                 rel={isExternal && !l.to.startsWith("mailto:") ? "noopener noreferrer" : undefined}
                                 onClick={() => setOpen(false)}

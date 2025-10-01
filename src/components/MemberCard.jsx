@@ -34,7 +34,7 @@ export default function MemberCard({ name, role, bio, photoUrl, photoAlt, onOpen
             )}
             <h3 className="member-name">{name}</h3>
             <p className="member-role">{role}</p>
-            {bio && <p className="member-bio">{bio}</p>}
+            {/* {bio && <p className="member-bio">{bio}</p>} */}
         </article >
     );
 }
