@@ -2,7 +2,7 @@
 
 // Cloudflare Image Resizing のURL生成ユーティリティ
 function cfResize(
-    originUrl,                    // 例: https://img.example.com/uploads/xxx.jpg
+    originUrl,
     { width, height, fit = "cover", format = "auto", quality = 85 } = {}
 ) {
     const params = [
