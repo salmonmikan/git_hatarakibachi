@@ -1,4 +1,5 @@
 ﻿import PropTypes from 'prop-types';
+import MemberPhoto from '../components/MemberPhoto';
 
 
 export default function MemberCard({ name, role, bio, photoUrl, photoAlt, onOpen }) {
@@ -22,7 +23,7 @@ export default function MemberCard({ name, role, bio, photoUrl, photoAlt, onOpen
             aria-label={`${name} の詳細を開く`}
         >
             {hasPhoto ? (
-                <img src={photoUrl} alt={imageAlt} className="member-photo" />
+                <MemberPhoto src={photoUrl} alt={name} w={360} h={360} />
             ) : (
                 <div
                     className="member-no-photo"
