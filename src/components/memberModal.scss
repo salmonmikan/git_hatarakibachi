@@ -1,0 +1,70 @@
+/* modal */
+.modal {
+    /* モーダル本体：幅は 320px〜80vw の範囲で、理想は 40rem */
+    &-panel {
+        --min: 250px;
+        /* 最小幅（スマホ縦でも崩れない下限） */
+        --pref: 20rem;
+        /* 理想幅（デスクトップで見やすい幅） */
+        --max: 50vw;
+        /* 画面に対する上限割合 */
+
+        inline-size: clamp(var(--min), var(--pref), var(--max));
+        max-block-size: 50vh;
+        /* 高さの上限（縦スクロールは中身だけ） */
+        overflow: auto;
+
+        background: #fff;
+        border-radius: 1rem;
+        padding: 1.25rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+    }
+
+    &-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .45);
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        z-index: 1500;
+    }
+
+    &-close {
+        padding: 0%;
+        position: sticky;
+        top: 0;
+        float: right;
+        border: 0;
+        background: transparent;
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    &-name {
+        font-size: 1.5rem;
+        margin-top: 0.75rem;
+    }
+
+    &-role {
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+
+    &-bio {
+        margin-top: 0.75rem;
+        line-height: 1.8;
+    }
+
+    &-detail {
+        margin: 0.5rem;
+    }
+
+    &-photo {
+        width: 100%;
+        aspect-ratio: 4/3;
+        object-fit: cover;
+        border-radius: 0.75rem;
+    }
+}
