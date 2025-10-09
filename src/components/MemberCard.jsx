@@ -3,6 +3,13 @@ import MemberPhoto from '../components/MemberPhoto';
 
 
 export default function MemberCard({ name, role, bio, photoUrl, photoAlt, onOpen }) {
+    async function fetchImg(path, el) {
+        const res = await fetch(`/api/img-url?path=${encodeURIComponent(path)}`);
+        if (!res.ok) throw new Error("failed to get img url");
+        const data = await res.json();
+        el.src = data.url;
+    }
+    
     const hasPhoto = Boolean(photoUrl);
     const imageAlt = photoAlt || (name ? `${name} photo` : 'Member photo');
 

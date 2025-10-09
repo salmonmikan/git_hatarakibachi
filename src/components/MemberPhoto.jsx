@@ -1,5 +1,6 @@
 // components/MemberPhoto.jsx
 
+
 // Cloudflare Image Resizing のURL生成ユーティリティ
 function cfResize(
     originUrl,
@@ -14,9 +15,11 @@ function cfResize(
     ]
         .filter(Boolean)
         .join(",");
+    // const k_env = env.IMG_KEY
 
     // 同一ドメイン配信なら絶対URLを渡すのが無難
     // return `/cdn-cgi/image/${params}/${originUrl}`;
+    return `${originUrl}`;
 }
 
 // 画像表示コンポーネント

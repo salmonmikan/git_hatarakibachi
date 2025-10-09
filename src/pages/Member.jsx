@@ -50,7 +50,7 @@ const members = [
     {
         id: "1",
         name: "たちばな",
-        photoUrl: "https://img.hatarakibachi.com/member/tachibana_body.jpg",
+        photoUrl: "https://img.hatarakibachi.com/img/member/tachibana_body.jpg",
         role: "演出・脚本・役者・広報",
         bio: "演劇が大好きで、舞台が大好きで、演じるのが大好きです。舞台上で生き続けたい。",
         age: 23,
