@@ -13,6 +13,7 @@
     &-no-photo, &-photo{
         width: 150px;
         height: 150px;
+        object-fit: cover;
         background-color: #eeeeee;
         display: flex;
         align-items: center;
@@ -20,6 +21,13 @@
         font-size: 1.4rem;
         color: #4e4e4e;
         border-radius: 10%;
+
+        &.upper {
+            object-position: top;
+            // width: 150px;
+            // height: 150px;
+            // border-radius: 50%;
+        }
     }
 
     &-name {

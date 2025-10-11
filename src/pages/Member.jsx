@@ -37,6 +37,7 @@ export default function Member() {
                 <MemberModal
                     open={!!selected}
                     member={selected}
+                    photoUrl={selected?.photoUrl_2 || selected?.photoUrl}
                     onClose={() => setSelected(null)}
                 />
             </section>
@@ -50,7 +51,8 @@ const members = [
     {
         id: "1",
         name: "たちばな",
-        photoUrl: "https://img.hatarakibachi.com/img/member/tachibana_body.jpg",
+        photoUrl: "img/member/tachibana_body.jpg",
+        photoUrl_2: "img/member/tachibana_face.jpg",
         role: "演出・脚本・役者・広報",
         bio: "演劇が大好きで、舞台が大好きで、演じるのが大好きです。舞台上で生き続けたい。",
         age: 23,
@@ -63,7 +65,8 @@ const members = [
     {
         id: "2",
         name: "ゆうき",
-        photoUrl: "",
+        photoUrl: "img/member/yuki_body.jpg",
+        photoUrl_2: "img/member/yuki_face.jpg",
         role: "役者・広報",
         bio: "",
         age: 24,
@@ -77,6 +80,7 @@ const members = [
         id: "3",
         name: "くりた",
         photoUrl: "",
+        photoUrl_2: "img/member/tachibana_face.jpg",
         role: "役者",
         bio: "",
         age: null,

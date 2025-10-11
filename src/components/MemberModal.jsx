@@ -4,8 +4,9 @@ import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
 import './MemberModal.scss';
+import { returnPhotoUrl } from '../assets/_returnPhotoUrl';
 
-export default function MemberModal({ open, member, onClose }) {
+export default function MemberModal({ open, member, onClose, photoUrl }) {
     const backdropRef = useRef(null);
     const closeBtnRef = useRef(null);
 
@@ -71,7 +72,7 @@ export default function MemberModal({ open, member, onClose }) {
                         {member && (
                             <div className="modal-content">
                                 {member.photoUrl ? (
-                                    <img className="modal-photo" src={member.photoUrl} alt={member.photoAlt || `${member.name}の写真`} />
+                                    <img className='modal-photo upper' src={returnPhotoUrl(photoUrl)} alt={name} />
                                 ) : (
                                     <div className="member-photo-placeholder modal-photo" aria-hidden="true" />
                                 )}
