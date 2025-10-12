@@ -4,8 +4,9 @@ import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
 import './MemberModal.scss';
+import { returnPhotoUrl } from '../assets/_returnPhotoUrl';
 
-export default function MemberModal({ open, member, onClose }) {
+export default function MemberModal({ open, member, onClose, photoUrl }) {
     const backdropRef = useRef(null);
     const closeBtnRef = useRef(null);
 
@@ -30,6 +31,9 @@ export default function MemberModal({ open, member, onClose }) {
     // const handleBackdropClick = (e) => {
     //     if (e.target === backdropRef.current) onClose?.();
     // };
+
+    // 値のあるなし判定
+    const present = v => v != null && String(v).trim() !== '';
 
     const content = (
         <AnimatePresence>
@@ -68,13 +72,32 @@ export default function MemberModal({ open, member, onClose }) {
                         {member && (
                             <div className="modal-content">
                                 {member.photoUrl ? (
-                                    <img className="modal-photo" src={member.photoUrl} alt={member.photoAlt || `${member.name}の写真`} />
+                                    <img className='modal-photo upper' src={returnPhotoUrl(photoUrl)} alt={name} />
                                 ) : (
                                     <div className="member-photo-placeholder modal-photo" aria-hidden="true" />
                                 )}
                                 <h2 className="modal-name">{member.name}</h2>
                                 <p className="modal-role">{member.role}</p>
-                                {member.bio && <p className="modal-bio">{member.bio}</p>}
+
+                                {present(member.bio) && <p className="modal-bio">{member.bio}</p>}
+
+                                {[
+                                    { key: 'age', label: '年齢：', value: member.age != null ? `${member.age}歳` : null },
+                                    { key: 'height', label: '身長：', value: member.height != null ? `${member.height}cm` : null },
+                                    { key: 'birthplace', label: '出身地：', value: member.birthplace || null },
+                                    { key: 'join', label: '入団：', value: member.join != null ? `${member.join}` : null },
+                                    { key: 'hobbie', label: '趣味：', value: member.hobbie?.length ? member.hobbie : null },
+                                    { key: 'skill', label: '特技：', value: member.skill?.length ? member.skill : null },
+                                ]
+                                    .filter(i => present(i.value))
+                                    .map(i => (
+                                        <p key={i.key} className="modal-detail">
+                                            <span className="label">{i.label}</span>
+                                            <span className="value">{i.value}</span>
+                                        </p>
+                                    ))
+                                }
+
                             </div>
                         )}
                     </motion.div>

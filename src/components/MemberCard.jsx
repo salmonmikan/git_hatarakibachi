@@ -1,7 +1,17 @@
 ﻿import PropTypes from 'prop-types';
+// import MemberPhoto from '../assets/MemberPhoto';
+import { returnPhotoUrl } from '../assets/_returnPhotoUrl';
+
 
 
 export default function MemberCard({ name, role, bio, photoUrl, photoAlt, onOpen }) {
+    async function fetchImg(path, el) {
+        const res = await fetch(`/api/img-url?path=${encodeURIComponent(path)}`);
+        if (!res.ok) throw new Error("failed to get img url");
+        const data = await res.json();
+        el.src = data.url;
+    }
+    
     const hasPhoto = Boolean(photoUrl);
     const imageAlt = photoAlt || (name ? `${name} photo` : 'Member photo');
 
@@ -22,7 +32,7 @@ export default function MemberCard({ name, role, bio, photoUrl, photoAlt, onOpen
             aria-label={`${name} の詳細を開く`}
         >
             {hasPhoto ? (
-                <img src={photoUrl} alt={imageAlt} className="member-photo" />
+                <img className='member-photo upper' src={returnPhotoUrl(photoUrl)} alt={name} />
             ) : (
                 <div
                     className="member-no-photo"

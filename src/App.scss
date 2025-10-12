@@ -82,16 +82,17 @@ main {
   margin: 0;
   padding: 0;
   display: flex;
-  gap: 12px;
+  gap: 3px;
   align-items: center;
 
   /* aタグ（NavLink）が出す <a> の見た目調整 */
   a {
     display: inline-block;
-    padding: 8px 12px;
+    padding: 6px 10px;
     text-decoration: none;
     color: #222;
     border-radius: 6px;
+    
 
     /* アクティブリンク */
     &.active {
