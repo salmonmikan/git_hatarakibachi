@@ -40,6 +40,7 @@ export default function Member() {
                     photoUrl={selected?.photoUrl_2 || selected?.photoUrl}
                     onClose={() => setSelected(null)}
                 />
+                <p>And More...</p>
             </section>
         </motion.section>
     );
