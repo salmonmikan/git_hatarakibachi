@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Routes, Route, NavLink, useLocation } from "react-router-dom";
 import About from "./pages/Aboutus.jsx";
 import Archive from "./pages/Archive.jsx";
@@ -11,10 +11,25 @@ import FloatingLinks from "./components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
 import './App.scss'
 import BackToTop from './components/BackToTop.jsx';
+// import supabase from './utils/supabase.ts'
 
 function App() {
   const location = useLocation();
   const mainRef = useRef(null);
+
+  // テスト用
+  // const [todos, setTodos] = useState([])
+
+  // useEffect(() => {
+  //   async function getTodos() {
+  //     const { data, error } = await supabase.from('todos').select()
+  //     console.log('supabase select ->', { data, error });
+  //     setTodos(data)
+  //   }
+
+  //   getTodos()
+  // }, [])
+
 
   return (
     <>
@@ -30,9 +45,6 @@ function App() {
             </NavLink>
           </div>
           <div className="nav-right">
-            {/* <button className="menu-button" aria-label="Menu">
-                &#9776;
-              </button> */}
           </div>
         </nav>
         <nav className="sub-nav">
@@ -59,8 +71,9 @@ function App() {
           </Routes>
         </AnimatePresence>
       </main>
+      {/* <pre>{JSON.stringify(todos, null, 2)}</pre> */}
       <p className="read-the-docs">
-        hatarakibachi
+        hatarakibachi All rights reserved.
       </p>
       <BackToTop />
     </>
