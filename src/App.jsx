@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Routes, Route, NavLink, useLocation } from "react-router-dom";
 import About from "./pages/Aboutus.jsx";
 import Archive from "./pages/Archive.jsx";
@@ -11,6 +11,7 @@ import FloatingLinks from "./components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
 import './App.scss'
 import BackToTop from './components/BackToTop.jsx';
+// import supabase from './utils/supabase.ts'
 
 function App() {
   const location = useLocation();
@@ -30,9 +31,6 @@ function App() {
             </NavLink>
           </div>
           <div className="nav-right">
-            {/* <button className="menu-button" aria-label="Menu">
-                &#9776;
-              </button> */}
           </div>
         </nav>
         <nav className="sub-nav">
@@ -59,8 +57,9 @@ function App() {
           </Routes>
         </AnimatePresence>
       </main>
+      {/* <pre>{JSON.stringify(todos, null, 2)}</pre> */}
       <p className="read-the-docs">
-        hatarakibachi
+        hatarakibachi All rights reserved.
       </p>
       <BackToTop />
     </>
