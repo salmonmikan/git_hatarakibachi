@@ -17,20 +17,6 @@ function App() {
   const location = useLocation();
   const mainRef = useRef(null);
 
-  // テスト用
-  // const [todos, setTodos] = useState([])
-
-  // useEffect(() => {
-  //   async function getTodos() {
-  //     const { data, error } = await supabase.from('todos').select()
-  //     console.log('supabase select ->', { data, error });
-  //     setTodos(data)
-  //   }
-
-  //   getTodos()
-  // }, [])
-
-
   return (
     <>
       <ScrollToTop />
