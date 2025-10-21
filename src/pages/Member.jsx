@@ -90,5 +90,19 @@ const members = [
         join: "2025(立ち上げメンバー)",
         hobbie: "",
         skill: ""
+    },
+    {
+        id: "4",
+        name: "たま",
+        photoUrl: "",
+        photoUrl_2: "",
+        role: "役者",
+        bio: "",
+        age: null,
+        height: null,
+        birthplace: "",
+        join: "2025(立ち上げメンバー)",
+        hobbie: "",
+        skill: ""
     }
 ];
