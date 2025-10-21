@@ -19,6 +19,7 @@ export default function Home() {
             <section aria-labelledby="about-title">
                 <h2 id="about-title"></h2>
                 <p>はたらきばち準備中...</p>
+                <p>最新の情報は各種SNSをご覧ください</p>
                 {/* ニュース一覧の画面 */}
                 
             </section>
