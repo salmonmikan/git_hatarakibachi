@@ -16,7 +16,7 @@ export default function Member() {
     // supabaseから情報を取得、ページ読み込み時に一度だけ実行
     useEffect(() => {
         async function getMembers() {
-            const { data, error } = await supabase.from('members').select()
+            const { data, error } = await supabase.from('members').select('*').order('id', { ascending: true });
             console.log('supabase select ->', { data, error });
             setMembers(data);
         }

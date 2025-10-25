@@ -86,7 +86,7 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                                     { key: 'height', label: '身長：', value: member.height != null ? `${member.height}cm` : null },
                                     { key: 'birthplace', label: '出身地：', value: member.birthplace || null },
                                     { key: 'join', label: '入団：', value: member.join != null ? `${member.join}` : null },
-                                    { key: 'hobbie', label: '趣味：', value: member.hobbie?.length ? member.hobbie : null },
+                                    { key: 'hobby', label: '趣味：', value: member.hobby?.length ? member.hobby : null },
                                     { key: 'skill', label: '特技：', value: member.skill?.length ? member.skill : null },
                                 ]
                                     .filter(i => present(i.value))
