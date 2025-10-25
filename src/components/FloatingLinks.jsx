@@ -82,8 +82,8 @@ export default function FloatingLinks({
     const links = [
         { key: "x", label: "X", to: "https://x.com/Hatarakibachi82", icon: "x" },
         { key: "ig", label: "Instagram", to: "https://www.instagram.com/hatarakibachi82", icon: "instagram" },
+        { key: "yt", label: "youtube", to: "https://youtube.com/@hatarakibachi82", icon: "youtube" },
         { key: "mail", label: "Email", to: "mailto:hatarakibachi88act@gmail.com", icon: "mail" },
-        { key: "yt", label: "youtube", to: "https://youtube.com/@hatarakibachi82", icon: "youtube" }
     ];
 
     return (
