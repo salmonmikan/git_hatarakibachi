@@ -88,6 +88,7 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                                     { key: 'join', label: '入団：', value: member.join != null ? `${member.join}` : null },
                                     { key: 'hobby', label: '趣味：', value: member.hobby?.length ? member.hobby : null },
                                     { key: 'skill', label: '特技：', value: member.skill?.length ? member.skill : null },
+                                    { key: 'personal_history', label: '出演歴：', value: member.personal_history?.length ? member.personal_history : null },
                                 ]
                                     .filter(i => present(i.value))
                                     .map(i => (
