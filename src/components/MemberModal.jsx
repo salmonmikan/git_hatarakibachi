@@ -60,15 +60,6 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                         exit={{ opacity: 0, scale: 0.98, y: 8 }}
                         transition={{ duration: 0.18, ease: 'easeOut' }}
                     >
-                        <button
-                            className="modal-close"
-                            onClick={onClose}
-                            ref={closeBtnRef}
-                            aria-label="閉じる"
-                        >
-                            ×
-                        </button>
-
                         {member && (
                             <div className="modal-content">
                                 {member.photoUrl ? (
@@ -85,10 +76,10 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                                     { key: 'age', label: '年齢：', value: member.age != null ? `${member.age}歳` : null },
                                     { key: 'height', label: '身長：', value: member.height != null ? `${member.height}cm` : null },
                                     { key: 'birthplace', label: '出身地：', value: member.birthplace || null },
-                                    { key: 'join', label: '入団：', value: member.join != null ? `${member.join}` : null },
+                                    { key: 'join_year', label: '入団：', value: member.join_year != null ? `${member.join_year}` : null },
                                     { key: 'hobby', label: '趣味：', value: member.hobby?.length ? member.hobby : null },
                                     { key: 'skill', label: '特技：', value: member.skill?.length ? member.skill : null },
-                                    { key: 'personal_history', label: '出演歴：', value: member.personal_history?.length ? member.personal_history : null },
+                                    // { key: 'personal_history', label: '出演歴：', value: member.personal_history?.length ? member.personal_history : null },
                                 ]
                                     .filter(i => present(i.value))
                                     .map(i => (
@@ -102,6 +93,14 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                             </div>
                         )}
                     </motion.div>
+                    <button
+                        className="modal-close"
+                        onClick={onClose}
+                        ref={closeBtnRef}
+                        aria-label="閉じる"
+                    >
+                        ×
+                    </button>
                 </motion.div>
             )}
         </AnimatePresence>
