@@ -12,13 +12,56 @@ export default function Member() {
     const reduce = useReducedMotion();
     const [selected, setSelected] = useState(null);
     const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     // supabaseから情報を取得、ページ読み込み時に一度だけ実行
     useEffect(() => {
+        function groupByYear(credits = []) {
+            const byYear = credits.reduce((acc, c) => {
+                const y = c.credit_date?.slice(0, 4) ?? 'unknown';
+                (acc[y] ??= []).push(c);
+                return acc;
+            }, {});
+
+            // 年の中は新しい順（文字列でも YYYY-MM-DD なら比較できる）
+            for (const y of Object.keys(byYear)) {
+                byYear[y].sort((a, b) => (b.credit_date ?? '').localeCompare(a.credit_date ?? ''));
+            }
+
+            return byYear;
+        }
+
         async function getMembers() {
-            const { data, error } = await supabase.from('members').select('*').order('id', { ascending: true });
-            console.log('supabase select ->', { data, error });
-            setMembers(data);
+            setLoading(true);
+            setError(null);
+
+            const { data, error } = await supabase
+                .from('members')
+                .select(`
+                    *,
+                    credits:credits (
+                        id,
+                        credit_title,
+                        credit_role,
+                        credit_date
+                    )
+                `)
+                // .eq('id', memberId)
+                .order('id', { ascending: true });
+
+            if (error) {
+                console.error('supabase select error ->', error);
+                setMembers([]);
+                setError(error.message ?? '読み込みに失敗しました');
+            } else {
+                setMembers((data ?? []).map(m => ({
+                    ...m,
+                    creditsByYear: groupByYear(m.credits ?? []),
+                })));
+            }
+
+            setLoading(false);
         }
 
         getMembers()
@@ -39,7 +82,11 @@ export default function Member() {
         >
             <section aria-labelledby="about-title">
                 <h2 id="about-title">Member</h2>
-                {/* <p>メンバー紹介準備中...</p> */}
+
+                {/* DB接続中・エラー時表示 */}
+                {loading && <p>読み込み中...</p>}
+                {error && <p className="error">{error}</p>}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {members.map((m) => (
                         <MemberCard
@@ -55,7 +102,7 @@ export default function Member() {
                     photoUrl={selected?.photoUrl_2 || selected?.photoUrl}
                     onClose={() => setSelected(null)}
                 />
-                <p>And More...</p>
+                {!loading && <p>And More...</p>}
             </section>
         </motion.section>
     );

@@ -31,6 +31,10 @@ body {
   place-items: center;
   min-width: 320px;
   min-height: 100vh;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 h1 {
@@ -49,12 +53,9 @@ button {
   cursor: pointer;
   transition: border-color 0.25s;
 }
+
 button:hover {
   border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  // outline: 4px auto -webkit-focus-ring-color;
 }
 
 @media (prefers-color-scheme: light) {
@@ -62,6 +63,7 @@ button:focus-visible {
     color: #213547;
     background-color: #ffffff;
   }
+
   /* a:hover {
     color: #747bff;
   } */
@@ -71,17 +73,20 @@ button:focus-visible {
 }
 
 /* レスポンシブフォントサイズ */
-/* ベース（スマホ） */
-@media (max-width: 480px) {
-  html { font-size: 15px; }  /* 1rem = 15px */
-}
+// /* ベース（スマホ） */
+// @media (max-width: 480px) {
+//   html { font-size: 15px; }  /* 1rem = 15px */
+// }
 
-/* タブレット〜中間 */
-@media (min-width: 768px) and (max-width: 1199px) {
-  html { font-size: 16px; }  /* 1rem = 16px（据え置き） */
-}
+// /* タブレット〜中間 */
+// @media (min-width: 768px) and (max-width: 1199px) {
+//   html { font-size: 16px; }  /* 1rem = 16px（据え置き） */
+// }
 
-/* デスクトップ（少し大きく） */
-@media (min-width: 1200px) {
-  html { font-size: 18px; }  /* 1rem = 18px */
+// /* デスクトップ（少し大きく） */
+// @media (min-width: 1200px) {
+//   html { font-size: 18px; }  /* 1rem = 18px */
+// }
+html {
+  font-size: clamp(14px, 1vw + 10px, 16px);
 }
