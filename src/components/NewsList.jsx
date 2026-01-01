@@ -1,5 +1,53 @@
 import React from "react";
 import "./NewsList.scss";
+import { useState, useEffect } from "react";
+import supabase from '../utils/supabase.ts'
+
+export default function NewsList({ items, limit, className = "" }) {
+    // const reduce = useReducedMotion();
+    const [selected, setSelected] = useState(null);
+    const [news, setNews] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // supabaseから情報を取得、ページ読み込み時に一度だけ実行
+    useEffect(() => {
+        // function groupByYear(credits = []) {
+        //     const byYear = credits.reduce((acc, c) => {
+        //         const y = c.credit_date?.slice(0, 4) ?? 'unknown';
+        //         (acc[y] ??= []).push(c);
+        //         return acc;
+        //     }, {});
+
+        //     // 年の中は新しい順（文字列でも YYYY-MM-DD なら比較できる）
+        //     for (const y of Object.keys(byYear)) {
+        //         byYear[y].sort((a, b) => (b.credit_date ?? '').localeCompare(a.credit_date ?? ''));
+        //     }
+
+        //     return byYear;
+        // }
+
+        async function getNews() {
+            setLoading(true);
+            setError(null);
+
+            const { data, error } = await supabase
+                .from('site_news')
+                .select(`*`)
+                .order('id', { ascending: true });
+
+            if (error) {
+                console.error('supabase select error ->', error);
+                setNews([]);
+                setError(error.message ?? '読み込みに失敗しました');
+            } else {
+                setNews(data);
+            }
+            setLoading(false);
+        }
+
+        getNews()
+    }, [])
 
 // ---- ダミーJSON（まずは直書き） ----
 const NEWS = [
@@ -56,7 +104,6 @@ const formatDate = (iso) => {
 };
 
 // ---- コンポーネント本体 ----
-const NewsList = ({ items, limit, className = "" }) => {
     const data = (items || NEWS).slice(0, limit || (items || NEWS).length);
 
     if (data.length === 0) {
@@ -113,5 +160,3 @@ const NewsList = ({ items, limit, className = "" }) => {
         </div>
     );
 };
-
-export default NewsList;
