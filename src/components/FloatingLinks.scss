@@ -28,6 +28,7 @@
         background: #111827;
         color: #fff;
         display: none;
+        font-size: 16px;
         /* shown on touch via media query */
         align-items: center;
         justify-content: center;
@@ -46,12 +47,9 @@
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08);
         width: 30px;
+        font-size: 16px;
         // overflow: hidden;
         transition: width 220ms cubic-bezier(.2, .8, .2, 1), padding 180ms ease;
-    }
-
-    .floating-item {
-        // width: 100%;
     }
 
     .floating-link {

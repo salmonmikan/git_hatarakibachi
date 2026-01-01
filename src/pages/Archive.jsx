@@ -11,7 +11,7 @@ export default function Archive() {
     useEffect(() => {
         async function getArchiveURLs() {
             const { data, error } = await supabase.from('archive_urls').select('*').order('id', { ascending: true });
-            console.log('supabase select ->', { data, error });
+            // console.log('supabase select ->', { data, error });
             setArchives(data);
         }
 

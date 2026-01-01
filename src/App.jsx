@@ -59,7 +59,7 @@ function App() {
       </main>
       {/* <pre>{JSON.stringify(todos, null, 2)}</pre> */}
       <p className="read-the-docs">
-        hatarakibachi All rights reserved.
+        {`©2025 hatarakibachi All rights reserved. \n Built with Cloudflare Pages.`}
       </p>
       <BackToTop />
     </>

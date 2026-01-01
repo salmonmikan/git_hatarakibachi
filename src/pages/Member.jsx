@@ -60,7 +60,6 @@ export default function Member() {
                     creditsByYear: groupByYear(m.credits ?? []),
                 })));
             }
-
             setLoading(false);
         }
 

@@ -4,14 +4,14 @@ import { returnPhotoUrl } from '../assets/_returnPhotoUrl';
 
 
 
-export default function MemberCard({ name, role, bio, photoUrl, photoAlt, onOpen }) {
+export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt, onOpen }) {
     async function fetchImg(path, el) {
         const res = await fetch(`/api/img-url?path=${encodeURIComponent(path)}`);
         if (!res.ok) throw new Error("failed to get img url");
         const data = await res.json();
         el.src = data.url;
     }
-    
+
     const hasPhoto = Boolean(photoUrl);
     const imageAlt = photoAlt || (name ? `${name} photo` : 'Member photo');
 
@@ -42,7 +42,8 @@ export default function MemberCard({ name, role, bio, photoUrl, photoAlt, onOpen
                     No Image
                 </div>
             )}
-            <h3 className="member-name">{name}</h3>
+                <h2 className="member-name">{name}</h2>
+                <span className="member-hurigana">{hurigana}</span>
             <p className="member-role">{role}</p>
             {/* {bio && <p className="member-bio">{bio}</p>} */}
         </article >
