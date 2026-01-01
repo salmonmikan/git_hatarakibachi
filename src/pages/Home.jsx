@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from "motion/react"
 import { pageVariants, pageTransition } from "../assets/_pageVariants.js";
+import NewsList from "../components/NewsList.jsx";
 
 export default function Home() {
     const reduce = useReducedMotion();
@@ -21,7 +22,7 @@ export default function Home() {
                 <p>はたらきばち準備中...</p>
                 <p>最新の情報は各種SNSをご覧ください</p>
                 {/* ニュース一覧の画面 */}
-                
+                <NewsList />
             </section>
         </motion.section>
     );
