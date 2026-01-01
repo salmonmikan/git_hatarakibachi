@@ -72,6 +72,7 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
 
                                 {present(member.bio) && <p className="modal-bio">{member.bio}</p>}
 
+                                {/* <h3>基本情報</h3> */}
                                 {[
                                     { key: 'age', label: '年齢：', value: member.age != null ? `${member.age}歳` : null },
                                     { key: 'height', label: '身長：', value: member.height != null ? `${member.height}cm` : null },
@@ -89,7 +90,20 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                                         </p>
                                     ))
                                 }
-
+                                <h3>出演歴</h3>
+                                {Object.keys(member.creditsByYear ?? {})
+                                    .sort((a, b) => Number(b) - Number(a))
+                                    .map(year => (
+                                        <section className="modal-credit_year" key={year}>
+                                            <h4>{year}年</h4>
+                                            {member.creditsByYear[year].map(c => (
+                                                <div key={c.id}>
+                                                    <div>{c.credit_title}</div>
+                                                    <div>{`　--${c.credit_role}`}</div>
+                                                </div>
+                                            ))}
+                                        </section>
+                                    ))}
                             </div>
                         )}
                     </motion.div>

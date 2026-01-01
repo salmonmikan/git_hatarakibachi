@@ -2,7 +2,7 @@
 .modal {
     /* モーダル本体：幅は 320px〜80vw の範囲で、理想は 40rem */
     &-panel {
-        :where(p, h1, h2) { margin: 0; } // 弱いreset
+        :where(p, h1, h2, h3, h4) { margin: 0; } // 弱いreset
         --min: 260px;
         /* 最小幅（スマホ縦でも崩れない下限） */
         --pref: 25rem;
