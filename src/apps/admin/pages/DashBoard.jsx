@@ -81,8 +81,9 @@ export default function DashBoard() {
                     <div className="adm-alert__note">※RLS/権限/テーブル名の確認が必要です</div>
                 </div>
             )}
-
-            <div className="adm-title">News登録状況</div>
+            <div className="adm-title">劇団員管理</div>
+            作成中
+            <div className="adm-title">News登録情報管理</div>
             <section
                 className="adm-cards"
                 data-layout="grid"

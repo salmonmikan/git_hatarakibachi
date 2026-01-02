@@ -2,7 +2,7 @@
     min-height: 100vh;
     display: grid;
     place-items: center;
-    padding: 18px;
+    padding: 0 2rem;
     background: #fafafa;
 }
 
@@ -134,6 +134,11 @@
         font-size: 12px;
         opacity: 0.7;
     }
+}
+
+.adm-title {
+    font-weight: 700;
+    text-decoration: underline;
 }
 
 /* Cards grid */
