@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { Component, useEffect, useMemo, useState } from "react";
 import supabase from '@src/utils/supabase.ts'
 import LogoutButton from "../components/LogoutButton.jsx";
+import {fetchNewsStats, fetchRecentCredits, fetchRecentNews} from "../components/DashBoardApi.js";
 
 const STATUS_LABEL = {
     0: "下書き",
@@ -28,42 +29,32 @@ export default function DashBoard() {
             setLoading(true);
             setError(null);
 
+            const [r1, r2, r3] = await Promise.all([
+                fetchNewsStats(),
+                fetchRecentNews(),
+                fetchRecentCredits(),
+            ]);
+
             // 1) status一覧を取って集計（最小構成のためクライアント集計）
-            const s1 = await supabase.from("site_news").select("news_status").limit(5000);
-            if (s1.error) {
+            if (r1.error) {
                 if (!alive) return;
                 setError(s1.error.message);
                 setLoading(false);
                 return;
             }
-
-            const rows = s1.data ?? [];
-            const next = { total: rows.length, draft: 0, public: 0, private: 0 };
-            for (const r of rows) {
-                if (r.news_status === 0) next.draft += 1;
-                else if (r.news_status === 1) next.public += 1;
-                else if (r.news_status === 2) next.private += 1;
-            }
+            const rows = r1.data ?? [];
+            const next = { total: rows.total, draft: rows.draft, public: rows.public, private: rows.private };
 
             // 2) 最新5件
-            const s2 = await supabase
-                .from("site_news")
-                .select("id,news_title,news_status,published_at")
-                .order("published_at", { ascending: false })
-                .limit(5);
-
-            if (!alive) return;
-
-            if (s2.error) {
+            // set処理
+            if (r2.error) {
                 setError(s2.error.message);
-                setStats(next);
                 setRecent([]);
                 setLoading(false);
                 return;
             }
-
             setStats(next);
-            setRecent(s2.data ?? []);
+            setRecent(r2.data ?? []);
             setLoading(false);
         };
 
@@ -134,9 +125,9 @@ export default function DashBoard() {
                                 data-surface="soft"
                                 data-status={String(n.status)}
                             >
-                                <div className="adm-item__title">{n.title}</div>
+                                <div className="adm-item__title">{n.news_title}</div>
                                 <div className="adm-item__meta" data-tone="muted">
-                                    {STATUS_LABEL[n.status] ?? `status=${n.status}`} / {n.published_at ?? "-"}
+                                    {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
                                 </div>
                             </article>
                         ))
