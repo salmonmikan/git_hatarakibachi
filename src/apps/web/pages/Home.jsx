@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from "motion/react"
-import { pageVariants, pageTransition } from "../assets/_pageVariants.js";
-import NewsList from "../components/NewsList.jsx";
+import { pageVariants, pageTransition } from "@/assets/_pageVariants.js";
+import NewsList from "@/components/NewsList.jsx";
+import './Home.scss'
 
 export default function Home() {
     const reduce = useReducedMotion();
@@ -17,12 +18,15 @@ export default function Home() {
                 if (typeof onEntered === "function") onEntered();
             }}
         >
-            <section aria-labelledby="about-title">
+            <section aria-labelledby="home-section">
                 <p>はたらきばち準備中...</p>
                 <p>最新の情報は各種SNSをご覧ください</p>
+                {/* 公演情報について */}
+                <h2 className="home-title">公演情報</h2>
+                <p>現在、公演情報はありません</p>
                 {/* ニュース一覧の画面 */}
-                <h2>News Release</h2>
-                <NewsList />
+                <h2 className="home-title">News Release</h2>
+                {/* <NewsList /> */}
             </section>
         </motion.section>
     );

@@ -1,19 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
 import { Routes, Route, NavLink, useLocation } from "react-router-dom";
-import About from "./pages/Aboutus.jsx";
-import Archive from "./pages/Archive.jsx";
-import Contact from "./pages/Contact.jsx";
-import Home from "./pages/Home.jsx";
-import Member from "./pages/Member.jsx";
-import Scenario from "./pages/Scenario.jsx";
-import ScrollToTop from "./components/ScrollToTop.jsx";
-import FloatingLinks from "./components/FloatingLinks.jsx";
+import About from "../web/pages/Aboutus.jsx";
+import Archive from "../web/pages/Archive.jsx";
+import Contact from "../web/pages/Contact.jsx";
+import Home from "../web/pages/Home.jsx";
+import Member from "../web/pages/Member.jsx";
+import Scenario from "../web/pages/Scenario.jsx";
+import ScrollToTop from "../../components/ScrollToTop.jsx";
+import FloatingLinks from "../../components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
 import './App.scss'
-import BackToTop from './components/BackToTop.jsx';
+import BackToTop from '../../components/BackToTop.jsx';
 // import supabase from './utils/supabase.ts'
 
-function App() {
+function aaaaaa() {
   const location = useLocation();
   const mainRef = useRef(null);
 
@@ -38,9 +38,9 @@ function App() {
             {/* <li><NavLink to="/" end className={({isActive}) => isActive ? "active" : ""}>Home</NavLink></li> */}
             <li><NavLink to="/about" className={({ isActive }) => isActive ? "active" : ""}>About</NavLink></li>
             <li><NavLink to="/member" className={({ isActive }) => isActive ? "active" : ""}>Member</NavLink></li>
-            <li><NavLink to="/archive" className={({ isActive }) => isActive ? "active" : ""}>Archive</NavLink></li>
+            {/* <li><NavLink to="/archive" className={({ isActive }) => isActive ? "active" : ""}>Archive</NavLink></li>
             <li><NavLink to="/scenario" className={({ isActive }) => isActive ? "active" : ""}>Scenario</NavLink></li>
-            <li><NavLink to="/contact" className={({ isActive }) => isActive ? "active" : ""}>Contact</NavLink></li>
+            <li><NavLink to="/contact" className={({ isActive }) => isActive ? "active" : ""}>Contact</NavLink></li> */}
           </ul>
         </nav>
       </header>
@@ -66,4 +66,4 @@ function App() {
   )
 }
 
-export default App
+export default aaaaaa

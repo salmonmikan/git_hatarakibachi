@@ -45,7 +45,6 @@ export default function NewsList({ items, limit, className = "" }) {
             }
             setLoading(false);
         }
-
         getNews()
     }, [])
 

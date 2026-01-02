@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react"
-import { pageVariants, pageTransition } from "../assets/_pageVariants.js";
+import { pageVariants, pageTransition } from "@/assets/_pageVariants.js";
 
-import supabase from '../utils/supabase.ts'
+import supabase from '@/utils/supabase.ts'
 
 export default function Archive() {
     const reduce = useReducedMotion();
