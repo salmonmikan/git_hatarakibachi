@@ -1,8 +1,13 @@
 /* modal */
 .modal {
+
     /* モーダル本体：幅は 320px〜80vw の範囲で、理想は 40rem */
     &-panel {
-        :where(p, h1, h2, h3, h4) { margin: 0; } // 弱いreset
+        :where(p, h1, h2, h3, h4) {
+            margin: 0;
+        }
+
+        // 弱いreset
         --min: 260px;
         /* 最小幅（スマホ縦でも崩れない下限） */
         --pref: 25rem;
@@ -20,11 +25,11 @@
         padding: 1.25rem;
         box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
 
-        &::-webkit-scrollbar{
+        &::-webkit-scrollbar {
             display: none;
-            }
         }
-        
+    }
+
 
     &-backdrop {
         position: fixed;
@@ -35,6 +40,13 @@
         padding: 1rem;
         z-index: 1500;
         align-content: center;
+    }
+
+    &-header {
+        display: flex;
+        gap: 0.5rem;
+        flex-direction: row;
+        align-items: baseline;
     }
 
     &-close {

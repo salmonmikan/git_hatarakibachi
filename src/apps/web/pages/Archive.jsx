@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react"
-import { pageVariants, pageTransition } from "../assets/_pageVariants.js";
+import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 
-import supabase from '../utils/supabase.ts'
+import supabase from '@src/utils/supabase.ts'
 
 export default function Archive() {
     const reduce = useReducedMotion();
@@ -11,7 +11,7 @@ export default function Archive() {
     useEffect(() => {
         async function getArchiveURLs() {
             const { data, error } = await supabase.from('archive_urls').select('*').order('id', { ascending: true });
-            console.log('supabase select ->', { data, error });
+            // console.log('supabase select ->', { data, error });
             setArchives(data);
         }
 

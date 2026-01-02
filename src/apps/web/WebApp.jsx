@@ -6,14 +6,15 @@ import Contact from "./pages/Contact.jsx";
 import Home from "./pages/Home.jsx";
 import Member from "./pages/Member.jsx";
 import Scenario from "./pages/Scenario.jsx";
-import ScrollToTop from "./components/ScrollToTop.jsx";
-import FloatingLinks from "./components/FloatingLinks.jsx";
+import ScrollToTop from "@src/components/ScrollToTop.jsx";
+import FloatingLinks from "@src/components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
-import './App.scss'
-import BackToTop from './components/BackToTop.jsx';
+import './WebApp.scss'
+import BackToTop from '@src/components/BackToTop.jsx';
+import NotFound from '@src/components/NotFound.jsx';
 // import supabase from './utils/supabase.ts'
 
-function App() {
+function WebApp() {
   const location = useLocation();
   const mainRef = useRef(null);
 
@@ -54,16 +55,18 @@ function App() {
             <Route path="archive" element={<Archive onEntered={() => mainRef.current?.focus()} />} />
             <Route path="scenario" element={<Scenario onEntered={() => mainRef.current?.focus()} />} />
             <Route path="contact" element={<Contact onEntered={() => mainRef.current?.focus()} />} />
+            
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>
       </main>
       {/* <pre>{JSON.stringify(todos, null, 2)}</pre> */}
       <p className="read-the-docs">
-        hatarakibachi All rights reserved.
+        {`©2025 hatarakibachi All rights reserved. \n Built with Cloudflare Pages.`}
       </p>
       <BackToTop />
     </>
   )
 }
 
-export default App
+export default WebApp

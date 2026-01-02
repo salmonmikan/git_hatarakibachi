@@ -72,7 +72,10 @@ export default function FloatingLinks({
     useEffect(() => {
         if (!open) return;
         function onDoc(e) {
-            if (!e.target.closest?.(".floating-links")) setOpen(false);
+            const inLinks = e.target.closest?.(".floating-links");
+            const inToggle = e.target.closest?.(".floating-toggle");
+            // 外側クリックのときだけ閉じる（トグルはここで扱わない）
+            if (!inLinks && !inToggle) setOpen(false);
         }
         document.addEventListener("pointerdown", onDoc);
         return () => document.removeEventListener("pointerdown", onDoc);

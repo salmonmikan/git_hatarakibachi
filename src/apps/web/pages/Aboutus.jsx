@@ -1,8 +1,9 @@
 import { motion, useReducedMotion } from "motion/react"
-import { pageVariants, pageTransition } from "../assets/_pageVariants.js";
+import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 
-export default function Contact() {
+export default function About() {
     const reduce = useReducedMotion();
+
     return (
         <motion.section
             className="page"
@@ -16,15 +17,10 @@ export default function Contact() {
             }}
         >
             <section aria-labelledby="about-title">
-                <h2 id="about-title">Contact</h2>
-                <p>ご連絡はこちらまでお願いいたします</p>
-                <p>hatarakibachi88act★gmail.com</p>
+                <h2 id="about-title">About Us</h2>
+                <p>東京･千葉を拠点に活動する、<br />「ずっと演劇をしていたい」<br />人たちの社会人劇団。</p>
+                <p>現在活動のため準備中……</p>
             </section>
-            {/* <section aria-labelledby="sns-links">
-                <h2 id="about-title">SNS LINK</h2>
-                <p>各種SNSでも情報発信中！</p>
-                <p>instagram</p>
-            </section> */}
         </motion.section>
     );
 }

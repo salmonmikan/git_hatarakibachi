@@ -67,16 +67,19 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                                 ) : (
                                     <div className="member-photo-placeholder modal-photo" aria-hidden="true" />
                                 )}
-                                <h2 className="modal-name">{member.name}</h2>
+                                <div className="modal-header">
+                                    <h2 className="modal-name">{member.name}</h2>
+                                    <span>{member.hurigana}</span>
+                                </div>
                                 <p className="modal-role">{member.role}</p>
 
                                 {present(member.bio) && <p className="modal-bio">{member.bio}</p>}
 
                                 {/* <h3>基本情報</h3> */}
                                 {[
-                                    { key: 'age', label: '年齢：', value: member.age != null ? `${member.age}歳` : null },
-                                    { key: 'height', label: '身長：', value: member.height != null ? `${member.height}cm` : null },
-                                    { key: 'birthplace', label: '出身地：', value: member.birthplace || null },
+                                    { key: 'age', label: '年齢：', value: member.age != null ? `${member.age}歳` : `非公開` },
+                                    { key: 'height', label: '身長：', value: member.height != null ? `${member.height}cm` : `非公開` },
+                                    { key: 'birthplace', label: '出身地：', value: member.birthplace || `非公開` },
                                     { key: 'join_year', label: '入団：', value: member.join_year != null ? `${member.join_year}` : null },
                                     { key: 'hobby', label: '趣味：', value: member.hobby?.length ? member.hobby : null },
                                     { key: 'skill', label: '特技：', value: member.skill?.length ? member.skill : null },
@@ -90,7 +93,7 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                                         </p>
                                     ))
                                 }
-                                <h3>出演歴</h3>
+                                <h3>活動歴</h3>
                                 {Object.keys(member.creditsByYear ?? {})
                                     .sort((a, b) => Number(b) - Number(a))
                                     .map(year => (
