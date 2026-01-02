@@ -12,5 +12,5 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       {isAdminHost ? <AdminApp /> : <WebApp />}
     </BrowserRouter>
-  </StrictMode>,
+  </StrictMode>
 )
