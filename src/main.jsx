@@ -1,8 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.scss'
-import WebApp from '@/apps/web/WebApp.jsx'
-import AdminApp from '@/apps/admin/AdminApp.jsx'
+import WebApp from '@src/apps/web/WebApp.jsx'
+import AdminApp from '@src/apps/admin/AdminApp.jsx'
 import { BrowserRouter } from "react-router-dom";
 
 const isAdminHost = window.location.hostname.startsWith("admin");

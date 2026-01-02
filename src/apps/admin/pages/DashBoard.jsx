@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import supabase from '@/utils/supabase.ts'
+import supabase from '@src/utils/supabase.ts'
 import LogoutButton from "../component/logout";
 
 const STATUS_LABEL = {

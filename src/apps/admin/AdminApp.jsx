@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/DashBoard.jsx";
-import RequireAuth from "@/components/RequireAuth";
+import RequireAuth from "@src/components/RequireAuth";
+import NotFound from '@src/components/NotFound.jsx';
 
 export default function AdminApp() {
   return (
@@ -9,7 +10,7 @@ export default function AdminApp() {
         <Route path="/login" element={<Login />} />
 
         <Route
-          path="/*"
+          path="/"
           element={
             <RequireAuth>
               <Dashboard />
@@ -17,7 +18,7 @@ export default function AdminApp() {
           }
         />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
   );
 }

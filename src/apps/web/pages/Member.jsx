@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { motion, useReducedMotion } from "motion/react"
-import { pageVariants, pageTransition } from "@/assets/_pageVariants.js";
-import MemberCard from "@/components/MemberCard.jsx";
-import MemberModal from "@/components/MemberModal.jsx";
+import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
+import MemberCard from "@src/components/MemberCard.jsx";
+import MemberModal from "@src/components/MemberModal.jsx";
 import './Member.scss'
 
-import supabase from '@/utils/supabase.ts'
+import supabase from '@src/utils/supabase.ts'
 
 
 export default function Member() {

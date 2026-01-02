@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "motion/react"
-import { pageVariants, pageTransition } from "@/assets/_pageVariants.js";
+import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 
 export default function About() {
     const reduce = useReducedMotion();

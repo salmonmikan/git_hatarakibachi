@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import supabase from '@/utils/supabase.ts'
+import supabase from '@src/utils/supabase.ts'
 
 export default function RequireAuth({ children }) {
     const [loading, setLoading] = useState(true);

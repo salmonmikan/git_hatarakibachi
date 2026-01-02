@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from "motion/react"
-import { pageVariants, pageTransition } from "@/assets/_pageVariants.js";
-import NewsList from "@/components/NewsList.jsx";
+import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
+import NewsList from "@src/components/NewsList.jsx";
 import './Home.scss'
 
 export default function Home() {

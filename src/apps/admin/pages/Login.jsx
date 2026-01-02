@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import supabase from '@/utils/supabase.ts'
+import supabase from '@src/utils/supabase.ts'
 
 export default function Login() {
     const nav = useNavigate();
