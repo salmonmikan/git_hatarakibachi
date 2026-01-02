@@ -1,0 +1,241 @@
+.admin {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: #fafafa;
+}
+
+.admin-card {
+    width: 100%;
+    max-width: 420px;
+    border-radius: 12px;
+    padding: 18px;
+
+    &[data-tone="paper"] {
+        background: #fff;
+        border: 1px solid #eee;
+    }
+}
+
+.admin-site {
+    margin: 0;
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.admin-title {
+    margin: 6px 0 0;
+}
+
+.admin-desc {
+    margin-top: 8px;
+    opacity: 0.7;
+}
+
+.admin-form {
+    margin-top: 14px;
+    display: grid;
+    gap: 12px;
+
+    &[data-busy="true"] {
+        // 忙しい時にフォーム全体の見た目を薄くするなど
+        opacity: 0.95;
+    }
+}
+
+.field {
+    display: grid;
+    gap: 6px;
+
+    &__label {
+        font-size: 13px;
+        opacity: 0.8;
+    }
+
+    &__input {
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+        outline: none;
+
+        &:focus {
+            border-color: #bbb;
+        }
+
+        &:disabled {
+            opacity: 0.7;
+        }
+    }
+
+    // 例：kind別に微調整したい時
+    &[data-kind="password"] .field__input {
+        letter-spacing: 0.5px;
+    }
+}
+
+.form-error {
+    color: crimson;
+    font-size: 13px;
+}
+
+.btn {
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    cursor: pointer;
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    &[data-variant="ghost"] {
+        background: #fff;
+    }
+}
+
+
+.adm-dash {
+    display: grid;
+    gap: 14px;
+}
+
+.adm-dash__title {
+    margin: 0;
+}
+
+.adm-dash__lead {
+    margin-top: 6px;
+    opacity: 0.7;
+}
+
+/* Alert */
+.adm-alert {
+    padding: 12px;
+    border-radius: 12px;
+
+    &[data-tone="danger"] {
+        border: 1px solid #f3c;
+    }
+
+    &__label {
+        color: crimson;
+        font-weight: 700;
+    }
+
+    &__msg {
+        margin-top: 6px;
+        font-size: 13px;
+    }
+
+    &__note {
+        margin-top: 6px;
+        font-size: 12px;
+        opacity: 0.7;
+    }
+}
+
+/* Cards grid */
+.adm-cards {
+    display: grid;
+    gap: 10px;
+
+    &[data-cols="auto-fit"] {
+        grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+    }
+}
+
+.adm-card {
+    border-radius: 14px;
+    padding: 14px;
+    border: 1px solid #eee;
+
+    &[data-surface="paper"] {
+        background: #fff;
+    }
+
+    &__label {
+        font-size: 13px;
+        opacity: 0.7;
+    }
+
+    &__value {
+        margin-top: 6px;
+        font-size: 28px;
+        font-weight: 800;
+
+        &[data-loading="true"] {
+            opacity: 0.8;
+        }
+    }
+}
+
+/* Panel */
+.adm-panel {
+    border-radius: 14px;
+    padding: 14px;
+    border: 1px solid #eee;
+
+    &[data-surface="paper"] {
+        background: #fff;
+    }
+}
+
+.adm-panel__head {
+    display: flex;
+    align-items: baseline;
+
+    &[data-justify="between"] {
+        justify-content: space-between;
+    }
+}
+
+.adm-panel__title {
+    margin: 0;
+    font-size: 18px;
+}
+
+.adm-panel__meta {
+    font-size: 12px;
+    opacity: 0.6;
+
+    &[data-size="xs"] {
+        font-size: 12px;
+    }
+}
+
+/* List */
+.adm-list {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+}
+
+.adm-list__placeholder[data-tone="muted"] {
+    opacity: 0.7;
+}
+
+/* Items */
+.adm-item {
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #f0f0f0;
+
+    &[data-surface="soft"] {
+        background: #fff;
+    }
+
+    &__title {
+        font-weight: 700;
+    }
+
+    &__meta {
+        margin-top: 4px;
+        font-size: 12px;
+
+        &[data-tone="muted"] {
+            opacity: 0.7;
+        }
+    }
+}

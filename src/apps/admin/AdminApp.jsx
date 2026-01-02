@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/DashBoard.jsx";
-import RequireAuth from "@src/components/RequireAuth";
+import RequireAuth from "./components/RequireAuth";
 import NotFound from '@src/components/NotFound.jsx';
 
 export default function AdminApp() {

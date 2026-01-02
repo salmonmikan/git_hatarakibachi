@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import supabase from '@src/utils/supabase.ts'
+import '../admin_common.scss'
 
 export default function Login() {
     const nav = useNavigate();
@@ -11,30 +12,24 @@ export default function Login() {
     const [error, setError] = useState(null);
 
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                display: "grid",
-                placeItems: "center",
-                padding: 18,
-                background: "#fafafa",
-            }}
-        >
-            <div style={{ width: "100%", maxWidth: 420, background: "white", border: "1px solid #eee", borderRadius: 12, padding: 18 }}>
-                <h2 style={{ margin: 0, fontSize: 14, opacity: 0.7 }}>hatarakibachi.com</h2>
-                <h1 style={{ margin: "6px 0 0" }}>Admin Login</h1>
-                <p style={{ opacity: 0.7, marginTop: 8 }}>
-                    Supabase Auth（メール+パスワード）
+        <section className="admin" data-range="admin">
+            <div className="admin-card" data-tone="paper">
+                <h2 className="admin-site">hatarakibachi.com</h2>
+                <h1 className="admin-title">Admin Login</h1>
+                <p className="admin-desc">
+                    管理者により発行されたログイン情報を入力してください。(Supabase Auth)
                 </p>
 
                 <form
+                    className="admin-form"
+                    data-busy={busy ? "true" : "false"}
                     onSubmit={async (e) => {
                         e.preventDefault();
                         setBusy(true);
                         setError(null);
 
                         const { error } = await supabase.auth.signInWithPassword({ email, password });
-                        setPassword(""); // 送信後は消す
+                        setPassword("");
 
                         if (error) {
                             setError(error.message);
@@ -45,48 +40,38 @@ export default function Login() {
                         nav("/", { replace: true });
                         setBusy(false);
                     }}
-                    style={{ display: "grid", gap: 12, marginTop: 14 }}
                 >
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 13, opacity: 0.8 }}>Email</span>
+                    <label className="field" data-kind="email">
+                        <span className="field__label">Email</span>
                         <input
+                            className="field__input"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             type="email"
                             required
                             disabled={busy}
-                            style={{ padding: 10, borderRadius: 10, border: "1px solid #ddd" }}
                         />
                     </label>
 
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 13, opacity: 0.8 }}>Password</span>
+                    <label className="field" data-kind="password">
+                        <span className="field__label">Password</span>
                         <input
+                            className="field__input"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             type="password"
                             required
                             disabled={busy}
-                            style={{ padding: 10, borderRadius: 10, border: "1px solid #ddd" }}
                         />
                     </label>
 
-                    {error && <div style={{ color: "crimson", fontSize: 13 }}>{error}</div>}
+                    {error && <div className="form-error" role="alert">{error}</div>}
 
-                    <button
-                        disabled={busy}
-                        type="submit"
-                        style={{
-                            padding: 10,
-                            borderRadius: 10,
-                            border: "1px solid #ddd",
-                            cursor: busy ? "not-allowed" : "pointer",
-                        }}
-                    >
+                    <button className="btn" data-variant="ghost" disabled={busy} type="submit">
                         {busy ? "Signing in..." : "Sign in"}
                     </button>
                 </form>
             </div>
-        </div>
+        </section>
     );
 }
