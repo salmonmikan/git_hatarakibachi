@@ -1,38 +1,38 @@
 // src/admin/pages/AdminMembers.jsx
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useAdminCtx } from "../hooks/useAdminCtx";
+import "./AdminMembers.scss";
 
 export default function AdminMembers() {
     const ctx = useAdminCtx();
     const { members, membersLoading, membersError } = ctx;
+    const nav = useNavigate();
 
-    if (membersLoading) return <div style={{ padding: 16 }}>Loading...</div>;
-    if (membersError) return <div style={{ padding: 16 }}>Error: {membersError}</div>;
+    const back = () => nav("/", { replace: true });
+
+    if (membersLoading) return <div className="admin-members">Loading...</div>;
+    if (membersError) return <div className="admin-members">Error: {membersError}</div>;
 
     return (
-        <div style={{ padding: 16 }}>
-            <h1 style={{ margin: 0 }}>Manage Member</h1>
+        <div className="admin-members">
+            <h1 className="admin-members__title">Manage Member</h1>
 
-            <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+            <div className="admin-members__list">
                 {members.map((m) => (
                     <Link
                         key={m.id}
                         to={String(m.id)} // ← /manage/members/:id へ（相対なのでこれでOK）
-                        style={{
-                            display: "block",
-                            border: "1px solid #eee",
-                            borderRadius: 12,
-                            padding: 10,
-                            textDecoration: "none",
-                            color: "inherit",
-                            background: "white",
-                        }}
+                        className="admin-members__link"
                     >
-                        <div style={{ fontWeight: 700 }}>{m.name ?? `member#${m.id}`}</div>
+                        <div className="admin-members__name">{m.name ?? `member#${m.id}`}</div>
                         {/* <div style={{ fontSize: 12, opacity: 0.7 }}>id: {m.id}</div> */}
                     </Link>
                 ))}
             </div>
+
+            <button className="admin-members__button" type="button" onClick={back}>
+                back
+            </button>
 
             {/* ここにモーダル（members/:id）が重なる */}
             <Outlet context={ctx} />
