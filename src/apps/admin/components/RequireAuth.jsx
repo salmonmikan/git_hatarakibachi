@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import supabase from '@src/utils/supabase.ts'
 
 export default function RequireAuth({ children }) {
@@ -28,5 +28,6 @@ export default function RequireAuth({ children }) {
     if (loading) return <div style={{ padding: 24 }}>Loading...</div>;
     if (!authed) return <Navigate to="/login" replace />;
 
-    return children;
+    // この位置に子コンポーネントがレンダリングされる
+    return <Outlet />;
 }

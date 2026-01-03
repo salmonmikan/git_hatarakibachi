@@ -1,7 +1,9 @@
+import { Link } from "react-router-dom";
 import { Component, useEffect, useMemo, useState } from "react";
 import supabase from '@src/utils/supabase.ts'
 import LogoutButton from "../components/LogoutButton.jsx";
 import { fetchNewsStats, fetchRecentCredits, fetchRecentNews, fetchMemberInfo } from "../components/DashBoardApi.js";
+// import '@src/index.scss'
 
 const STATUS_LABEL = {
     0: "下書き",
@@ -96,7 +98,8 @@ export default function DashBoard() {
                     data-layout="grid"
                     data-cols="auto-fit"
                 >
-                    <div
+                    <Link
+                        to="/manage/members"
                         key="total-members"
                         className="adm-card"
                         data-surface="paper"
@@ -107,9 +110,9 @@ export default function DashBoard() {
                             className="adm-card__value"
                             data-loading={loading ? "true" : "false"}
                         >
-                            {loading ? "…" : member.length ?? 0}
+                            {loading ? "…" : member?.length ?? 0}
                         </div>
-                    </div>
+                    </Link>
                 </section>
 
                 <div className="adm-title">News登録情報管理</div>

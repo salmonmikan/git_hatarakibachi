@@ -6,19 +6,15 @@ import NotFound from '@src/components/NotFound.jsx';
 
 export default function AdminApp() {
   return (
-      <Routes>
-        <Route path="/login" element={<Login />} />
+    <Routes>
+      <Route path="/login" element={<Login />} />
 
-        <Route
-          path="/"
-          element={
-            <RequireAuth>
-              <Dashboard />
-            </RequireAuth>
-          }
-        />
+      <Route element={<RequireAuth />}>
+        <Route index element={<Dashboard />} />
+        {/* <Route path="members" element={<AdminMembers />} /> */}
+      </Route>
 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 }
