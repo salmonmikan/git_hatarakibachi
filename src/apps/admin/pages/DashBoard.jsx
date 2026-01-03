@@ -99,7 +99,7 @@ export default function DashBoard() {
                     data-cols="auto-fit"
                 >
                     <Link
-                        to="/manage/members"
+                        to="members"
                         key="total-members"
                         className="adm-card"
                         data-surface="paper"
