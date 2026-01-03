@@ -1,4 +1,6 @@
-# 劇団はたらきばち公式サイト
+## 劇団はたらきばち公式サイト
+はたらきばちのwebサイトを構成するファイル群です。
+
 ローカル環境開発時-起動時コマンド <br/>
 npx wrangler pages dev --local --proxy 5173 -- npm run dev <br/>
 ※wrangler pages dev --local --proxy 5173 -- npm run dev を実行すると、Cloudflare Pages の開発サーバ（Functions）と Vite の開発サーバ（HMR）を一度に起動し、Wrangler が Vite のポートをリバースプロキシします。その結果、フロントの HMR と Functions のホットリロードが同時に動作し、開発体験（DX）が大幅に向上します。
