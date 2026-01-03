@@ -1,31 +1,30 @@
 // src/admin/pages/AdminMembers.jsx
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useAdminCtx } from "../hooks/useAdminCtx";
-import "./AdminMembers.scss";
+import "./AdminCredits.scss";
 
-export default function AdminMembers() {
+export default function AdminCredits() {
     const ctx = useAdminCtx();
-    const { data: members, loading: membersLoading, error: membersError } = ctx.lists.members;
-
+    const { data: credits, loading: creditsLoading, error: creditsError } = ctx.lists.credits;
     const nav = useNavigate();
 
     const back = () => nav("/", { replace: true });
 
-    if (membersLoading) return <div className="admin-members">Loading...</div>;
-    if (membersError) return <div className="admin-members">Error: {membersError}</div>;
+    if (creditsLoading) return <div className="admin-members">Loading...</div>;
+    if (creditsError) return <div className="admin-members">Error: {creditsError}</div>;
 
     return (
         <div className="admin-members">
-            <h1 className="admin-members__title">Manage Member</h1>
+            <h1 className="admin-members__title">Manage Credit</h1>
 
             <div className="admin-members__list">
-                {members.map((m) => (
+                {credits.map((m) => (
                     <Link
                         key={m.id}
                         to={String(m.id)} // ← /manage/members/:id へ（相対なのでこれでOK）
                         className="admin-members__link"
                     >
-                        <div className="admin-members__name">{m.name ?? `member#${m.id}`}</div>
+                        <div className="admin-members__name">{`${m.credit_title}`}</div>
                         {/* <div style={{ fontSize: 12, opacity: 0.7 }}>id: {m.id}</div> */}
                     </Link>
                 ))}

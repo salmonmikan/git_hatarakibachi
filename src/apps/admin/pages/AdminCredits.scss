@@ -1,0 +1,37 @@
+/* src/admin/pages/AdminMembers.scss */
+
+.admin-members {
+    padding: 16px;
+}
+
+.admin-members__title {
+    margin: 0;
+}
+
+.admin-members__list {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.admin-members__link {
+    display: block;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 10px;
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+}
+
+.admin-members__name {
+    font-weight: 700;
+}
+
+.admin-members__button {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: #fff;
+    cursor: pointer;
+}

@@ -4,6 +4,8 @@ import AdminLayout from "./components/AdminLayout.jsx";
 import Dashboard from "./pages/DashBoard.jsx";
 import AdminMembers from "./pages/AdminMembers.jsx";
 import MemberEditModal from "./components/MemberEditModal.jsx";
+import AdminCredits from "./pages/AdminCredits.jsx";
+import CreditEditModal from "./components/CreditEditModal.jsx";
 
 import RequireAuth from "./components/RequireAuth";
 import NotFound from '@src/components/NotFound.jsx';
@@ -19,6 +21,9 @@ export default function AdminApp() {
           <Route index element={<Dashboard />} />
           <Route path="members" element={<AdminMembers />}>
             <Route path=":id" element={<MemberEditModal />} />
+          </Route>
+          <Route path="credits" element={<AdminCredits />}>
+            <Route path=":id" element={<CreditEditModal />} />
           </Route>
         </Route>
       </Route>

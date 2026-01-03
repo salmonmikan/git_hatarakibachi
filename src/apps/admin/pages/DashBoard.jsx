@@ -13,13 +13,16 @@ const STATUS_LABEL = {
 };
 
 export default function DashBoard() {
-    const { members, membersLoading } = useAdminCtx();
+    const { lists } = useAdminCtx(); // 返ってきたオブジェクトの中から lists だけ抜き出して、同名の変数 lists に入れる
+    const { data: members, loading: membersLoading, error: membersError } = lists.members;
+    const { data: cresits, loading: creditsLoading, error: creditsError } = lists.credits;
 
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ total: 0, draft: 0, public: 0, private: 0 });
     const [recent, setRecent] = useState([]);
     const [error, setError] = useState(null);
-    const [member, setMember] = useState(null);
+    // const [member, setMember] = useState(null);
+    // const [cresits, setCredits] = useState(null);
 
     const cards = useMemo(() => ([
         { title: "合計", value: stats.total },
@@ -62,7 +65,8 @@ export default function DashBoard() {
             }
             setStats(next);
             setRecent(r2.data ?? []);
-            setMember(r4.data ?? null);
+            // setCredits(r3.data ?? []);
+            // setMember(r4.data ?? null);
             setLoading(false);
         };
 
@@ -114,6 +118,21 @@ export default function DashBoard() {
                             data-loading={membersLoading ? "true" : "false"}
                         >
                             {loading ? "…" : members?.length ?? 0}
+                        </div>
+                    </Link>
+                    <Link
+                        to="credits"
+                        key="total-credits"
+                        className="adm-card"
+                        data-surface="paper"
+                        data-kind="metric"
+                    >
+                        <div className="adm-card__label">活動歴登録数</div>
+                        <div
+                            className="adm-card__value"
+                            data-loading={creditsLoading ? "true" : "false"}
+                        >
+                            {loading ? "…" : cresits?.length ?? 0}
                         </div>
                     </Link>
                 </section>

@@ -2,18 +2,44 @@ import { Outlet } from "react-router-dom";
 import { useEffect, useMemo, useCallback, useState } from "react";
 import supabase from '@src/utils/supabase.ts'
 
-export default function AdminLayout() {
-    const [members, setMembers] = useState([]);
-    const [membersLoading, setMembersLoading] = useState(true);
-    const [membersError, setMembersError] = useState(null);
+const initialLists = {
+    members: { data: [], loading: true, error: null },
+    news: { data: [], loading: true, error: null },
+    credits: { data: [], loading: true, error: null },
+};
 
-    const [news, setNews] = useState([]);
-    const [newsLoading, setNewsLoading] = useState(true);
-    const [newsError, setNewsError] = useState(null);
+export default function AdminLayout() {
+    // listでまとめて管理
+    const [lists, setLists] = useState(initialLists);
+
+    // 1,prev（今のlists）を受け取る.全体は ...prev でコピー（members/news/credits を全取得）
+    // 2,そのうち key（例 "members"）だけを...prev[key] で中身（data/errorなど）を保ったままloading だけ上書き
+    const setListLoading = useCallback((key, loading) => {
+        setLists((prev) => ({
+            ...prev,
+            [key]: { ...prev[key], loading },
+        }));
+    }, []);
+
+    // errorだけ上書き
+    const setListError = useCallback((key, error) => {
+        setLists((prev) => ({
+            ...prev,
+            [key]: { ...prev[key], error },
+        }));
+    }, []);
+
+    // dataだけ上書き
+    const setListData = useCallback((key, data) => {
+        setLists((prev) => ({
+            ...prev,
+            [key]: { ...prev[key], data },
+        }));
+    }, []);
 
     const refreshMembers = useCallback(async () => {
-        setMembersLoading(true);
-        setMembersError(null);
+        setListLoading("members", true);
+        setListError("members", null);
 
         const res = await supabase
             .from("members")
@@ -22,19 +48,19 @@ export default function AdminLayout() {
             .limit(5000);
 
         if (res.error) {
-            setMembersError(res.error.message);
-            setMembers([]);
-            setMembersLoading(false);
+            setListError("members", res.error.message);
+            setListData("members", []);
+            setListLoading("members", false);
             return;
         }
 
-        setMembers(res.data ?? []);
-        setMembersLoading(false);
-    }, []);
+        setListData("members", res.data ?? []);
+        setListLoading("members", false);
+    }, [setListLoading, setListError, setListData]);
 
     const refreshNews = useCallback(async () => {
-        setNewsLoading(true);
-        setNewsError(null);
+        setListLoading("news", true);
+        setListError("news", null);
 
         const res = await supabase
             .from("site_news")
@@ -43,52 +69,91 @@ export default function AdminLayout() {
             .limit(200);
 
         if (res.error) {
-            setNewsError(res.error.message);
-            setNews([]);
-            setNewsLoading(false);
+            setListError("news", res.error.message);
+            setListData("news", []);
+            setListLoading("news", false);
             return;
         }
 
-        setNews(res.data ?? []);
-        setNewsLoading(false);
-    }, []);
+        setListData("news", res.data ?? []);
+        setListLoading("news", false);
+    }, [setListLoading, setListError, setListData]);
+
+    const refreshCredits = useCallback(async () => {
+        setListLoading("credits", true);
+        setListError("credits", null);
+
+        const res = await supabase
+            .from("credits")
+            .select("*")
+            .order("id", { ascending: true })
+            .limit(5000);
+
+        if (res.error) {
+            setListError("credits", res.error.message);
+            setListData("credits", []);
+            setListLoading("credits", false);
+            return;
+        }
+
+        setListData("credits", res.data ?? []);
+        setListLoading("credits", false);
+    }, [setListLoading, setListError, setListData]);
 
     useEffect(() => {
         let alive = true;
 
         (async () => {
-            await Promise.all([refreshMembers(), refreshNews()]);
+            await Promise.all([refreshMembers(), refreshNews(), refreshCredits()]);
             if (!alive) return;
         })();
 
         return () => {
             alive = false;
         };
-    }, [refreshMembers, refreshNews]);
+    }, [refreshMembers, refreshNews, refreshCredits]);
 
-    const ctx = useMemo(
-        () => ({
-            members,
-            membersLoading,
-            membersError,
-            refreshMembers,
+    const ctx = useMemo(() => {
+        const members = lists.members.data;
+        const membersLoading = lists.members.loading;
+        const membersError = lists.members.error;
 
-            news,
-            newsLoading,
-            newsError,
-            refreshNews,
-        }),
-        [
-            members,
-            membersLoading,
-            membersError,
-            refreshMembers,
-            news,
-            newsLoading,
-            newsError,
-            refreshNews,
-        ]
-    );
+        const news = lists.news.data;
+        const newsLoading = lists.news.loading;
+        const newsError = lists.news.error;
+
+        const credits = lists.credits.data;
+        const creditsLoading = lists.credits.loading;
+        const creditsError = lists.credits.error;
+
+        // AdminLayout の ctx に lists を入れて Outlet context={ctx} してるから、子側で useAdminCtx()（= useOutletContext() 的なやつ）経由で取れる。
+        return {
+            // 集約版（これを使うと増えても1箇所）
+            lists: {
+                // refresh関数も集約する
+                members: { ...lists.members, refresh: refreshMembers },
+                news: { ...lists.news, refresh: refreshNews },
+                credits: { ...lists.credits, refresh: refreshCredits },
+            },
+            setLists,
+
+            // 互換用（既存の子コンポーネントが壊れにくい）
+            // members,
+            // membersLoading,
+            // membersError,
+            // refreshMembers,
+
+            // news,
+            // newsLoading,
+            // newsError,
+            // refreshNews,
+
+            // credits,
+            // creditsLoading,
+            // creditsError,
+            // refreshCredits,
+        };
+    }, [lists, refreshMembers, refreshNews, refreshCredits]);
 
     return (
         <div className="admin-shell" data-surface="app">

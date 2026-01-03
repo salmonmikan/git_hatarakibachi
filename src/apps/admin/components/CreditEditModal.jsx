@@ -3,18 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import FormField from "./FormField.jsx";
 
-import { useAdminCtx } from "../hooks/useAdminCtx";
+import { useAdminCtx } from "../hooks/useAdminCtx.js";
 import supabase from "@src/utils/supabase.ts";
 
-import "./MemberEditModal.scss";
+import "./CreditEditModal.scss";
 
-export default function MemberEditModal() {
+export default function CreditEditModal() {
     const nav = useNavigate();
     const { id } = useParams();
     const memberId = Number(id);
 
-    const { lists } = useAdminCtx();
-    const { data: members, loading: membersLoading, error: membersError, refresh :refreshMembers } = lists.members;
+    const { members, refreshMembers } = useAdminCtx();
 
     const memberFromList = useMemo(() => {
         return members?.find((m) => m.id === memberId) ?? null;
