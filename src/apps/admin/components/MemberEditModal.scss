@@ -13,11 +13,17 @@
 }
 
 .mem-modal__panel {
-    width: min(760px, 100%);
+    width: min(560px, 90%);
+    height: 80vh;
     background: #fff;
     border: 1px solid #eee;
     border-radius: 14px;
     padding: 16px;
+    overflow: auto;
+    
+    &::-webkit-scrollbar {
+            display: none;
+        }
 }
 
 .mem-modal__header {
@@ -85,6 +91,7 @@
 }
 
 .mem-form__label {
+    margin: 0 auto 0 0;
     font-size: 13px;
     opacity: 0.8;
 }

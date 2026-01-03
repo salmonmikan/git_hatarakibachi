@@ -24,7 +24,7 @@ export default function MemberEditModal() {
     const [error, setError] = useState(null);
 
     // フォーム状態, まとめて扱う
-    const [form, setForm] = useState({ name: "", bio: "" });
+    const [form, setForm] = useState({ name: "", hurigana: "", bio: "", role: "", skill: "", hobby: "" });
 
     const onChange = (e) => {
         const { name, value } = e.target;
@@ -41,7 +41,11 @@ export default function MemberEditModal() {
             // 更新しないものはそのまま維持
             ...prev,
             name: memberFromList?.name ?? "",
+            hurigana: memberFromList?.hurigana ?? "",
             bio: memberFromList?.bio ?? "",
+            role: memberFromList?.role ?? "",
+            skill: memberFromList?.skill ?? "",
+            hobby: memberFromList?.hobby ?? "",
         }));
     }, [memberFromList?.id]);
 
@@ -70,7 +74,11 @@ export default function MemberEditModal() {
             setForm((prev) => ({
                 ...prev,
                 name: row?.name ?? "",
+                hurigana: row?.hurigana ?? "",
                 bio: row?.bio ?? "",
+                role: row?.role ?? "",
+                skill: row?.skill ?? "",
+                hobby: row?.hobby ?? "",
             }));
             setLoading(false);
         };
@@ -105,7 +113,11 @@ export default function MemberEditModal() {
 
         const payload = {
             name: form.name.trim(),
-            bio: form.bio,
+            hurigana: form.hurigana.trim(),
+            bio: form.bio.trim(),
+            role: form.role.trim(),
+            skill: form.skill.trim(),
+            hobby: form.hobby.trim(),
         };
 
         const res = await supabase.from("members").update(payload).eq("id", memberId).select();
@@ -156,7 +168,7 @@ export default function MemberEditModal() {
                 )}
 
                 <form className="mem-form" onSubmit={onSave}>
-                    <FormField label="Name">
+                    <FormField label="名前">
                         <input
                             name="name"
                             className="mem-form__input"
@@ -167,7 +179,17 @@ export default function MemberEditModal() {
                         />
                     </FormField>
 
-                    <FormField label="Bio">
+                    <FormField label="フリガナ(ローマ字)">
+                        <input
+                            name="hurigana"
+                            className="mem-form__input"
+                            value={form.hurigana}
+                            onChange={onChange}
+                            disabled={busy || loading}
+                        />
+                    </FormField>
+
+                    <FormField label="一言">
                         <textarea
                             name="bio"
                             className="mem-form__textarea"
@@ -175,6 +197,36 @@ export default function MemberEditModal() {
                             onChange={onChange}
                             disabled={busy || loading}
                             rows={6}
+                        />
+                    </FormField>
+
+                    <FormField label="役職">
+                        <input
+                            name="role"
+                            className="mem-form__input"
+                            value={form.role}
+                            onChange={onChange}
+                            disabled={busy || loading}
+                        />
+                    </FormField>
+
+                    <FormField label="特技">
+                        <input
+                            name="skill"
+                            className="mem-form__input"
+                            value={form.skill}
+                            onChange={onChange}
+                            disabled={busy || loading}
+                        />
+                    </FormField>
+
+                    <FormField label="趣味">
+                        <input
+                            name="hobby"
+                            className="mem-form__input"
+                            value={form.hobby}
+                            onChange={onChange}
+                            disabled={busy || loading}
                         />
                     </FormField>
 
