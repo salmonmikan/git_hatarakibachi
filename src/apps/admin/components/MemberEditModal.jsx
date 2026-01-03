@@ -1,41 +1,52 @@
 // src/admin/pages/MemberEditModal.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import FormField from "./FormField.jsx";
+
 import { useAdminCtx } from "../hooks/useAdminCtx";
-import supabase from '@src/utils/supabase.ts'
+import supabase from "@src/utils/supabase.ts";
+
+import "./MemberEditModal.scss";
 
 export default function MemberEditModal() {
     const nav = useNavigate();
     const { id } = useParams();
     const memberId = Number(id);
 
-    const { members, refreshMembers } = useAdminCtx(); // ← 中継されてる前提
+    const { members, refreshMembers } = useAdminCtx();
 
     const memberFromList = useMemo(() => {
         return members?.find((m) => m.id === memberId) ?? null;
     }, [members, memberId]);
 
-    const [loading, setLoading] = useState(false); // “1件取得”用（listに無い時）
-    const [busy, setBusy] = useState(false);       // 保存中
+    const [loading, setLoading] = useState(false);
+    const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
 
-    // フォーム値（まずは最小）
-    const [name, setName] = useState("");
-    const [bio, setBio] = useState("");
-    // const [imageUrl, setImageUrl] = useState("");
+    // フォーム状態, まとめて扱う
+    const [form, setForm] = useState({ name: "", bio: "" });
+
+    const onChange = (e) => {
+        const { name, value } = e.target;
+        // previous stateを基に更新
+        setForm((prev) => ({ ...prev, [name]: value }));
+    };
 
     const close = () => nav("..", { replace: true });
 
-    // 初期値セット（listにあれば即）
     useEffect(() => {
+        // console.log("apply from list", memberFromList?.id);
         if (!memberFromList) return;
-        setName(memberFromList.name ?? "");
-        setBio(memberFromList.bio ?? "");
-        // setImageUrl(memberFromList.image_url ?? "");
-    }, [memberFromList]);
+        setForm((prev) => ({
+            // 更新しないものはそのまま維持
+            ...prev,
+            name: memberFromList?.name ?? "",
+            bio: memberFromList?.bio ?? "",
+        }));
+    }, [memberFromList?.id]);
 
-    // listに無い場合の保険：idで1件取りに行く
     useEffect(() => {
+        // console.log("apply from list", memberFromList?.id);
         let alive = true;
 
         const fetchOneIfNeeded = async () => {
@@ -45,11 +56,7 @@ export default function MemberEditModal() {
             setLoading(true);
             setError(null);
 
-            const res = await supabase
-                .from("members")
-                .select("*")
-                .eq("id", memberId)
-                .maybeSingle();
+            const res = await supabase.from("members").select("*").eq("id", memberId).maybeSingle();
 
             if (!alive) return;
 
@@ -60,9 +67,11 @@ export default function MemberEditModal() {
             }
 
             const row = res.data;
-            setName(row?.name ?? "");
-            setBio(row?.bio ?? "");
-            // setImageUrl(row?.image_url ?? "");
+            setForm((prev) => ({
+                ...prev,
+                name: row?.name ?? "",
+                bio: row?.bio ?? "",
+            }));
             setLoading(false);
         };
 
@@ -73,7 +82,6 @@ export default function MemberEditModal() {
         };
     }, [memberFromList, memberId]);
 
-    // ESCで閉じる + 背面スクロール抑制
     useEffect(() => {
         const onKeyDown = (e) => {
             if (e.key === "Escape") close();
@@ -95,126 +103,87 @@ export default function MemberEditModal() {
         setBusy(true);
         setError(null);
 
-        // 変更するカラムだけ update する
         const payload = {
-            name: name.trim(),
-            bio,
-            // image_url: imageUrl.trim() || null,
+            name: form.name.trim(),
+            bio: form.bio,
         };
 
-        const res = await supabase
-            .from("members")
-            .update(payload)
-            .eq("id", memberId)
-            .select();
+        const res = await supabase.from("members").update(payload).eq("id", memberId).select();
 
         if (res.error) {
             setError(res.error.message);
             setBusy(false);
             return;
         }
-        console.log("update res:", res);
 
-        // 一覧のキャッシュを更新（あなたの方針的に refreshAll でOK）
         await refreshMembers?.();
-
         setBusy(false);
         close();
     };
 
     return (
         <div
+            className="mem-modal"
             role="presentation"
             onClick={close}
-            style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(0,0,0,0.35)",
-                display: "grid",
-                placeItems: "center",
-                padding: 16,
-                zIndex: 50,
-            }}
+            data-busy={busy ? "true" : "false"}
+            data-loading={loading ? "true" : "false"}
         >
             <div
+                className="mem-modal__panel"
                 role="dialog"
                 aria-modal="true"
                 onClick={(e) => e.stopPropagation()}
-                style={{
-                    width: "min(760px, 100%)",
-                    background: "white",
-                    borderRadius: 14,
-                    border: "1px solid #eee",
-                    padding: 16,
-                }}
             >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <header className="mem-modal__header">
                     <div>
-                        <h2 style={{ margin: 0 }}>Edit Member</h2>
-                        <div style={{ marginTop: 4, fontSize: 12, opacity: 0.65 }}>id: {id}</div>
+                        <h2 className="mem-modal__title">Edit Member</h2>
+                        <div className="mem-modal__sub">id: {id}</div>
                     </div>
-                    <button onClick={close} disabled={busy}>Close</button>
-                </div>
 
-                {(loading) && (
-                    <div style={{ marginTop: 12, opacity: 0.7 }}>Loading...</div>
-                )}
+                    <button className="mem-modal__close" onClick={close} disabled={busy}>
+                        Close
+                    </button>
+                </header>
+
+                {loading && <div className="mem-modal__hint">Loading...</div>}
 
                 {error && (
-                    <div style={{ marginTop: 12, padding: 12, border: "1px solid #f3c", borderRadius: 12 }}>
-                        <div style={{ color: "crimson", fontWeight: 700 }}>Error</div>
-                        <div style={{ marginTop: 6, fontSize: 13 }}>{error}</div>
+                    <div className="mem-modal__error">
+                        <div className="mem-modal__errorTitle">Error</div>
+                        <div className="mem-modal__errorBody">{error}</div>
                     </div>
                 )}
 
-                <form onSubmit={onSave} style={{ marginTop: 14, display: "grid", gap: 12 }}>
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 13, opacity: 0.8 }}>Name</span>
+                <form className="mem-form" onSubmit={onSave}>
+                    <FormField label="Name">
                         <input
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            name="name"
+                            className="mem-form__input"
+                            value={form.name}
+                            onChange={onChange}
                             disabled={busy || loading}
                             required
-                            style={{ padding: 10, borderRadius: 10, border: "1px solid #ddd" }}
                         />
-                    </label>
+                    </FormField>
 
-                    <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 13, opacity: 0.8 }}>Bio</span>
+                    <FormField label="Bio">
                         <textarea
-                            value={bio}
-                            onChange={(e) => setBio(e.target.value)}
+                            name="bio"
+                            className="mem-form__textarea"
+                            value={form.bio}
+                            onChange={onChange}
                             disabled={busy || loading}
                             rows={6}
-                            style={{ padding: 10, borderRadius: 10, border: "1px solid #ddd", resize: "vertical" }}
                         />
-                    </label>
+                    </FormField>
 
-                    {/* <label style={{ display: "grid", gap: 6 }}>
-                        <span style={{ fontSize: 13, opacity: 0.8 }}>Image URL</span>
-                        <input
-                            value={imageUrl}
-                            onChange={(e) => setImageUrl(e.target.value)}
-                            disabled={busy || loading}
-                            placeholder="https://..."
-                            style={{ padding: 10, borderRadius: 10, border: "1px solid #ddd" }}
-                        />
-                    </label> */}
-
-                    <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
-                        <button type="button" onClick={close} disabled={busy}>
+                    <div className="mem-form__actions">
+                        <button className="mem-btn mem-btn--ghost" type="button" onClick={close} disabled={busy}>
                             Cancel
                         </button>
-                        <button
-                            type="submit"
-                            disabled={busy || loading}
-                            style={{
-                                padding: "10px 14px",
-                                borderRadius: 10,
-                                border: "1px solid #ddd",
-                                cursor: busy ? "not-allowed" : "pointer",
-                            }}
-                        >
+
+                        <button className="mem-btn mem-btn--primary" type="submit" disabled={busy || loading}>
                             {busy ? "Saving..." : "Save"}
                         </button>
                     </div>

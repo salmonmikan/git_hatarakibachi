@@ -78,7 +78,7 @@ export default function DashBoard() {
             <header className="adm-dash__head">
                 <h1 className="adm-dash__title">hatarakibachi Dashboard</h1>
                 <p className="adm-dash__lead">
-                    管理画面ダッシュボード
+                    {`管理画面ダッシュボード \n ※この画面での変更はwebサイトへ即時反映されます。`}
                 </p>
             </header>
 
