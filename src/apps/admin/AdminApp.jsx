@@ -3,9 +3,9 @@ import Login from "./pages/Login";
 import AdminLayout from "./components/AdminLayout.jsx";
 import Dashboard from "./pages/DashBoard.jsx";
 import AdminMembers from "./pages/AdminMembers.jsx";
-import MemberEditModal from "./components/MemberEditModal.jsx";
+import MemberEditModal from "./components/Modal/MemberEditModal.jsx";
 import AdminCredits from "./pages/AdminCredits.jsx";
-import CreditEditModal from "./components/CreditEditModal.jsx";
+import CreditEditModal from "./components/Modal/CreditEditModal.jsx";
 
 import RequireAuth from "./components/RequireAuth";
 import NotFound from '@src/components/NotFound.jsx';

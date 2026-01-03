@@ -1,9 +1,9 @@
 // src/admin/pages/MemberEditModal.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import FormField from "./FormField.jsx";
+import FormField from "../FormField.jsx";
 
-import { useAdminCtx } from "../hooks/useAdminCtx";
+import { useAdminCtx } from "../../hooks/useAdminCtx.js";
 import supabase from "@src/utils/supabase.ts";
 
 import "./MemberEditModal.scss";

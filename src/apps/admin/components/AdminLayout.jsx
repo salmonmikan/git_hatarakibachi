@@ -114,17 +114,18 @@ export default function AdminLayout() {
     }, [refreshMembers, refreshNews, refreshCredits]);
 
     const ctx = useMemo(() => {
-        const members = lists.members.data;
-        const membersLoading = lists.members.loading;
-        const membersError = lists.members.error;
+        // 集約済のためコメントアウト
+        // const members = lists.members.data;
+        // const membersLoading = lists.members.loading;
+        // const membersError = lists.members.error;
 
-        const news = lists.news.data;
-        const newsLoading = lists.news.loading;
-        const newsError = lists.news.error;
+        // const news = lists.news.data;
+        // const newsLoading = lists.news.loading;
+        // const newsError = lists.news.error;
 
-        const credits = lists.credits.data;
-        const creditsLoading = lists.credits.loading;
-        const creditsError = lists.credits.error;
+        // const credits = lists.credits.data;
+        // const creditsLoading = lists.credits.loading;
+        // const creditsError = lists.credits.error;
 
         // AdminLayout の ctx に lists を入れて Outlet context={ctx} してるから、子側で useAdminCtx()（= useOutletContext() 的なやつ）経由で取れる。
         return {
