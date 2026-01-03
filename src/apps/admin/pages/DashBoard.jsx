@@ -1,7 +1,7 @@
 import { Component, useEffect, useMemo, useState } from "react";
 import supabase from '@src/utils/supabase.ts'
 import LogoutButton from "../components/LogoutButton.jsx";
-import {fetchNewsStats, fetchRecentCredits, fetchRecentNews} from "../components/DashBoardApi.js";
+import { fetchNewsStats, fetchRecentCredits, fetchRecentNews, fetchMemberInfo } from "../components/DashBoardApi.js";
 
 const STATUS_LABEL = {
     0: "下書き",
@@ -14,6 +14,7 @@ export default function DashBoard() {
     const [stats, setStats] = useState({ total: 0, draft: 0, public: 0, private: 0 });
     const [recent, setRecent] = useState([]);
     const [error, setError] = useState(null);
+    const [member, setMember] = useState(null);
 
     const cards = useMemo(() => ([
         { title: "合計", value: stats.total },
@@ -29,10 +30,11 @@ export default function DashBoard() {
             setLoading(true);
             setError(null);
 
-            const [r1, r2, r3] = await Promise.all([
+            const [r1, r2, r3, r4] = await Promise.all([
                 fetchNewsStats(),
                 fetchRecentNews(),
                 fetchRecentCredits(),
+                fetchMemberInfo(),
             ]);
 
             // 1) status一覧を取って集計（最小構成のためクライアント集計）
@@ -49,12 +51,13 @@ export default function DashBoard() {
             // set処理
             if (r2.error) {
                 setError(s2.error.message);
-                setRecent([]);
+                // setRecent([]);
                 setLoading(false);
                 return;
             }
             setStats(next);
             setRecent(r2.data ?? []);
+            setMember(r4.data ?? null);
             setLoading(false);
         };
 
@@ -82,28 +85,56 @@ export default function DashBoard() {
                 </div>
             )}
 
-            <div className="adm-title">News登録状況</div>
-            <section
-                className="adm-cards"
-                data-layout="grid"
-                data-cols="auto-fit"
-            >
-                {cards.map((c) => (
+            <section className="adm-panel" data-surface="paper" data-kind="recent-news">
+                <div className="adm-panel__head" data-layout="row" data-justify="between">
+                    <h2 className="adm-panel__title">Database Index</h2>
+                    <span className="adm-panel__meta" data-size="xs">各指標から一覧画面へ遷移できます</span>
+                </div>
+                <div className="adm-title">劇団員管理</div>
+                <section
+                    className="adm-cards"
+                    data-layout="grid"
+                    data-cols="auto-fit"
+                >
                     <div
-                        key={c.title}
+                        key="total-members"
                         className="adm-card"
                         data-surface="paper"
                         data-kind="metric"
                     >
-                        <div className="adm-card__label">{c.title}</div>
+                        <div className="adm-card__label">所属人数</div>
                         <div
                             className="adm-card__value"
                             data-loading={loading ? "true" : "false"}
                         >
-                            {loading ? "…" : c.value}
+                            {loading ? "…" : member.length ?? 0}
                         </div>
                     </div>
-                ))}
+                </section>
+
+                <div className="adm-title">News登録情報管理</div>
+                <section
+                    className="adm-cards"
+                    data-layout="grid"
+                    data-cols="auto-fit"
+                >
+                    {cards.map((c) => (
+                        <div
+                            key={c.title}
+                            className="adm-card"
+                            data-surface="paper"
+                            data-kind="metric"
+                        >
+                            <div className="adm-card__label">{c.title}</div>
+                            <div
+                                className="adm-card__value"
+                                data-loading={loading ? "true" : "false"}
+                            >
+                                {loading ? "…" : c.value}
+                            </div>
+                        </div>
+                    ))}
+                </section>
             </section>
 
             <section className="adm-panel" data-surface="paper" data-kind="recent-news">

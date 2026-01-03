@@ -2,8 +2,8 @@
     min-height: 100vh;
     display: grid;
     place-items: center;
-    padding: 18px;
-    background: #fafafa;
+    padding: 0 2rem;
+    background: #f9e4ab;
 }
 
 .admin-card {
@@ -134,6 +134,12 @@
         font-size: 12px;
         opacity: 0.7;
     }
+}
+
+.adm-title {
+    font-weight: 700;
+    text-decoration: underline;
+    margin: 1rem;
 }
 
 /* Cards grid */
