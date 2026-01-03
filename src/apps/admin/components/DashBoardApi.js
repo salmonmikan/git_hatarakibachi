@@ -26,7 +26,7 @@ export async function fetchRecentNews({ limit = 5 } = {}) {
     return { ok: true, data: res.data ?? [] };
 }
 
-export async function fetchRecentCredits({ limit = 10 } = {}) {
+export async function fetchRecentCredits({ limit = 100 } = {}) {
     const res = await supabase
         .from("credits")
         .select("id, member_id, credit_title, credit_role, credit_date")

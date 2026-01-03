@@ -1,7 +1,10 @@
+import { Link } from "react-router-dom";
 import { Component, useEffect, useMemo, useState } from "react";
 import supabase from '@src/utils/supabase.ts'
 import LogoutButton from "../components/LogoutButton.jsx";
 import { fetchNewsStats, fetchRecentCredits, fetchRecentNews, fetchMemberInfo } from "../components/DashBoardApi.js";
+// import '@src/index.scss'
+import { useAdminCtx } from "../hooks/useAdminCtx";
 
 const STATUS_LABEL = {
     0: "下書き",
@@ -10,11 +13,16 @@ const STATUS_LABEL = {
 };
 
 export default function DashBoard() {
+    const { lists } = useAdminCtx(); // 返ってきたオブジェクトの中から lists だけ抜き出して、同名の変数 lists に入れる
+    const { data: members, loading: membersLoading, error: membersError } = lists.members;
+    const { data: cresits, loading: creditsLoading, error: creditsError } = lists.credits;
+
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ total: 0, draft: 0, public: 0, private: 0 });
     const [recent, setRecent] = useState([]);
     const [error, setError] = useState(null);
-    const [member, setMember] = useState(null);
+    // const [member, setMember] = useState(null);
+    // const [cresits, setCredits] = useState(null);
 
     const cards = useMemo(() => ([
         { title: "合計", value: stats.total },
@@ -57,7 +65,8 @@ export default function DashBoard() {
             }
             setStats(next);
             setRecent(r2.data ?? []);
-            setMember(r4.data ?? null);
+            // setCredits(r3.data ?? []);
+            // setMember(r4.data ?? null);
             setLoading(false);
         };
 
@@ -73,7 +82,7 @@ export default function DashBoard() {
             <header className="adm-dash__head">
                 <h1 className="adm-dash__title">hatarakibachi Dashboard</h1>
                 <p className="adm-dash__lead">
-                    管理画面ダッシュボード
+                    {`管理画面ダッシュボード \n ※この画面での変更はwebサイトへ即時反映されます。`}
                 </p>
             </header>
 
@@ -88,7 +97,7 @@ export default function DashBoard() {
             <section className="adm-panel" data-surface="paper" data-kind="recent-news">
                 <div className="adm-panel__head" data-layout="row" data-justify="between">
                     <h2 className="adm-panel__title">Database Index</h2>
-                    <span className="adm-panel__meta" data-size="xs">各指標から一覧画面へ遷移できます</span>
+                    <span className="adm-panel__meta" data-size="xs">各指標から編集画面へ遷移できます ※作成中</span>
                 </div>
                 <div className="adm-title">劇団員管理</div>
                 <section
@@ -96,7 +105,8 @@ export default function DashBoard() {
                     data-layout="grid"
                     data-cols="auto-fit"
                 >
-                    <div
+                    <Link
+                        to="members"
                         key="total-members"
                         className="adm-card"
                         data-surface="paper"
@@ -105,11 +115,26 @@ export default function DashBoard() {
                         <div className="adm-card__label">所属人数</div>
                         <div
                             className="adm-card__value"
-                            data-loading={loading ? "true" : "false"}
+                            data-loading={membersLoading ? "true" : "false"}
                         >
-                            {loading ? "…" : member.length ?? 0}
+                            {loading ? "…" : members?.length ?? 0}
                         </div>
-                    </div>
+                    </Link>
+                    <Link
+                        to="credits"
+                        key="total-credits"
+                        className="adm-card"
+                        data-surface="paper"
+                        data-kind="metric"
+                    >
+                        <div className="adm-card__label">活動歴登録数</div>
+                        <div
+                            className="adm-card__value"
+                            data-loading={creditsLoading ? "true" : "false"}
+                        >
+                            {loading ? "…" : cresits?.length ?? 0}
+                        </div>
+                    </Link>
                 </section>
 
                 <div className="adm-title">News登録情報管理</div>

@@ -81,6 +81,7 @@ export default function Member() {
         >
             <section aria-labelledby="about-title">
                 <h2 id="about-title">Member</h2>
+                {!loading && <p>各劇団員の画像から、詳細をご覧いただけます。</p>}
 
                 {/* DB接続中・エラー時表示 */}
                 {loading && <p>読み込み中...</p>}
