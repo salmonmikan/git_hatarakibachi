@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
+import AdminLayout from "./components/AdminLayout.jsx";
 import Dashboard from "./pages/DashBoard.jsx";
+import AdminMembers from "./pages/AdminMembers.jsx";
+import MemberEditModal from "./components/MemberEditModal.jsx";
+
 import RequireAuth from "./components/RequireAuth";
 import NotFound from '@src/components/NotFound.jsx';
 
@@ -10,8 +14,13 @@ export default function AdminApp() {
       <Route path="/login" element={<Login />} />
 
       <Route element={<RequireAuth />}>
-        <Route index element={<Dashboard />} />
-        {/* <Route path="members" element={<AdminMembers />} /> */}
+        {/* AdminLayoutは管理画面の共通レイアウトコンポーネント */}
+        <Route element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="members" element={<AdminMembers />}>
+            <Route path=":id" element={<MemberEditModal />} />
+          </Route>
+        </Route>
       </Route>
 
       <Route path="*" element={<NotFound />} />

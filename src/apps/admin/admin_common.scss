@@ -208,6 +208,7 @@
 .adm-panel__meta {
     font-size: 12px;
     opacity: 0.6;
+    word-break: auto-phrase;
 
     &[data-size="xs"] {
         font-size: 12px;
