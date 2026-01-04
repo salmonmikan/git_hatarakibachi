@@ -6,9 +6,9 @@ import "./AdminCredits.scss";
 export default function AdminCredits() {
     const ctx = useAdminCtx();
     const { data: credits, loading: creditsLoading, error: creditsError } = ctx.lists.credits;
-    const nav = useNavigate();
-
-    const back = () => nav("/", { replace: true });
+    
+    // const nav = useNavigate();
+    // const back = () => nav("/", { replace: true });
 
     if (creditsLoading) return <div className="admin-members">Loading...</div>;
     if (creditsError) return <div className="admin-members">Error: {creditsError}</div>;
@@ -21,7 +21,7 @@ export default function AdminCredits() {
                 {credits.map((m) => (
                     <Link
                         key={m.id}
-                        to={String(m.id)} // ← /manage/members/:id へ（相対なのでこれでOK）
+                        to={String(m.id)}
                         className="admin-members__link"
                     >
                         <div className="admin-members__name">{`${m.credit_title}`}</div>
@@ -30,9 +30,9 @@ export default function AdminCredits() {
                 ))}
             </div>
 
-            <button className="admin-members__button" type="button" onClick={back}>
+            {/* <button className="admin-members__button" type="button" onClick={back}>
                 back
-            </button>
+            </button> */}
 
             {/* ここにモーダル（members/:id）が重なる */}
             <Outlet context={ctx} />

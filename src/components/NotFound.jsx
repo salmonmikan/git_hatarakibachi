@@ -9,7 +9,7 @@ export default function NotFound() {
             <h1>404 Not Found...🍯</h1>
             <p style={{ opacity: 0.7 }}>ページが見つかりませんでした。</p>
             <button type="button" onClick={back}>
-                前のページに戻る
+                トップページに戻る
             </button>
         </div>
     );

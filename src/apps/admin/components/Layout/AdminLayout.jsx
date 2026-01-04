@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useCallback, useState } from "react";
 import supabase from '@src/utils/supabase.ts'
 
@@ -7,6 +7,10 @@ const initialLists = {
     news: { data: [], loading: true, error: null },
     credits: { data: [], loading: true, error: null },
 };
+
+const nav = useNavigate();
+const back = () => nav("/", { replace: true });
+const dashboard = window.location.pathname === "/";
 
 export default function AdminLayout() {
     // listでまとめて管理
@@ -129,8 +133,14 @@ export default function AdminLayout() {
 
     return (
         <div className="admin-shell" data-surface="app">
+            {!dashboard && `hatarakibashi Admin`}
             {/* ここに管理画面の共通ヘッダー/サイドバーを置いてOK */}
             <Outlet context={ctx} />
+            {!dashboard &&
+                <button className="admin-members__button" type="button" onClick={back}>
+                    back
+                </button>
+            }
         </div>
     );
 }

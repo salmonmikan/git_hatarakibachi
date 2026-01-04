@@ -7,8 +7,8 @@ export default function AdminMembers() {
     const ctx = useAdminCtx();
     const { data: members, loading: membersLoading, error: membersError } = ctx.lists.members;
 
-    const nav = useNavigate();
-    const back = () => nav("/", { replace: true });
+    // const nav = useNavigate();
+    // const back = () => nav("/", { replace: true });
 
     if (membersLoading) return <div className="admin-members">Loading...</div>;
     if (membersError) return <div className="admin-members">Error: {membersError}</div>;
@@ -21,18 +21,17 @@ export default function AdminMembers() {
                 {members.map((m) => (
                     <Link
                         key={m.id}
-                        to={String(m.id)} // ← /manage/members/:id へ（相対なのでこれでOK）
+                        to={String(m.id)} // ← /manage/members/:id へ
                         className="admin-members__link"
                     >
                         <div className="admin-members__name">{m.name ?? `member#${m.id}`}</div>
-                        {/* <div style={{ fontSize: 12, opacity: 0.7 }}>id: {m.id}</div> */}
                     </Link>
                 ))}
             </div>
 
-            <button className="admin-members__button" type="button" onClick={back}>
+            {/* <button className="admin-members__button" type="button" onClick={back}>
                 back
-            </button>
+            </button> */}
 
             {/* ここにモーダル（members/:id）が重なる */}
             <Outlet context={ctx} />
