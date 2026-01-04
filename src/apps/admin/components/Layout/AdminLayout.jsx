@@ -89,7 +89,11 @@ export default function AdminLayout() {
 
         const res = await supabase
             .from("credits")
-            .select("*")
+            .select(`
+                *,
+                member:members ( id, name )
+            `)
+            .is("deleted_at", null)
             .order("id", { ascending: true })
             .limit(5000);
 
@@ -103,6 +107,94 @@ export default function AdminLayout() {
         setListData("credits", res.data ?? []);
         setListLoading("credits", false);
     }, [setListLoading, setListError, setListData]);
+
+    // CRUD操作（Credit）
+    const addCredit = useCallback(
+        async (payload) => {
+            setListLoading("credits", true);
+            setListError("credits", null);
+
+            const res = await supabase
+                .from("credits")
+                .insert(payload)
+                .select("*")
+                .single();
+
+            if (res.error) {
+                setListError("credits", res.error.message);
+                setListLoading("credits", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = [...(prev.credits.data ?? []), res.data].sort((a, b) => a.id - b.id);
+                return { ...prev, credits: { ...prev.credits, data: next } };
+            });
+
+            setListLoading("credits", false);
+            return { data: res.data, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
+    const updateCredit = useCallback(
+        async (id, payload) => {
+            setListLoading("credits", true);
+            setListError("credits", null);
+
+            const res = await supabase
+                .from("credits")
+                .update(payload)
+                .eq("id", id)
+                .select("*")
+                .single();
+
+            if (res.error) {
+                setListError("credits", res.error.message);
+                setListLoading("credits", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = (prev.credits.data ?? []).map((c) => (c.id === id ? res.data : c));
+                return { ...prev, credits: { ...prev.credits, data: next } };
+            });
+
+            setListLoading("credits", false);
+            return { data: res.data, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
+    const removeCredit = useCallback(
+        async (id) => {
+            setListLoading("credits", true);
+            setListError("credits", null);
+
+            const res = await supabase
+                .from("credits")
+                .update({ deleted_at: new Date().toISOString() })
+                .eq("id", id)
+                .select("id")
+                .single();
+
+            if (res.error) {
+                setListError("credits", res.error.message);
+                setListLoading("credits", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = (prev.credits.data ?? []).filter((c) => c.id !== id);
+                return { ...prev, credits: { ...prev.credits, data: next } };
+            });
+
+            setListLoading("credits", false);
+            return { data: { id }, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
 
     useEffect(() => {
         let alive = true;
@@ -125,7 +217,13 @@ export default function AdminLayout() {
                 // refresh関数も集約する
                 members: { ...lists.members, refresh: refreshMembers },
                 news: { ...lists.news, refresh: refreshNews },
-                credits: { ...lists.credits, refresh: refreshCredits },
+                credits: {
+                    ...lists.credits,
+                    refresh: refreshCredits,
+                    add: addCredit,
+                    update: updateCredit,
+                    remove: removeCredit,
+                },
             },
             setLists,
         };

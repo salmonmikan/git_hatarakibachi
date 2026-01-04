@@ -14,7 +14,7 @@ export default function MemberEditModal() {
     const memberId = Number(id);
 
     const { lists } = useAdminCtx();
-    const { data: members, loading: membersLoading, error: membersError, refresh :refreshMembers } = lists.members;
+    const { data: members, loading: membersLoading, error: membersError, refresh: refreshMembers } = lists.members;
 
     const memberFromList = useMemo(() => {
         return members?.find((m) => m.id === memberId) ?? null;

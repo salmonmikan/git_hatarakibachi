@@ -15,7 +15,7 @@ export default function AdminMembers() {
 
     return (
         <div className="admin-members">
-            <h1 className="admin-members__title">Manage Member</h1>
+            <h1 className="admin-members__title">Manage Members</h1>
 
             <div className="admin-members__list">
                 {members.map((m) => (

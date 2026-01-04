@@ -22,6 +22,11 @@
     text-decoration: none;
     color: inherit;
     background: #fff;
+
+    &[data-visual="button"] {
+        color: black;
+        margin: 1rem;
+    }
 }
 
 .admin-members__name {
