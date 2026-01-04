@@ -8,13 +8,13 @@ const initialLists = {
     credits: { data: [], loading: true, error: null },
 };
 
-const nav = useNavigate();
-const back = () => nav("/", { replace: true });
-const dashboard = window.location.pathname === "/";
-
 export default function AdminLayout() {
     // listでまとめて管理
     const [lists, setLists] = useState(initialLists);
+
+    const nav = useNavigate();
+    const back = () => nav("/", { replace: true });
+    const dashboard = window.location.pathname === "/";
 
     // 1,prev（今のlists）を受け取る.全体は ...prev でコピー（members/news/credits を全取得）
     // 2,そのうち key（例 "members"）だけを...prev[key] で中身（data/errorなど）を保ったままloading だけ上書き
