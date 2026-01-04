@@ -8,7 +8,6 @@ export default function AdminMembers() {
     const { data: members, loading: membersLoading, error: membersError } = ctx.lists.members;
 
     const nav = useNavigate();
-
     const back = () => nav("/", { replace: true });
 
     if (membersLoading) return <div className="admin-members">Loading...</div>;

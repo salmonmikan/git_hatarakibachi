@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
 import { Component, useEffect, useMemo, useState } from "react";
-import supabase from '@src/utils/supabase.ts'
+// import supabase from '@src/utils/supabase.ts'
 import LogoutButton from "../components/LogoutButton.jsx";
-import { fetchNewsStats, fetchRecentCredits, fetchRecentNews, fetchMemberInfo } from "../components/DashBoardApi.js";
+import { fetchNewsStats, fetchRecentNews } from "../components/DashBoardApi.js";
 // import '@src/index.scss'
 import { useAdminCtx } from "../hooks/useAdminCtx";
+import MetricGrid from "../components/MetricGrid.jsx";
+import Panel, { PanelSection } from "../components/Panel";
+import ListShell from "../components/ListShell.jsx";
 
 const STATUS_LABEL = {
     0: "下書き",
@@ -15,21 +18,13 @@ const STATUS_LABEL = {
 export default function DashBoard() {
     const { lists } = useAdminCtx(); // 返ってきたオブジェクトの中から lists だけ抜き出して、同名の変数 lists に入れる
     const { data: members, loading: membersLoading, error: membersError } = lists.members;
-    const { data: cresits, loading: creditsLoading, error: creditsError } = lists.credits;
+    const { data: news, loading: newsLoading, error: newsError } = lists.news;
+    const { data: credits, loading: creditsLoading, error: creditsError } = lists.credits;
 
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ total: 0, draft: 0, public: 0, private: 0 });
     const [recent, setRecent] = useState([]);
     const [error, setError] = useState(null);
-    // const [member, setMember] = useState(null);
-    // const [cresits, setCredits] = useState(null);
-
-    const cards = useMemo(() => ([
-        { title: "合計", value: stats.total },
-        { title: "下書き", value: stats.draft },
-        { title: "公開中", value: stats.public },
-        { title: "非公開", value: stats.private },
-    ]), [stats]);
 
     useEffect(() => {
         let alive = true;
@@ -38,11 +33,9 @@ export default function DashBoard() {
             setLoading(true);
             setError(null);
 
-            const [r1, r2, r3, r4] = await Promise.all([
+            const [r1, r2] = await Promise.all([
                 fetchNewsStats(),
                 fetchRecentNews(),
-                fetchRecentCredits(),
-                fetchMemberInfo(),
             ]);
 
             // 1) status一覧を取って集計（最小構成のためクライアント集計）
@@ -59,14 +52,11 @@ export default function DashBoard() {
             // set処理
             if (r2.error) {
                 setError(s2.error.message);
-                // setRecent([]);
                 setLoading(false);
                 return;
             }
             setStats(next);
             setRecent(r2.data ?? []);
-            // setCredits(r3.data ?? []);
-            // setMember(r4.data ?? null);
             setLoading(false);
         };
 
@@ -76,6 +66,38 @@ export default function DashBoard() {
             alive = false;
         };
     }, []);
+
+    const memberItems = [
+        {
+            key: "total-members",
+            to: "members",
+            label: "所属人数",
+            value: members?.length ?? 0,
+            loading: membersLoading,
+        },
+        {
+            key: "total-credits",
+            to: "credits",
+            label: "活動歴登録数",
+            value: credits?.length ?? 0,
+            loading: creditsLoading,
+        },
+    ];
+
+    const cards = useMemo(() => ([
+        { title: "合計", value: stats.total },
+        { title: "下書き", value: stats.draft },
+        { title: "公開中", value: stats.public },
+        { title: "非公開", value: stats.private },
+    ]), [stats]);
+
+    const newsItems = cards.map((c) => ({
+        key: c.title,
+        label: c.title,
+        value: c.value,
+        loading, // 全体ロード
+    }));
+
 
     return (
         <div className="adm-dash" data-layout="stack" style={undefined}>
@@ -94,102 +116,55 @@ export default function DashBoard() {
                 </div>
             )}
 
-            <section className="adm-panel" data-surface="paper" data-kind="recent-news">
-                <div className="adm-panel__head" data-layout="row" data-justify="between">
-                    <h2 className="adm-panel__title">Database Index</h2>
-                    <span className="adm-panel__meta" data-size="xs">各指標から編集画面へ遷移できます ※作成中</span>
-                </div>
-                <div className="adm-title">劇団員管理</div>
-                <section
-                    className="adm-cards"
-                    data-layout="grid"
-                    data-cols="auto-fit"
-                >
-                    <Link
-                        to="members"
-                        key="total-members"
-                        className="adm-card"
-                        data-surface="paper"
-                        data-kind="metric"
-                    >
-                        <div className="adm-card__label">所属人数</div>
-                        <div
-                            className="adm-card__value"
-                            data-loading={membersLoading ? "true" : "false"}
-                        >
-                            {loading ? "…" : members?.length ?? 0}
-                        </div>
-                    </Link>
-                    <Link
-                        to="credits"
-                        key="total-credits"
-                        className="adm-card"
-                        data-surface="paper"
-                        data-kind="metric"
-                    >
-                        <div className="adm-card__label">活動歴登録数</div>
-                        <div
-                            className="adm-card__value"
-                            data-loading={creditsLoading ? "true" : "false"}
-                        >
-                            {loading ? "…" : cresits?.length ?? 0}
-                        </div>
-                    </Link>
-                </section>
+            <Panel
+                kind="recent-news"
+                title="Database Index"
+                meta="各指標から編集画面へ遷移できます ※作成中"
+            >
+                <PanelSection title="劇団員管理">
+                    <MetricGrid items={memberItems} />
+                </PanelSection>
 
-                <div className="adm-title">News登録情報管理</div>
-                <section
-                    className="adm-cards"
-                    data-layout="grid"
-                    data-cols="auto-fit"
-                >
-                    {cards.map((c) => (
-                        <div
-                            key={c.title}
-                            className="adm-card"
-                            data-surface="paper"
-                            data-kind="metric"
-                        >
-                            <div className="adm-card__label">{c.title}</div>
-                            <div
-                                className="adm-card__value"
-                                data-loading={loading ? "true" : "false"}
-                            >
-                                {loading ? "…" : c.value}
+                <PanelSection title="News登録情報管理">
+                    <MetricGrid items={newsItems} />
+                </PanelSection>
+            </Panel>
+
+            <Panel
+                kind="recent-news"
+                title="Recent News"
+                meta="latest 5"
+            >
+                <ListShell loading={loading} hasItems={recent?.length > 0}>
+                    {recent.map((n) => (
+                        <article key={n.id} className="adm-item" data-surface="soft" data-status={String(n.status)}>
+                            <div className="adm-item__title">{n.news_title}</div>
+                            <div className="adm-item__meta" data-tone="muted">
+                                {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
                             </div>
-                        </div>
+                        </article>
                     ))}
-                </section>
-            </section>
+                </ListShell>
+            </Panel>
 
-            <section className="adm-panel" data-surface="paper" data-kind="recent-news">
-                <div className="adm-panel__head" data-layout="row" data-justify="between">
-                    <h2 className="adm-panel__title">Recent News</h2>
-                    <span className="adm-panel__meta" data-size="xs">latest 5</span>
+            <Panel
+                kind="analytics"
+                title="Analytics"
+                meta="サイトアナリティクス"
+            >
+                <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
+                    <Link
+                        to="analytics"
+                        className="adm-card"
+                        data-surface="paper"
+                        data-kind="metric"
+                    >
+                        <div className="adm-card__label" data-color="black">
+                            {`Google Analytics(GA4)`}
+                        </div>
+                    </Link>
                 </div>
-
-                <div className="adm-list" data-state={loading ? "loading" : (recent.length === 0 ? "empty" : "ready")}>
-                    {loading ? (
-                        <div className="adm-list__placeholder" data-tone="muted">Loading...</div>
-                    ) : recent.length === 0 ? (
-                        <div className="adm-list__placeholder" data-tone="muted">No items</div>
-                    ) : (
-                        recent.map((n) => (
-                            <article
-                                key={n.id}
-                                className="adm-item"
-                                data-surface="soft"
-                                data-status={String(n.status)}
-                            >
-                                <div className="adm-item__title">{n.news_title}</div>
-                                <div className="adm-item__meta" data-tone="muted">
-                                    {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
-                                </div>
-                            </article>
-                        ))
-                    )}
-                </div>
-            </section>
+            </Panel>
 
             <div className="adm-dash__foot">
                 <LogoutButton />

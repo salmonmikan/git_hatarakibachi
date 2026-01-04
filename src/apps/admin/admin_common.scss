@@ -168,6 +168,11 @@
     &__label {
         font-size: 13px;
         opacity: 0.7;
+
+        &[data-color="black"] {
+        color: black;
+    }
+
     }
 
     &__value {
