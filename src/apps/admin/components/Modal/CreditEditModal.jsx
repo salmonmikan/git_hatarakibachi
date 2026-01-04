@@ -16,6 +16,7 @@ export default function CreditEditModal() {
 
     const { lists } = useAdminCtx();
     const { data: CtxData, loading: CtxDataLoading, error: CtxDataError, refresh: CtxDataRefresh, add, update, remove } = lists.credits;
+    const { data: members, loading: membersLoading } = lists.members;
 
     const CtxFromList = useMemo(() => {
         if (isNew) return null;
@@ -27,7 +28,7 @@ export default function CreditEditModal() {
     const [error, setError] = useState(null); // 個別エラー管理
 
     // フォーム状態, まとめて扱う
-    const [form, setForm] = useState({ credit_title: "", credit_role: "", credit_date: "" });
+    const [form, setForm] = useState({ credit_title: "", credit_role: "", credit_date: "", member_id: "" });
 
     const onChange = (e) => {
         const { name, value } = e.target;
@@ -43,6 +44,7 @@ export default function CreditEditModal() {
         setForm((prev) => ({
             // 更新しないものはそのまま維持
             ...prev,
+            member_id: CtxFromList?.member_id ?? "",
             credit_title: CtxFromList?.credit_title ?? "",
             credit_role: CtxFromList?.credit_role ?? "",
             credit_date: CtxFromList?.credit_date ?? "",
@@ -109,6 +111,7 @@ export default function CreditEditModal() {
         setError(null);
 
         const payload = {
+            member_id: Number(form.member_id),
             credit_title: form.credit_title.trim(),
             credit_role: form.credit_role.trim(),
             credit_date: form.credit_date || null,
@@ -170,7 +173,7 @@ export default function CreditEditModal() {
                     <div>
                         <h2 className="mem-modal__title">
                             {isNew ? "add Credit" : `Edit Credit`}
-                            </h2>
+                        </h2>
                         <div className="mem-modal__sub">id: {id}</div>
                     </div>
 
@@ -189,7 +192,28 @@ export default function CreditEditModal() {
                 )}
 
                 <form className="mem-form" onSubmit={onSave}>
-                    <FormField label="タイトル">
+                    <FormField label="relational member *必須">
+                        <select
+                            name="member_id"
+                            className="mem-form__input"
+                            value={form.member_id}
+                            onChange={onChange}
+                            disabled={busy || CtxDataLoading || membersLoading}
+                            required
+                        >
+                            <option value="" disabled>
+                                メンバーを選択…
+                            </option>
+
+                            {(members ?? []).map((m) => (
+                                <option key={m.id} value={String(m.id)}>
+                                    {m.name}
+                                </option>
+                            ))}
+                        </select>
+                    </FormField>
+
+                    <FormField label="タイトル *必須">
                         <input
                             name="credit_title"
                             className="mem-form__input"
@@ -214,7 +238,7 @@ export default function CreditEditModal() {
                         <input
                             type="date"
                             name="credit_date"
-                            className="mem-form__textarea"
+                            className="mem-form__input"
                             value={form.credit_date}
                             onChange={onChange}
                             disabled={busy || CtxDataLoading}
