@@ -6,25 +6,26 @@ import FormField from "../FormField.jsx";
 import { useAdminCtx } from "../../hooks/useAdminCtx.js";
 import supabase from "@src/utils/supabase.ts";
 
-import "./CreditEditModal.scss";
+import "./AdminEditModal.scss";
 
 export default function CreditEditModal() {
     const nav = useNavigate();
     const { id } = useParams();
-    const memberId = Number(id);
+    const creditId = Number(id);
 
-    const { members, refreshMembers } = useAdminCtx();
+    const { lists } = useAdminCtx();
+    const { data: CtxData, loading: CtxDataLoading, error: CtxDataError, refresh: CtxDataRefresh } = lists.credits;
 
-    const memberFromList = useMemo(() => {
-        return members?.find((m) => m.id === memberId) ?? null;
-    }, [members, memberId]);
+    const CtxFromList = useMemo(() => {
+        return CtxData?.find((m) => m.id === creditId) ?? null;
+    }, [CtxData, creditId]);
 
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
 
     // フォーム状態, まとめて扱う
-    const [form, setForm] = useState({ name: "", hurigana: "", bio: "", role: "", skill: "", hobby: "" });
+    const [form, setForm] = useState({ credit_title: "", credit_role: "", credit_date: "" });
 
     const onChange = (e) => {
         const { name, value } = e.target;
@@ -35,32 +36,32 @@ export default function CreditEditModal() {
     const close = () => nav("..", { replace: true });
 
     useEffect(() => {
-        // console.log("apply from list", memberFromList?.id);
-        if (!memberFromList) return;
+        // console.log("apply from list", creditFromList?.id);
+        if (!CtxFromList) return;
         setForm((prev) => ({
             // 更新しないものはそのまま維持
             ...prev,
-            name: memberFromList?.name ?? "",
-            hurigana: memberFromList?.hurigana ?? "",
-            bio: memberFromList?.bio ?? "",
-            role: memberFromList?.role ?? "",
-            skill: memberFromList?.skill ?? "",
-            hobby: memberFromList?.hobby ?? "",
+            credit_title: CtxFromList?.credit_title ?? "",
+            credit_role: CtxFromList?.credit_role ?? "",
+            credit_date: CtxFromList?.credit_date ?? "",
+            // role: CtxFromList?.role ?? "",
+            // skill: CtxFromList?.skill ?? "",
+            // hobby: CtxFromList?.hobby ?? "",
         }));
-    }, [memberFromList?.id]);
+    }, [CtxFromList?.id]);
 
     useEffect(() => {
-        // console.log("apply from list", memberFromList?.id);
+        // console.log("apply from list", creditFromList?.id);
         let alive = true;
 
         const fetchOneIfNeeded = async () => {
-            if (memberFromList) return;
-            if (!Number.isFinite(memberId)) return;
+            if (CtxFromList) return;
+            if (!Number.isFinite(creditId)) return;
 
             setLoading(true);
             setError(null);
 
-            const res = await supabase.from("members").select("*").eq("id", memberId).maybeSingle();
+            const res = await supabase.from("credits").select("*").eq("id", creditId).maybeSingle();
 
             if (!alive) return;
 
@@ -73,12 +74,12 @@ export default function CreditEditModal() {
             const row = res.data;
             setForm((prev) => ({
                 ...prev,
-                name: row?.name ?? "",
-                hurigana: row?.hurigana ?? "",
-                bio: row?.bio ?? "",
-                role: row?.role ?? "",
-                skill: row?.skill ?? "",
-                hobby: row?.hobby ?? "",
+                credit_title: row?.credit_title ?? "",
+                credit_role: row?.credit_role ?? "",
+                credit_date: row?.credit_date ?? "",
+                // role: row?.role ?? "",
+                // skill: row?.skill ?? "",
+                // hobby: row?.hobby ?? "",
             }));
             setLoading(false);
         };
@@ -88,7 +89,7 @@ export default function CreditEditModal() {
         return () => {
             alive = false;
         };
-    }, [memberFromList, memberId]);
+    }, [CtxFromList, creditId]);
 
     useEffect(() => {
         const onKeyDown = (e) => {
@@ -112,15 +113,15 @@ export default function CreditEditModal() {
         setError(null);
 
         const payload = {
-            name: form.name.trim(),
-            hurigana: form.hurigana.trim(),
-            bio: form.bio.trim(),
-            role: form.role.trim(),
-            skill: form.skill.trim(),
-            hobby: form.hobby.trim(),
+            credit_title: form.credit_title.trim(),
+            credit_role: form.credit_role.trim(),
+            credit_date: form.credit_date.trim(),
+            // role: form.role.trim(),
+            // skill: form.skill.trim(),
+            // hobby: form.hobby.trim(),
         };
 
-        const res = await supabase.from("members").update(payload).eq("id", memberId).select();
+        const res = await supabase.from("credits").update(payload).eq("id", creditId).select();
 
         if (res.error) {
             setError(res.error.message);
@@ -128,7 +129,7 @@ export default function CreditEditModal() {
             return;
         }
 
-        await refreshMembers?.();
+        await CtxDataRefresh?.();
         setBusy(false);
         close();
     };
@@ -149,7 +150,7 @@ export default function CreditEditModal() {
             >
                 <header className="mem-modal__header">
                     <div>
-                        <h2 className="mem-modal__title">Edit Member</h2>
+                        <h2 className="mem-modal__title">Edit Credit</h2>
                         <div className="mem-modal__sub">id: {id}</div>
                     </div>
 
@@ -168,39 +169,40 @@ export default function CreditEditModal() {
                 )}
 
                 <form className="mem-form" onSubmit={onSave}>
-                    <FormField label="名前">
+                    <FormField label="タイトル">
                         <input
-                            name="name"
+                            name="credit_title"
                             className="mem-form__input"
-                            value={form.name}
+                            value={form.credit_title}
                             onChange={onChange}
                             disabled={busy || loading}
                             required
                         />
                     </FormField>
 
-                    <FormField label="フリガナ(ローマ字)">
+                    <FormField label="役職・役名">
                         <input
-                            name="hurigana"
+                            name="credit_role"
                             className="mem-form__input"
-                            value={form.hurigana}
+                            value={form.credit_role}
                             onChange={onChange}
                             disabled={busy || loading}
                         />
                     </FormField>
 
-                    <FormField label="一言">
-                        <textarea
+                    <FormField label="活動年">
+                        <input
+                            type="date"
                             name="bio"
                             className="mem-form__textarea"
-                            value={form.bio}
+                            value={form.credit_date}
                             onChange={onChange}
                             disabled={busy || loading}
                             rows={6}
                         />
                     </FormField>
 
-                    <FormField label="役職">
+                    {/* <FormField label="役職">
                         <input
                             name="role"
                             className="mem-form__input"
@@ -228,7 +230,7 @@ export default function CreditEditModal() {
                             onChange={onChange}
                             disabled={busy || loading}
                         />
-                    </FormField>
+                    </FormField> */}
 
                     <div className="mem-form__actions">
                         <button className="mem-btn mem-btn--ghost" type="button" onClick={close} disabled={busy}>

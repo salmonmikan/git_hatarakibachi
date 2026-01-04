@@ -6,7 +6,7 @@ import FormField from "../FormField.jsx";
 import { useAdminCtx } from "../../hooks/useAdminCtx.js";
 import supabase from "@src/utils/supabase.ts";
 
-import "./MemberEditModal.scss";
+import "./AdminEditModal.scss";
 
 export default function MemberEditModal() {
     const nav = useNavigate();
