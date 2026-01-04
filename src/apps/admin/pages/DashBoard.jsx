@@ -6,6 +6,7 @@ import { fetchNewsStats, fetchRecentNews } from "../components/DashBoardApi.js";
 // import '@src/index.scss'
 import { useAdminCtx } from "../hooks/useAdminCtx";
 import MetricGrid from "../components/MetricGrid.jsx";
+import Panel, { PanelSection } from "../components/Panel";
 
 const STATUS_LABEL = {
     0: "下書き",
@@ -22,13 +23,6 @@ export default function DashBoard() {
     const [stats, setStats] = useState({ total: 0, draft: 0, public: 0, private: 0 });
     const [recent, setRecent] = useState([]);
     const [error, setError] = useState(null);
-
-    const cards = useMemo(() => ([
-        { title: "合計", value: stats.total },
-        { title: "下書き", value: stats.draft },
-        { title: "公開中", value: stats.public },
-        { title: "非公開", value: stats.private },
-    ]), [stats]);
 
     useEffect(() => {
         let alive = true;
@@ -88,6 +82,13 @@ export default function DashBoard() {
         },
     ];
 
+    const cards = useMemo(() => ([
+        { title: "合計", value: stats.total },
+        { title: "下書き", value: stats.draft },
+        { title: "公開中", value: stats.public },
+        { title: "非公開", value: stats.private },
+    ]), [stats]);
+
     const newsItems = cards.map((c) => ({
         key: c.title,
         label: c.title,
@@ -113,28 +114,25 @@ export default function DashBoard() {
                 </div>
             )}
 
-            <section className="adm-panel" data-surface="paper" data-kind="recent-news">
-                <div className="adm-panel__head" data-layout="row" data-justify="between">
-                    <h2 className="adm-panel__title">Database Index</h2>
-                    <span className="adm-panel__meta" data-size="xs">
-                        各指標から編集画面へ遷移できます ※作成中
-                    </span>
-                </div>
+            <Panel
+                kind="recent-news"
+                title="Database Index"
+                meta="各指標から編集画面へ遷移できます ※作成中"
+            >
+                <PanelSection title="劇団員管理">
+                    <MetricGrid items={memberItems} />
+                </PanelSection>
 
-                <div className="adm-title">劇団員管理</div>
-                <MetricGrid items={memberItems} />
+                <PanelSection title="News登録情報管理">
+                    <MetricGrid items={newsItems} />
+                </PanelSection>
+            </Panel>
 
-                <div className="adm-title">News登録情報管理</div>
-                <MetricGrid items={newsItems} />
-            </section>
-
-
-            <section className="adm-panel" data-surface="paper" data-kind="recent-news">
-                <div className="adm-panel__head" data-layout="row" data-justify="between">
-                    <h2 className="adm-panel__title">Recent News</h2>
-                    <span className="adm-panel__meta" data-size="xs">latest 5</span>
-                </div>
-
+            <Panel
+                kind="recent-news"
+                title="Recent News"
+                meta="latest 5"
+            >
                 <div className="adm-list" data-state={loading ? "loading" : (recent.length === 0 ? "empty" : "ready")}>
                     {loading ? (
                         <div className="adm-list__placeholder" data-tone="muted">Loading...</div>
@@ -156,35 +154,25 @@ export default function DashBoard() {
                         ))
                     )}
                 </div>
-            </section>
+            </Panel>
 
-            <section className="adm-panel" data-surface="paper" data-kind="recent-news">
-                <div className="adm-panel__head" data-layout="row" data-justify="between">
-                    <h2 className="adm-panel__title">Analytics</h2>
-                    <span className="adm-panel__meta" data-size="xs">サイトアナリティクス</span>
-                </div>
-                <div
-                    className="adm-cards"
-                    data-layout="grid"
-                    data-cols="auto-fit"
-                >
+            <Panel
+                kind="analytics"
+                title="Analytics"
+                meta="サイトアナリティクス">
+                <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
                     <Link
                         to="analytics"
-                        key="analytics"
                         className="adm-card"
                         data-surface="paper"
                         data-kind="metric"
                     >
-                        <div className="adm-card__label" data-color="black">Google Analytics(GA4)</div>
-                        {/* <div
-                            className="adm-card__value"
-                            data-loading={membersLoading ? "true" : "false"}
-                        >
-                            {loading ? "…" : members?.length ?? 0}
-                        </div> */}
+                        <div className="adm-card__label" data-color="black">
+                            {`Google Analytics(GA4)`}
+                        </div>
                     </Link>
                 </div>
-            </section>
+            </Panel>
 
             <div className="adm-dash__foot">
                 <LogoutButton />
