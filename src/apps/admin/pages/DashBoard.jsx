@@ -7,6 +7,7 @@ import { fetchNewsStats, fetchRecentNews } from "../components/DashBoardApi.js";
 import { useAdminCtx } from "../hooks/useAdminCtx";
 import MetricGrid from "../components/MetricGrid.jsx";
 import Panel, { PanelSection } from "../components/Panel";
+import ListShell from "../components/ListShell.jsx";
 
 const STATUS_LABEL = {
     0: "下書き",
@@ -17,6 +18,7 @@ const STATUS_LABEL = {
 export default function DashBoard() {
     const { lists } = useAdminCtx(); // 返ってきたオブジェクトの中から lists だけ抜き出して、同名の変数 lists に入れる
     const { data: members, loading: membersLoading, error: membersError } = lists.members;
+    const { data: news, loading: newsLoading, error: newsError } = lists.news;
     const { data: credits, loading: creditsLoading, error: creditsError } = lists.credits;
 
     const [loading, setLoading] = useState(true);
@@ -133,33 +135,23 @@ export default function DashBoard() {
                 title="Recent News"
                 meta="latest 5"
             >
-                <div className="adm-list" data-state={loading ? "loading" : (recent.length === 0 ? "empty" : "ready")}>
-                    {loading ? (
-                        <div className="adm-list__placeholder" data-tone="muted">Loading...</div>
-                    ) : recent.length === 0 ? (
-                        <div className="adm-list__placeholder" data-tone="muted">No items</div>
-                    ) : (
-                        recent.map((n) => (
-                            <article
-                                key={n.id}
-                                className="adm-item"
-                                data-surface="soft"
-                                data-status={String(n.status)}
-                            >
-                                <div className="adm-item__title">{n.news_title}</div>
-                                <div className="adm-item__meta" data-tone="muted">
-                                    {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
-                                </div>
-                            </article>
-                        ))
-                    )}
-                </div>
+                <ListShell loading={loading} hasItems={recent?.length > 0}>
+                    {recent.map((n) => (
+                        <article key={n.id} className="adm-item" data-surface="soft" data-status={String(n.status)}>
+                            <div className="adm-item__title">{n.news_title}</div>
+                            <div className="adm-item__meta" data-tone="muted">
+                                {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
+                            </div>
+                        </article>
+                    ))}
+                </ListShell>
             </Panel>
 
             <Panel
                 kind="analytics"
                 title="Analytics"
-                meta="サイトアナリティクス">
+                meta="サイトアナリティクス"
+            >
                 <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
                     <Link
                         to="analytics"

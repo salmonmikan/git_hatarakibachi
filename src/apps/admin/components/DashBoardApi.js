@@ -26,33 +26,33 @@ export async function fetchRecentNews({ limit = 5 } = {}) {
     return { ok: true, data: res.data ?? [] };
 }
 
-export async function fetchRecentCredits({ limit = 100 } = {}) {
-    const res = await supabase
-        .from("credits")
-        .select("id, member_id, credit_title, credit_role, credit_date")
-        .order("credit_date", { ascending: false })
-        .limit(limit);
+// export async function fetchRecentCredits({ limit = 100 } = {}) {
+//     const res = await supabase
+//         .from("credits")
+//         .select("id, member_id, credit_title, credit_role, credit_date")
+//         .order("credit_date", { ascending: false })
+//         .limit(limit);
 
-    if (res.error) return { ok: false, error: res.error.message };
-    return { ok: true, data: res.data ?? [] };
-}
+//     if (res.error) return { ok: false, error: res.error.message };
+//     return { ok: true, data: res.data ?? [] };
+// }
 
-export async function fetchMemberInfo({ limit = 50 } = {}) {
-    const res = await supabase
-        .from('members')
-        .select(`
-            *,
-            credits:credits (
-                id,
-                credit_title,
-                credit_role,
-                credit_date
-            )
-        `)
-        .order('id', { ascending: true })
-        .limit(limit);
+// export async function fetchMemberInfo({ limit = 50 } = {}) {
+//     const res = await supabase
+//         .from('members')
+//         .select(`
+//             *,
+//             credits:credits (
+//                 id,
+//                 credit_title,
+//                 credit_role,
+//                 credit_date
+//             )
+//         `)
+//         .order('id', { ascending: true })
+//         .limit(limit);
 
 
-    if (res.error) return { ok: false, error: res.error.message };
-    return { ok: true, data: res.data ?? [] };
-}
+//     if (res.error) return { ok: false, error: res.error.message };
+//     return { ok: true, data: res.data ?? [] };
+// }
