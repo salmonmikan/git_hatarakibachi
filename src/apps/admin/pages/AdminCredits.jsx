@@ -6,7 +6,7 @@ import "./AdminCredits.scss";
 export default function AdminCredits() {
     const ctx = useAdminCtx();
     const { data: credits, loading: creditsLoading, error: creditsError } = ctx.lists.credits;
-    
+
     // const nav = useNavigate();
     // const back = () => nav("/", { replace: true });
 
@@ -15,7 +15,10 @@ export default function AdminCredits() {
 
     return (
         <div className="admin-members">
-            <h1 className="admin-members__title">Manage Credit</h1>
+            <h1 className="admin-members__title">Manage Credits</h1>
+            <Link to="new" className="admin-members__link" data-visual="button">
+                追加
+            </Link>
 
             <div className="admin-members__list">
                 {credits.map((m) => (
@@ -24,7 +27,7 @@ export default function AdminCredits() {
                         to={String(m.id)}
                         className="admin-members__link"
                     >
-                        <div className="admin-members__name">{`${m.credit_title}`}</div>
+                        <div className="admin-members__name">{`${m.credit_title}/${m.member.name}`}</div>
                         {/* <div style={{ fontSize: 12, opacity: 0.7 }}>id: {m.id}</div> */}
                     </Link>
                 ))}

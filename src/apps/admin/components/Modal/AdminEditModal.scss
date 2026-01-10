@@ -14,7 +14,7 @@
 
 .mem-modal__panel {
     width: min(560px, 90%);
-    height: 80vh;
+    max-height: 80vh;
     background: #fff;
     border: 1px solid #eee;
     border-radius: 14px;

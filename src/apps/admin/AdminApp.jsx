@@ -25,8 +25,9 @@ export default function AdminApp() {
           </Route>
           <Route path="credits" element={<AdminCredits />}>
             <Route path=":id" element={<CreditEditModal />} />
+            {/* <Route path="new" element={<CreditEditModal />} /> */}
           </Route>
-          <Route path="analytics" element={<AnalyticsEmbed />}/>
+          <Route path="analytics" element={<AnalyticsEmbed />} />
         </Route>
       </Route>
 
