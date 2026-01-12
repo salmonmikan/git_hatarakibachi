@@ -16,6 +16,9 @@ export default function AdminMembers() {
     return (
         <div className="admin-members">
             <h1 className="admin-members__title">Manage Members</h1>
+            <Link to="new" className="admin-members__link" data-visual="button">
+                追加
+            </Link>
 
             <div className="admin-members__list">
                 {members.map((m) => (

@@ -12,6 +12,8 @@ const MEMBER_DEFAULTS = {
     role: "",
     skill: "",
     hobby: "",
+    photoUrl: "",
+    photoUrl_2: "",
 };
 
 const MEMBER_COERCE = {
@@ -21,6 +23,8 @@ const MEMBER_COERCE = {
     role: (v) => String(v ?? "").trim(),
     skill: (v) => String(v ?? "").trim(),
     hobby: (v) => String(v ?? "").trim(),
+    photoUrl: (v) => String(v ?? "").trim(),
+    photoUrl_2: (v) => String(v ?? "").trim(),
 };
 
 export default function MemberEditModal() {
@@ -91,6 +95,26 @@ export default function MemberEditModal() {
                             name="hobby"
                             className="mem-form__input"
                             value={form.hobby}
+                            onChange={onChange}
+                            disabled={busy || loading}
+                        />
+                    </FormField>
+
+                    <FormField label="画像URL_バストアップ *画像の直接アップロードはできません">
+                        <input
+                            name="photoUrl"
+                            className="mem-form__input"
+                            value={form.photoUrl}
+                            onChange={onChange}
+                            disabled={busy || loading}
+                        />
+                    </FormField>
+
+                    <FormField label="画像URL_顔写真 *画像の直接アップロードはできません">
+                        <input
+                            name="photoUrl_2"
+                            className="mem-form__input"
+                            value={form.photoUrl_2}
                             onChange={onChange}
                             disabled={busy || loading}
                         />

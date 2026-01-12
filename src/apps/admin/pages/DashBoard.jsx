@@ -137,8 +137,10 @@ export default function DashBoard() {
             >
                 <PanelSection title="">
                     <ul>
+                        <li>2026/01/13: Update情報表示を追加(DBは未対応)</li>
                         <li>2026/01/13: クレジット管理に検索機能追加</li>
                         <li>2026/01/13: credit,memberの編集モーダル処理共通化</li>
+                        <li>2026/01/13: member管理にメンバー追加機能・画像URL編集機能追加(アップロードは未対応)</li>
                     </ul>
                 </PanelSection>
             </Panel>
