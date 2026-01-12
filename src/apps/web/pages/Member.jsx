@@ -44,10 +44,11 @@ export default function Member() {
                         id,
                         credit_title,
                         credit_role,
-                        credit_date
+                        credit_date,
+                        deleted_at
                     )
                 `)
-                // .eq('id', memberId)
+                .is("credits.deleted_at", null)
                 .order('id', { ascending: true });
 
             if (error) {

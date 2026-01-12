@@ -131,6 +131,19 @@ export default function DashBoard() {
             </Panel>
 
             <Panel
+                // kind="recent-news"
+                title="Update Info"
+                meta=""
+            >
+                <PanelSection title="">
+                    <ul>
+                        <li>2026/01/13: クレジット管理に検索機能追加</li>
+                        <li>2026/01/13: credit,memberの編集モーダル処理共通化</li>
+                    </ul>
+                </PanelSection>
+            </Panel>
+
+            <Panel
                 kind="recent-news"
                 title="Recent News"
                 meta="latest 5"

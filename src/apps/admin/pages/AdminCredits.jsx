@@ -40,18 +40,6 @@ export default function AdminCredits() {
                 )}
             </AdminSearch>
 
-            {/* <div className="admin-members__list">
-                {credits.map((m) => (
-                    <Link
-                        key={m.id}
-                        to={String(m.id)} // to CreditEditModal.jsx
-                        className="admin-members__link"
-                    >
-                        <div className="admin-members__name">{`${m.credit_title}/${m.member.name}`}</div>
-                    </Link>
-                ))}
-            </div> */}
-
             {/* ここにモーダル（members/:id）が重なる */}
             <Outlet context={ctx} />
         </div>

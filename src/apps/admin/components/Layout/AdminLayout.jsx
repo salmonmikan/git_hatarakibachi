@@ -1,6 +1,7 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useCallback, useState } from "react";
 import supabase from '@src/utils/supabase.ts'
+import BackToTop from "../../../../components/BackToTop";
 
 const initialLists = {
     members: { data: [], loading: true, error: null },
@@ -239,6 +240,7 @@ export default function AdminLayout() {
                     back
                 </button>
             }
+            <BackToTop />
         </div>
     );
 }
