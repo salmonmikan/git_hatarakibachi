@@ -231,7 +231,7 @@ export default function AdminLayout() {
 
     return (
         <div className="admin-shell" data-surface="app">
-            {!dashboard && `hatarakibashi Admin`}
+            {!dashboard && `hatarakibachi Admin`}
             {/* ここに管理画面の共通ヘッダー/サイドバーを置いてOK */}
             <Outlet context={ctx} />
             {!dashboard &&
