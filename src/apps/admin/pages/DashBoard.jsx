@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { Component, useEffect, useMemo, useState } from "react";
+import { Component, use, useEffect, useMemo, useState } from "react";
 // import supabase from '@src/utils/supabase.ts'
 import LogoutButton from "../components/LogoutButton.jsx";
-import { fetchNewsStats, fetchRecentNews } from "../components/DashBoardApi.js";
+import { fetchNewsStats, fetchRecentNews, fetchUpdateInfo } from "../components/DashBoardApi.js";
 // import '@src/index.scss'
 import { useAdminCtx } from "../hooks/useAdminCtx";
 import MetricGrid from "../components/MetricGrid.jsx";
@@ -25,6 +25,7 @@ export default function DashBoard() {
     const [stats, setStats] = useState({ total: 0, draft: 0, public: 0, private: 0 });
     const [recent, setRecent] = useState([]);
     const [error, setError] = useState(null);
+    const [UpdateInfo, setUpdateInfo] = useState([]);
 
     useEffect(() => {
         let alive = true;
@@ -33,15 +34,16 @@ export default function DashBoard() {
             setLoading(true);
             setError(null);
 
-            const [r1, r2] = await Promise.all([
+            const [r1, r2, r3] = await Promise.all([
                 fetchNewsStats(),
                 fetchRecentNews(),
+                fetchUpdateInfo(),
             ]);
 
             // 1) status一覧を取って集計（最小構成のためクライアント集計）
             if (r1.error) {
                 if (!alive) return;
-                setError(s1.error.message);
+                setError(r1.error.message);
                 setLoading(false);
                 return;
             }
@@ -51,12 +53,22 @@ export default function DashBoard() {
             // 2) 最新5件
             // set処理
             if (r2.error) {
-                setError(s2.error.message);
+                setError(r2.error.message);
                 setLoading(false);
                 return;
             }
             setStats(next);
             setRecent(r2.data ?? []);
+
+            // 3) Update情報
+            if (r3.error) {
+                setError(r3.error.message);
+                setLoading(false);
+                return;
+            }
+            setUpdateInfo(r3.data ?? []);
+
+            // 処理終了
             setLoading(false);
         };
 
@@ -98,6 +110,9 @@ export default function DashBoard() {
         loading, // 全体ロード
     }));
 
+    const truncateText = (s, max = 40) =>
+        (s?.length ?? 0) > max ? s.slice(0, max) + "…" : s;
+
 
     return (
         <div className="adm-dash" data-layout="stack" style={undefined}>
@@ -137,10 +152,13 @@ export default function DashBoard() {
             >
                 <PanelSection title="">
                     <ul>
-                        <li>2026/01/13: Update情報表示を追加(DBは未対応)</li>
+                        {UpdateInfo?.map((m) => (
+                            <li key={m.id}>{m.update_date}: {truncateText(m.update_title, 25)}</li>
+                        ))}
+                        {/* <li>2026/01/13: Update情報表示を追加(DBは未対応)</li>
                         <li>2026/01/13: クレジット管理に検索機能追加</li>
                         <li>2026/01/13: credit,memberの編集モーダル処理共通化</li>
-                        <li>2026/01/13: member管理にメンバー追加機能・画像URL編集機能追加(アップロードは未対応)</li>
+                        <li>2026/01/13: member管理にメンバー追加機能・画像URL編集機能追加(アップロードは未対応)</li> */}
                     </ul>
                 </PanelSection>
             </Panel>
