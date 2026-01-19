@@ -50,6 +50,7 @@ export default function AdminLayout() {
             .from("members")
             .select("*")
             .order("id", { ascending: true })
+            .is("deleted_at", null)
             .limit(5000);
 
         if (res.error) {
@@ -196,6 +197,93 @@ export default function AdminLayout() {
         [setListLoading, setListError, setLists]
     );
 
+    // CRUD操作（member）
+    const addMembers = useCallback(
+        async (payload) => {
+            setListLoading("members", true);
+            setListError("members", null);
+
+            const res = await supabase
+                .from("members")
+                .insert(payload)
+                // .select("*")
+                .single();
+
+            if (res.error) {
+                setListError("members", res.error.message);
+                setListLoading("members", false);
+                return { data: null, error: res.error };
+            }
+
+            // setLists((prev) => {
+            //     const next = [...(prev.members.data ?? []), res.data].sort((a, b) => a.id - b.id);
+            //     return { ...prev, members: { ...prev.members, data: next } };
+            // });
+
+            setListLoading("members", false);
+            return { data: res.data, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
+    const updateMembers = useCallback(
+        async (id, payload) => {
+            setListLoading("members", true);
+            setListError("members", null);
+
+            const res = await supabase
+                .from("members")
+                .update(payload)
+                .eq("id", id)
+                .select("*")
+                .single();
+
+            if (res.error) {
+                setListError("members", res.error.message);
+                setListLoading("members", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = (prev.members.data ?? []).map((c) => (c.id === id ? res.data : c));
+                return { ...prev, members: { ...prev.members, data: next } };
+            });
+
+            setListLoading("members", false);
+            return { data: res.data, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
+    const removeMembers = useCallback(
+        async (id) => {
+            setListLoading("members", true);
+            setListError("members", null);
+
+            const res = await supabase
+                .from("members")
+                .update({ deleted_at: new Date().toISOString() })
+                .eq("id", id)
+                .select("id")
+                .single();
+
+            if (res.error) {
+                setListError("members", res.error.message);
+                setListLoading("members", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = (prev.members.data ?? []).filter((c) => c.id !== id);
+                return { ...prev, members: { ...prev.members, data: next } };
+            });
+
+            setListLoading("members", false);
+            return { data: { id }, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
 
     useEffect(() => {
         let alive = true;
@@ -216,7 +304,13 @@ export default function AdminLayout() {
             // 集約版（これを使うと増えても1箇所）
             lists: {
                 // refresh関数も集約する
-                members: { ...lists.members, refresh: refreshMembers },
+                members: {
+                    ...lists.members, 
+                    refresh: refreshMembers,
+                    add: addMembers,
+                    update: updateMembers,
+                    remove: removeMembers, 
+                },
                 news: { ...lists.news, refresh: refreshNews },
                 credits: {
                     ...lists.credits,

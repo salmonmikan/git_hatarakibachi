@@ -48,7 +48,8 @@ export default function Member() {
                         deleted_at
                     )
                 `)
-                .is("credits.deleted_at", null)
+                .is("deleted_at", null)
+                .is('credits.deleted_at', null)
                 .order('id', { ascending: true });
 
             if (error) {

@@ -56,3 +56,16 @@ export async function fetchRecentNews({ limit = 5 } = {}) {
 //     if (res.error) return { ok: false, error: res.error.message };
 //     return { ok: true, data: res.data ?? [] };
 // }
+
+export async function fetchUpdateInfo({ limit = 10 } = {}) {
+    const res = await supabase
+        .from("update_info")
+        .select("*")
+        .order("update_date", { ascending: false })
+        .is("deleted_at", null)
+        .limit(limit);
+
+
+    if (res.error) return { ok: false, error: res.error.message };
+    return { ok: true, data: res.data ?? [] };
+}
