@@ -322,7 +322,7 @@ export default function AdminLayout() {
             },
             setLists,
         };
-    }, [lists, refreshMembers, refreshNews, refreshCredits]);
+    }, [lists, refreshNews]);
 
     return (
         <div className="admin-shell" data-surface="app">

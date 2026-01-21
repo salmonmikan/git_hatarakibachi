@@ -14,6 +14,7 @@ const MEMBER_DEFAULTS = {
     hobby: "",
     photoUrl: "",
     photoUrl_2: "",
+    state_flag: "",
 };
 
 const MEMBER_COERCE = {
@@ -25,7 +26,14 @@ const MEMBER_COERCE = {
     hobby: (v) => String(v ?? "").trim(),
     photoUrl: (v) => String(v ?? "").trim(),
     photoUrl_2: (v) => String(v ?? "").trim(),
+    state_flag: (v) => String(v ?? "").trim(),
 };
+
+const STATE_OPTIONS = [
+    { value: 1, label: "1: 表示" },
+    { value: 8, label: "8: 非表示" },
+    // { value: 9, label: "9: 保留" },
+];
 
 export default function MemberEditModal() {
     const { lists } = useAdminCtx();
@@ -118,6 +126,24 @@ export default function MemberEditModal() {
                             onChange={onChange}
                             disabled={busy || loading}
                         />
+                    </FormField>
+
+                    <FormField label="メンバー状態フラグ">
+                        <select
+                            name="state_flag"
+                            className="mem-form__input"
+                            value={String(form.state_flag ?? "")}
+                            onChange={onChange}
+                            disabled={busy || loading}
+                            required
+                        >
+                            <option value="" disabled>選択してください</option>
+                            {STATE_OPTIONS.map((o) => (
+                                <option key={o.value} value={String(o.value)}>
+                                    {o.label}
+                                </option>
+                            ))}
+                        </select>
                     </FormField>
                 </>
             )}
