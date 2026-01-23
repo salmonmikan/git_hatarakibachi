@@ -42,28 +42,6 @@ export default function AdminLayout() {
         }));
     }, []);
 
-    const refreshMembers = useCallback(async () => {
-        setListLoading("members", true);
-        setListError("members", null);
-
-        const res = await supabase
-            .from("members")
-            .select("*")
-            .order("id", { ascending: true })
-            .is("deleted_at", null)
-            .limit(5000);
-
-        if (res.error) {
-            setListError("members", res.error.message);
-            setListData("members", []);
-            setListLoading("members", false);
-            return;
-        }
-
-        setListData("members", res.data ?? []);
-        setListLoading("members", false);
-    }, [setListLoading, setListError, setListData]);
-
     const refreshNews = useCallback(async () => {
         setListLoading("news", true);
         setListError("news", null);
@@ -85,6 +63,95 @@ export default function AdminLayout() {
         setListLoading("news", false);
     }, [setListLoading, setListError, setListData]);
 
+
+    const addNews = useCallback(
+        async (payload) => {
+            setListLoading("news", true);
+            setListError("news", null);
+
+            const res = await supabase
+                .from("site_news")
+                .insert(payload)
+                .select("*")
+                .single();
+
+            if (res.error) {
+                setListError("news", res.error.message);
+                setListLoading("news", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = [...(prev.news.data ?? []), res.data].sort((a, b) => a.id - b.id);
+                return { ...prev, news: { ...prev.news, data: next } };
+            });
+
+            setListLoading("news", false);
+            return { data: res.data, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
+    const updateNews = useCallback(
+        async (id, payload) => {
+            setListLoading("news", true);
+            setListError("news", null);
+
+            const res = await supabase
+                .from("site_news")
+                .update(payload)
+                .eq("id", id)
+                .select("*")
+                .single();
+
+            if (res.error) {
+                setListError("news", res.error.message);
+                setListLoading("news", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = (prev.news.data ?? []).map((c) => (c.id === id ? res.data : c));
+                return { ...prev, news: { ...prev.news, data: next } };
+            });
+
+            setListLoading("news", false);
+            return { data: res.data, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
+    const removeNews = useCallback(
+        async (id) => {
+            setListLoading("news", true);
+            setListError("news", null);
+
+            const res = await supabase
+                .from("site_news")
+                .update({ deleted_at: new Date().toISOString() })
+                .eq("id", id)
+                .select("id")
+                .single();
+
+            if (res.error) {
+                setListError("news", res.error.message);
+                setListLoading("news", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = (prev.news.data ?? []).filter((c) => c.id !== id);
+                return { ...prev, news: { ...prev.news, data: next } };
+            });
+
+            setListLoading("news", false);
+            return { data: { id }, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+    
+
+    // creditAPI
     const refreshCredits = useCallback(async () => {
         setListLoading("credits", true);
         setListError("credits", null);
@@ -110,7 +177,6 @@ export default function AdminLayout() {
         setListLoading("credits", false);
     }, [setListLoading, setListError, setListData]);
 
-    // CRUD操作（Credit）
     const addCredit = useCallback(
         async (payload) => {
             setListLoading("credits", true);
@@ -197,7 +263,29 @@ export default function AdminLayout() {
         [setListLoading, setListError, setLists]
     );
 
-    // CRUD操作（member）
+    // memberAPI
+    const refreshMembers = useCallback(async () => {
+        setListLoading("members", true);
+        setListError("members", null);
+
+        const res = await supabase
+            .from("members")
+            .select("*")
+            .order("id", { ascending: true })
+            .is("deleted_at", null)
+            .limit(5000);
+
+        if (res.error) {
+            setListError("members", res.error.message);
+            setListData("members", []);
+            setListLoading("members", false);
+            return;
+        }
+
+        setListData("members", res.data ?? []);
+        setListLoading("members", false);
+    }, [setListLoading, setListError, setListData]);
+
     const addMembers = useCallback(
         async (payload) => {
             setListLoading("members", true);
@@ -285,6 +373,7 @@ export default function AdminLayout() {
     );
 
 
+    // 一斉取得
     useEffect(() => {
         let alive = true;
 
@@ -311,7 +400,13 @@ export default function AdminLayout() {
                     update: updateMembers,
                     remove: removeMembers, 
                 },
-                news: { ...lists.news, refresh: refreshNews },
+                news: { 
+                    ...lists.news,
+                    refresh: refreshNews,
+                    add: addNews,
+                    update: updateNews,
+                    remove: removeNews,
+                },
                 credits: {
                     ...lists.credits,
                     refresh: refreshCredits,
@@ -322,7 +417,7 @@ export default function AdminLayout() {
             },
             setLists,
         };
-    }, [lists, refreshNews]);
+    }, [lists]);
 
     return (
         <div className="admin-shell" data-surface="app">
