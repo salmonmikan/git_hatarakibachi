@@ -105,6 +105,7 @@ export default function DashBoard() {
 
     const newsItems = cards.map((c) => ({
         key: c.title,
+        to: "news",
         label: c.title,
         value: c.value,
         loading, // 全体ロード

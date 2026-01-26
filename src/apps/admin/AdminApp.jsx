@@ -4,6 +4,7 @@ import AdminLayout from "./components/Layout/AdminLayout.jsx";
 import Dashboard from "./pages/DashBoard.jsx";
 import AdminMembers from "./pages/AdminMembers.jsx";
 import MemberEditModal from "./components/Modal/MemberEditModal.jsx";
+import AdminNews from "./pages/AdminNews.jsx";
 import AdminCredits from "./pages/AdminCredits.jsx";
 import CreditEditModal from "./components/Modal/CreditEditModal.jsx";
 
@@ -27,6 +28,7 @@ export default function AdminApp() {
             <Route path=":id" element={<CreditEditModal />} />
             {/* <Route path="new" element={<CreditEditModal />} /> */}
           </Route>
+          <Route path="news" element={<AdminNews />}></Route>
           <Route path="analytics" element={<AnalyticsEmbed />} />
         </Route>
       </Route>
