@@ -26,7 +26,7 @@ export default function Home() {
                 <p>現在、公演情報はありません</p>
                 {/* ニュース一覧の画面 */}
                 <h2 className="home-title">News Release</h2>
-                {/* <NewsList /> */}
+                <NewsList />
             </section>
         </motion.section>
     );

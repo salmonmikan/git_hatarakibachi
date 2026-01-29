@@ -10,6 +10,7 @@ export default function NewsList({ items, limit, className = "" }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+
     // supabaseから情報を取得、ページ読み込み時に一度だけ実行
     useEffect(() => {
         // function groupByYear(credits = []) {
@@ -34,6 +35,7 @@ export default function NewsList({ items, limit, className = "" }) {
             const { data, error } = await supabase
                 .from('site_news')
                 .select(`*`)
+                .limit(5)
                 .order('id', { ascending: true });
 
             if (error) {
@@ -49,41 +51,41 @@ export default function NewsList({ items, limit, className = "" }) {
     }, [])
 
 // ---- ダミーJSON（まずは直書き） ----
-const NEWS = [
-    {
-        id: "1",
-        category: "公演情報",
-        title: "公演情報を更新しました",
-        // url: "https://example.com/post/serverless-news",
-        imageUrl: "https://picsum.photos/seed/news1/800/420",
-        publishedAt: "2025-09-29T12:34:56Z",
-        tags: ["公演", "脚本"],
-        summary:
-            "新作公演『はたらきばち』の詳細情報を公開しました。",
-    },
-    {
-        id: "2",
-        category: "メンバー募集",
-        title: "メンバー募集を開始しました",
-        // url: "https://example.com/post/serverless-news-2",
-        imageUrl: "https://picsum.photos/seed/news2/800/420",
-        publishedAt: "2025-10-05T09:00:00Z",
-        tags: ["募集", "役者"],
-        summary:
-            "新作公演に向けて、役者やスタッフを募集しています。興味のある方はぜひご応募ください。",
-    },
-    {
-        id: "3",
-        category: "イベント",
-        title: "オンラインイベントを開催しました",
-        // url: "https://example.com/post/serverless-news-3",
-        imageUrl: "https://picsum.photos/seed/news3/800/420",
-        publishedAt: "2025-10-15T18:00:00Z",
-        tags: ["イベント", "オンライン"],
-        summary:
-            "オンラインでのトークイベントを開催しました。多くの方にご参加いただき、ありがとうございました。",
-    },
-];
+// const NEWS = [
+//     {
+//         id: "1",
+//         category: "公演情報",
+//         title: "公演情報を更新しました",
+//         // url: "https://example.com/post/serverless-news",
+//         imageUrl: "https://picsum.photos/seed/news1/800/420",
+//         publishedAt: "2025-09-29T12:34:56Z",
+//         tags: ["公演", "脚本"],
+//         summary:
+//             "新作公演『はたらきばち』の詳細情報を公開しました。",
+//     },
+//     {
+//         id: "2",
+//         category: "メンバー募集",
+//         title: "メンバー募集を開始しました",
+//         // url: "https://example.com/post/serverless-news-2",
+//         imageUrl: "https://picsum.photos/seed/news2/800/420",
+//         publishedAt: "2025-10-05T09:00:00Z",
+//         tags: ["募集", "役者"],
+//         summary:
+//             "新作公演に向けて、役者やスタッフを募集しています。興味のある方はぜひご応募ください。",
+//     },
+//     {
+//         id: "3",
+//         category: "イベント",
+//         title: "オンラインイベントを開催しました",
+//         // url: "https://example.com/post/serverless-news-3",
+//         imageUrl: "https://picsum.photos/seed/news3/800/420",
+//         publishedAt: "2025-10-15T18:00:00Z",
+//         tags: ["イベント", "オンライン"],
+//         summary:
+//             "オンラインでのトークイベントを開催しました。多くの方にご参加いただき、ありがとうございました。",
+//     },
+// ];
 
 // ---- ユーティリティ ----
 const formatDate = (iso) => {
@@ -102,8 +104,23 @@ const formatDate = (iso) => {
     }
 };
 
+                        // {n.imageUrl ? (
+                        //     <div className="news-card__image">
+                        //         {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                        //         <img src={n.imageUrl} loading="lazy" />
+                        //     </div>
+                        // ) : (
+                        //     <div className="news-card__image news-card__image--placeholder">
+                        //         <span>No image</span>
+                        //     </div>
+                        // )}
+
+                        // {n.summary ? (
+                        //     <p className="news-card__summary">{n.summary}</p>
+                        // ) : null}
+
 // ---- コンポーネント本体 ----
-    const data = (items || NEWS).slice(0, limit || (items || NEWS).length);
+    const data = (news || NEWS).slice(0, limit || (news || NEWS).length);
 
     if (data.length === 0) {
         return <div className={`news-list__empty ${className}`}>ニュースはまだありません。</div>;
@@ -119,29 +136,16 @@ const formatDate = (iso) => {
                         rel="noreferrer"
                         className="news-card__link"
                     >
-                        {n.imageUrl ? (
-                            <div className="news-card__image">
-                                {/* eslint-disable-next-line jsx-a11y/alt-text */}
-                                <img src={n.imageUrl} loading="lazy" />
-                            </div>
-                        ) : (
-                            <div className="news-card__image news-card__image--placeholder">
-                                <span>No image</span>
-                            </div>
-                        )}
 
-                        <h3 className="news-card__title">{n.title}</h3>
-                        {n.summary ? (
-                            <p className="news-card__summary">{n.summary}</p>
-                        ) : null}
+                        <h3 className="news-card__title">{n.news_title}</h3>
 
                         <div className="news-card__meta">
-                            <time dateTime={n.publishedAt}>{formatDate(n.publishedAt)}</time>
+                            <time dateTime={n.published_at}>{formatDate(n.published_at)}</time>
                             <span className="news-card__dot" aria-hidden>
                                 •
                             </span>
-                            <span className="news-card__source" title={n.category}>
-                                {n.category}
+                            <span className="news-card__source" title={n.news_category}>
+                                {n.news_category}
                             </span>
                             {/* {Array.isArray(n.tags) && n.tags.length > 0 ? (
                                 <span className="news-card__tags">
