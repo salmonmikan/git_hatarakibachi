@@ -8,9 +8,9 @@ export async function fetchNewsStats({ limit = 5000 } = {}) {
     const rows = res.data ?? [];
     const stats = { total: rows.length, draft: 0, public: 0, private: 0 };
     for (const r of rows) {
-        if (r.news_status === 0) stats.draft += 1;
+        if (r.news_status === 5) stats.draft += 1;
         else if (r.news_status === 1) stats.public += 1;
-        else if (r.news_status === 2) stats.private += 1;
+        else if (r.news_status === 8) stats.private += 1;
     }
     return { ok: true, data: stats };
 }

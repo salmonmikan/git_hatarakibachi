@@ -7,6 +7,7 @@ import MemberEditModal from "./components/Modal/MemberEditModal.jsx";
 import AdminNews from "./pages/AdminNews.jsx";
 import AdminCredits from "./pages/AdminCredits.jsx";
 import CreditEditModal from "./components/Modal/CreditEditModal.jsx";
+import NewsEditModal from "./components/Modal/NewsEditModal.jsx";
 
 import RequireAuth from "./components/RequireAuth";
 import NotFound from '@src/components/NotFound.jsx';
@@ -28,7 +29,9 @@ export default function AdminApp() {
             <Route path=":id" element={<CreditEditModal />} />
             {/* <Route path="new" element={<CreditEditModal />} /> */}
           </Route>
-          <Route path="news" element={<AdminNews />}></Route>
+          <Route path="news" element={<AdminNews />}>
+            <Route path=":id" element={<NewsEditModal />} />
+          </Route>
           <Route path="analytics" element={<AnalyticsEmbed />} />
         </Route>
       </Route>
