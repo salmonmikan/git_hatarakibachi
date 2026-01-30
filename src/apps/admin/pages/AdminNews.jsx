@@ -5,7 +5,7 @@ import "./AdminMembers.scss";
 
 export default function AdminMembers() {
     const ctx = useAdminCtx();
-    const {data, error, loading} = ctx.lists.news;
+    const { data, error, loading } = ctx.lists.news;
 
     if (loading) return <div className="admin-members">Loading...</div>;
     if (error) return <div className="admin-members">Error: {error}</div>;
@@ -18,16 +18,29 @@ export default function AdminMembers() {
             </Link>
 
             <div className="admin-members__list">
-                {data.map((d) => (
-                    <Link
-                        key={d.id}
-                        to={String(d.id)} // ← /manage/members/:id へ
-                        className="admin-members__link"
-                    >
-                        <div className="admin-members__name">{d.news_title ?? `member#${d.id}`}</div>
-                    </Link>
-                ))}
+                {data.map((d) => {
+                    const newsStatus =
+                        d.news_status === 1 ? "公開中" :
+                        d.news_status === 5 ? "下書き" :
+                        d.news_status === 8 ? "非公開" :
+                        "不明";
+
+                    const title = d.news_title ?? `member#${d.id}`;
+
+                    return (
+                        <Link
+                            key={d.id}
+                            to={String(d.id)}
+                            className="admin-members__link"
+                        >
+                            <div className="admin-members__name">
+                                {`${newsStatus} : ${title}`}
+                            </div>
+                        </Link>
+                    );
+                })}
             </div>
+
 
             {/* <button className="admin-members__button" type="button" onClick={back}>
                 back

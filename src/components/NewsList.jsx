@@ -36,6 +36,7 @@ export default function NewsList({ items, limit, className = "" }) {
                 .from('site_news')
                 .select(`*`)
                 .limit(5)
+                .eq("news_status", 1)
                 .order('id', { ascending: true });
 
             if (error) {

@@ -10,9 +10,9 @@ import Panel, { PanelSection } from "../components/Panel";
 import ListShell from "../components/ListShell.jsx";
 
 const STATUS_LABEL = {
-    0: "下書き",
-    1: "公開",
-    2: "非公開",
+    1: "公開中",
+    5: "下書き",
+    8: "非公開",
 };
 
 export default function DashBoard() {
@@ -98,8 +98,8 @@ export default function DashBoard() {
 
     const cards = useMemo(() => ([
         { title: "合計", value: stats.total },
-        { title: "下書き", value: stats.draft },
         { title: "公開中", value: stats.public },
+        { title: "下書き", value: stats.draft },
         { title: "非公開", value: stats.private },
     ]), [stats]);
 
