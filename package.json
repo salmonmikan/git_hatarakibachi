@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sb:init": "supabase init",
+    "sb:start": "supabase start",
+    "sb:stop": "supabase stop",
+    "sb:reset": "supabase db reset"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
@@ -27,6 +31,7 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.4.0",
     "sass": "^1.93.0",
+    "supabase": "^2.74.5",
     "vite": "^7.3.0",
     "wrangler": "^4.42.1"
   }

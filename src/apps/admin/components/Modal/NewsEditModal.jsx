@@ -9,7 +9,7 @@ const MEMBER_DEFAULTS = {
     news_title: "",
     news_summary: "",
     published_at: "",
-    news_status: "",
+    news_status: "5",
     // skill: "",
     // hobby: "",
     // photoUrl: "",
@@ -41,7 +41,7 @@ export default function NewsEditModal() {
     return (
         <EntityEditModal
             list={lists.news}
-            entityName="Member"
+            entityName="News"
             defaults={MEMBER_DEFAULTS}
             coerce={MEMBER_COERCE}
             renderFields={({ form, onChange, busy, loading }) => (
@@ -90,7 +90,7 @@ export default function NewsEditModal() {
                         />
                     </FormField>
 
-                    <FormField label="ニュース公開ステータス">
+                    <FormField label="ニュース公開ステータス *デフォルトは「下書き」です">
                         <select
                             name="news_status"
                             className="mem-form__input"
