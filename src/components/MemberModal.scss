@@ -20,10 +20,11 @@
         /* 高さの上限（縦スクロールは中身だけ） */
         overflow: auto;
 
-        background: #fff;
+        background: var(--color-modal-bg);
+        color: var(--color-modal-text);
         border-radius: 1rem;
         padding: 1.25rem;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+        box-shadow: 0 20px 60px var(--color-shadow);
 
         &::-webkit-scrollbar {
             display: none;
@@ -59,26 +60,29 @@
         font-size: 2rem;
         line-height: 1;
         cursor: pointer;
-        color: #FFFFFF;
+        color: var(--color-modal-text);
     }
 
     &-name {
         font-size: 1.5rem;
         margin-top: 0.75rem;
+        color: var(--color-modal-text);
     }
 
     &-role {
-        color: #6b7280;
+        color: var(--color-text-muted);
         // margin-top: 0.25rem;
     }
 
     &-bio {
         margin: 1rem 0;
+        color: var(--color-modal-text);
         // line-height: 1.8;
     }
 
     &-detail {
         margin: 0.25rem;
+        color: var(--color-modal-text);
     }
 
     &-photo {

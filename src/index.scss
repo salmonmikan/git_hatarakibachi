@@ -4,8 +4,26 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  
+  /* ライトモード（デフォルト）のカラー定義 */
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-border: #e5e7eb;
+  --color-header-bg: #ffffff;
+  --color-nav-text: #222222;
+  --color-nav-active-bg: #111827;
+  --color-nav-active-text: #ffffff;
+  --color-button-bg: #1a1a1a;
+  --color-button-text: #ffffff;
+  --color-card-bg: #ffffff;
+  --color-modal-bg: #ffffff;
+  --color-modal-text: #111827;
+  --color-shadow: rgba(0, 0, 0, 0.12);
+  
+  color: var(--color-text);
+  background-color: var(--color-bg);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -49,7 +67,8 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--color-button-bg);
+  color: var(--color-button-text);
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -60,8 +79,22 @@ button:hover {
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    /* ライトモード明示的定義 */
+    --color-text: #111827;
+    --color-text-muted: #6b7280;
+    --color-bg: #ffffff;
+    --color-bg-secondary: #f9fafb;
+    --color-border: #e5e7eb;
+    --color-header-bg: #ffffff;
+    --color-nav-text: #222222;
+    --color-nav-active-bg: #111827;
+    --color-nav-active-text: #ffffff;
+    --color-button-bg: #1a1a1a;
+    --color-button-text: #ffffff;
+    --color-card-bg: #ffffff;
+    --color-modal-bg: #ffffff;
+    --color-modal-text: #111827;
+    --color-shadow: rgba(0, 0, 0, 0.12);
   }
 
   /* a:hover {
@@ -69,6 +102,27 @@ button:hover {
   } */
   button {
     background-color: #f9f9f9;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* ダークモードのカラー定義 */
+    --color-text: #e5e7eb;
+    --color-text-muted: #9ca3af;
+    --color-bg: #0b0f14;
+    --color-bg-secondary: #111827;
+    --color-border: #374151;
+    --color-header-bg: #111827;
+    --color-nav-text: #e5e7eb;
+    --color-nav-active-bg: #3b82f6;
+    --color-nav-active-text: #ffffff;
+    --color-button-bg: #1f2937;
+    --color-button-text: #e5e7eb;
+    --color-card-bg: #111827;
+    --color-modal-bg: #111827;
+    --color-modal-text: #e5e7eb;
+    --color-shadow: rgba(0, 0, 0, 0.5);
   }
 }
 
