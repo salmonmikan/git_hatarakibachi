@@ -8,7 +8,7 @@
 header {
   // position: sticky;
   // top: 0;
-  background: #fff;
+  background: var(--color-header-bg);
   // z-index: 100;
   // margin-bottom: 2rem;
   // padding-top: 1rem;
@@ -25,7 +25,7 @@ main {
 }
 
 .site-title {
-  color: #000000;
+  color: var(--color-text);
   font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: bold;
   text-decoration: none;
@@ -90,15 +90,15 @@ main {
     display: inline-block;
     padding: 6px 10px;
     text-decoration: none;
-    color: #222;
+    color: var(--color-nav-text);
     border-radius: 6px;
     
 
     /* アクティブリンク */
     &.active {
-      background: #111827;
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      background: var(--color-nav-active-bg);
+      color: var(--color-nav-active-text);
+      box-shadow: 0 2px 6px var(--color-shadow);
     }
 
     /* フォーカス時の見た目（アクセシビリティ） */
@@ -146,6 +146,6 @@ main {
 }
 
 .read-the-docs {
-  color: #888;
+  color: var(--color-text-muted);
   white-space: pre-line;
 }
