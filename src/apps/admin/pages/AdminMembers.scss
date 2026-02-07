@@ -29,9 +29,10 @@
 }
 
 .admin-members__button {
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 10px 14px;
-    background: #fff;
+    background: var(--color-bg);
+    color: var(--color-text);
     cursor: pointer;
 }
