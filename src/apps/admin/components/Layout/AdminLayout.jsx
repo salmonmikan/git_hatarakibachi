@@ -7,6 +7,7 @@ const initialLists = {
     members: { data: [], loading: true, error: null },
     news: { data: [], loading: true, error: null },
     credits: { data: [], loading: true, error: null },
+    members_affiliation: { data: [], loading: true, error: null },
 };
 
 export default function AdminLayout() {
@@ -149,7 +150,7 @@ export default function AdminLayout() {
         },
         [setListLoading, setListError, setLists]
     );
-    
+
 
     // creditAPI
     const refreshCredits = useCallback(async () => {
@@ -269,11 +270,12 @@ export default function AdminLayout() {
         setListError("members", null);
 
         const res = await supabase
-            .from("members")
+            .from("members_admin_view")
             .select("*")
+            .order("display_order", { ascending: true })
             .order("id", { ascending: true })
             .is("deleted_at", null)
-            .limit(5000);
+            .limit(50);
 
         if (res.error) {
             setListError("members", res.error.message);
@@ -372,20 +374,52 @@ export default function AdminLayout() {
         [setListLoading, setListError, setLists]
     );
 
+    // member_affiliation_master
+    const loadMembers_affiliation = useCallback(async () => {
+        setListLoading("members_affiliation", true);
+        setListError("members_affiliation", null);
+
+        const res = await supabase
+            .from("member_affiliations")
+            .select("*")
+            .eq("is_active", true)
+            .order("code", { ascending: true });
+
+        if (res.error) {
+            setListError("members_affiliation", res.error.message);
+            setListData("members_affiliation", []);
+            setListLoading("members_affiliation", false);
+            return;
+        }
+
+        setListData("members_affiliation", res.data ?? []);
+        setListLoading("members_affiliation", false);
+    }, [setListLoading, setListError, setListData]);
+
 
     // 一斉取得
     useEffect(() => {
         let alive = true;
 
         (async () => {
-            await Promise.all([refreshMembers(), refreshNews(), refreshCredits()]);
+            await Promise.all([
+                refreshMembers(),
+                refreshNews(), 
+                refreshCredits(),
+                loadMembers_affiliation()
+            ]);
             if (!alive) return;
         })();
 
         return () => {
             alive = false;
         };
-    }, [refreshMembers, refreshNews, refreshCredits]);
+    }, [
+        refreshMembers, 
+        refreshNews, 
+        refreshCredits,
+        loadMembers_affiliation
+        ]);
 
     const ctx = useMemo(() => {
         // AdminLayout の ctx に lists を入れて Outlet context={ctx} してるから、子側で useAdminCtx()（= useOutletContext() 的なやつ）経由で取れる。
@@ -394,13 +428,13 @@ export default function AdminLayout() {
             lists: {
                 // refresh関数も集約する
                 members: {
-                    ...lists.members, 
+                    ...lists.members,
                     refresh: refreshMembers,
                     add: addMembers,
                     update: updateMembers,
-                    remove: removeMembers, 
+                    remove: removeMembers,
                 },
-                news: { 
+                news: {
                     ...lists.news,
                     refresh: refreshNews,
                     add: addNews,
@@ -414,6 +448,12 @@ export default function AdminLayout() {
                     update: updateCredit,
                     remove: removeCredit,
                 },
+                master: {
+                    members_affiliation: {
+                        ...lists.members_affiliation,
+                        refresh: loadMembers_affiliation,
+                    },
+                },
             },
             setLists,
         };
@@ -422,7 +462,7 @@ export default function AdminLayout() {
     return (
         <div className="admin-shell" data-surface="app">
             {!dashboard && `hatarakibachi Admin`}
-            {/* ここに管理画面の共通ヘッダー/サイドバーを置いてOK */}
+            {/* ここに管理画面の共通ヘッダー/サイドバーを置く */}
             <Outlet context={ctx} />
             {!dashboard &&
                 <button className="admin-members__button" type="button" onClick={back}>
