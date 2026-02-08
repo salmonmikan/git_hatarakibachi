@@ -135,7 +135,7 @@ export default function DashBoard() {
             <Panel
                 kind="recent-news"
                 title="Database Index"
-                meta="各指標から編集画面へ遷移できます ※作成中"
+                meta="各指標から編集画面へ遷移できます"
             >
                 <PanelSection title="劇団員管理">
                     <MetricGrid items={memberItems} />
@@ -152,12 +152,24 @@ export default function DashBoard() {
                 meta="latest 10"
             >
                 <PanelSection title="">
-                    <ul>
+                    <ul className="adm-update">
                         {UpdateInfo?.map((m) => (
-                            <li key={m.id}>{m.update_date}: {truncateText(m.update_title, 25)}</li>
+                            <li key={m.id} className="adm-update__item">
+                                <div className="adm-update__meta">
+                                    <span className="adm-update__date">{m.update_date}</span>
+                                    <span className="adm-update__category">
+                                        {(m.categories ?? []).join(" / ")}
+                                    </span>
+                                </div>
+
+                                <div className="adm-update__text">
+                                    {truncateText(m.update_title, 25)}
+                                </div>
+                            </li>
                         ))}
                     </ul>
                 </PanelSection>
+
             </Panel>
 
             <Panel

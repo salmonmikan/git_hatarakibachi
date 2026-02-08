@@ -262,3 +262,46 @@ ul {
     margin: 0;
     text-align: start;
 }
+
+.adm-update {
+    display: grid;
+    gap: 6px;
+}
+
+.adm-update__meta {
+    display: flex;
+    gap: 6px;
+}
+
+.adm-update__item {
+    display: grid;
+    // grid-template-columns: 10ch auto 1fr;
+    // column-gap: 10px;
+    align-items: start;
+}
+
+.adm-update__date {
+    white-space: nowrap;
+    opacity: 0.7;
+    font-size: 12px;
+}
+
+.adm-update__category {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 18px;
+    min-width: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+    opacity: 0.8;
+}
+
+.adm-update__text {
+    min-width: 0;
+    word-break: break-word;
+}
