@@ -27,6 +27,12 @@ export default function DashBoard() {
     const [error, setError] = useState(null);
     const [UpdateInfo, setUpdateInfo] = useState([]);
 
+    // infoのトグル用
+    const [openId, setOpenId] = useState(null);
+    const toggle = (id) => {
+        setOpenId((prev) => (prev === id ? null : id));
+    };
+
     useEffect(() => {
         let alive = true;
 
@@ -135,7 +141,7 @@ export default function DashBoard() {
             <Panel
                 kind="recent-news"
                 title="Database Index"
-                meta="各指標から編集画面へ遷移できます ※作成中"
+                meta="各指標から編集画面へ遷移できます"
             >
                 <PanelSection title="劇団員管理">
                     <MetricGrid items={memberItems} />
@@ -152,12 +158,49 @@ export default function DashBoard() {
                 meta="latest 10"
             >
                 <PanelSection title="">
-                    <ul>
-                        {UpdateInfo?.map((m) => (
-                            <li key={m.id}>{m.update_date}: {truncateText(m.update_title, 25)}</li>
-                        ))}
+                    <ul className="adm-update">
+                        {UpdateInfo?.map((m) => {
+                            const hasDesc = !!m.update_description?.trim();
+                            const isOpen = openId === m.id;
+
+                            return (
+                                <li key={m.id} className={`adm-update__item ${isOpen ? "is-open" : ""}`}>
+                                    <div className="adm-update__meta">
+                                        <span className="adm-update__date">{m.update_date}</span>
+                                        <span className="adm-update__category">
+                                            {(m.categories ?? []).join(" / ")}
+                                        </span>
+                                    </div>
+
+                                    {/* タイトル：詳細がある時だけクリック可能 */}
+                                    {hasDesc ? (
+                                        <button
+                                            type="button"
+                                            className="adm-update__title"
+                                            onClick={() => toggle(m.id)}
+                                            aria-expanded={isOpen}
+                                        >
+                                            {truncateText(m.update_title, 25)}
+                                            <span className="adm-update__more">　詳細…</span>
+                                        </button>
+                                    ) : (
+                                        <span className="adm-update__title">
+                                            {truncateText(m.update_title, 25)}
+                                        </span>
+                                    )}
+
+                                    {/* 詳細：ある時だけ、開いてる時だけ */}
+                                    {hasDesc && isOpen && (
+                                        <div className="adm-update__desc">
+                                            {m.update_description}
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
                     </ul>
                 </PanelSection>
+
             </Panel>
 
             <Panel

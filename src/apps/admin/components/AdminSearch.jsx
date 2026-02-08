@@ -17,9 +17,9 @@ export default function AdminSearch({ ctx, credits, children }) {
 
     return (
         <>
-            <div className="admin_member__search">
-                <label className="admin_member__field">
-                    <span className="admin_member__label">検索</span>
+            <div className="admin_view__search">
+                <label className="admin_view__field">
+                    <span className="admin_view__label">検索</span>
                     <input
                         value={q}
                         placeholder="タイトル / 役職・役名"
@@ -27,8 +27,8 @@ export default function AdminSearch({ ctx, credits, children }) {
                     />
                 </label>
 
-                <label className="admin_member__field">
-                    <span className="admin_member__label">メンバー</span>
+                <label className="admin_view__field">
+                    <span className="admin_view__label">メンバー</span>
                     <select
                         value={memberId}
                         disabled={loading}

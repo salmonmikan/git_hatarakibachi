@@ -14,6 +14,7 @@ const MEMBER_DEFAULTS = {
     hobby: "",
     photoUrl: "",
     photoUrl_2: "",
+    affiliation_code: "",
     state_flag: "",
 };
 
@@ -26,6 +27,7 @@ const MEMBER_COERCE = {
     hobby: (v) => String(v ?? "").trim(),
     photoUrl: (v) => String(v ?? "").trim(),
     photoUrl_2: (v) => String(v ?? "").trim(),
+    affiliation_code: (v) => String(v ?? "").trim(),
     state_flag: (v) => String(v ?? "").trim(),
 };
 
@@ -46,7 +48,7 @@ export default function MemberEditModal() {
             coerce={MEMBER_COERCE}
             renderFields={({ form, onChange, busy, loading }) => (
                 <>
-                    <FormField label="名前">
+                    <FormField label="名前 *必須">
                         <input
                             name="name"
                             className="mem-form__input"
@@ -128,7 +130,23 @@ export default function MemberEditModal() {
                         />
                     </FormField>
 
-                    <FormField label="メンバー状態フラグ">
+                    <FormField label="所属 *必須">
+                        <select
+                            name="affiliation_code"
+                            className="mem-form__input"
+                            value={String(form.affiliation_code ?? "")}
+                            onChange={onChange}
+                            disabled={busy || loading}
+                            required
+                        >
+                            <option value="" disabled>選択してください</option>
+                            {(lists.master.members_affiliation.data ?? []).map((o) => (
+                                <option key={o.code} value={o.code}>{o.label}</option>
+                            ))}
+                        </select>
+                    </FormField>
+
+                    <FormField label="メンバー状態フラグ *必須">
                         <select
                             name="state_flag"
                             className="mem-form__input"

@@ -1,0 +1,63 @@
+/* src/admin/pages/admin_view.scss */
+
+.admin-view {
+    padding: 16px;
+}
+
+.admin-view__title {
+    margin: 0;
+}
+
+.admin-view__stack {
+    display: block;
+    // gap: 12px;
+    justify-items: stretch;
+}
+
+.admin-view__list {
+    // margin-top: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.admin-view__list-inner {
+    display: grid;
+    gap: 8px;
+    // justify-items: start;
+}
+
+.admin-view__link {
+    display: block;
+    border: 1px solid #eee;
+    // width: 100%;
+    border-radius: 12px;
+    padding: 10px;
+    text-decoration: none;
+    color: inherit;
+    background: #fff;
+
+    &[data-visual="button"] {
+        color: black;
+        margin: 1rem;
+    }
+}
+
+.admin-view__list-inner .admin-view__link {
+    display: block;
+    width: 100%;
+}
+
+.admin-view__name {
+    font-weight: 700;
+}
+
+.admin-view__button {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+

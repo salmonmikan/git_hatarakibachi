@@ -1,23 +1,23 @@
-// src/admin/pages/AdminMembers.jsx
+// src/admin/pages/AdminNews.jsx
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useAdminCtx } from "../hooks/useAdminCtx";
-import "./AdminMembers.scss";
+import "./admin_view.scss";
 
 export default function AdminMembers() {
     const ctx = useAdminCtx();
     const { data, error, loading } = ctx.lists.news;
 
-    if (loading) return <div className="admin-members">Loading...</div>;
-    if (error) return <div className="admin-members">Error: {error}</div>;
+    if (loading) return <div className="admin-view">Loading...</div>;
+    if (error) return <div className="admin-view">Error: {error}</div>;
 
     return (
-        <div className="admin-members">
-            <h1 className="admin-members__title">Manage News</h1>
-            <Link to="new" className="admin-members__link" data-visual="button">
+        <div className="admin-view">
+            <h1 className="admin-view__title">Manage News</h1>
+            <Link to="new" className="admin-view__link" data-visual="button">
                 追加
             </Link>
 
-            <div className="admin-members__list">
+            <div className="admin-view__list">
                 {data.map((d) => {
                     const newsStatus =
                         d.news_status === 1 ? "公開中" :
@@ -31,9 +31,9 @@ export default function AdminMembers() {
                         <Link
                             key={d.id}
                             to={String(d.id)}
-                            className="admin-members__link"
+                            className="admin-view__link"
                         >
-                            <div className="admin-members__name">
+                            <div className="admin-view__name">
                                 {`${newsStatus} : ${title}`}
                             </div>
                         </Link>
@@ -41,8 +41,7 @@ export default function AdminMembers() {
                 })}
             </div>
 
-
-            {/* <button className="admin-members__button" type="button" onClick={back}>
+            {/* <button className="admin-view__button" type="button" onClick={back}>
                 back
             </button> */}
 

@@ -1,0 +1,18 @@
+.sortable-row {
+    user-select: none;
+    touch-action: none;
+    display: flex;
+    // align-items: center;
+    gap: 8px;
+    transform: var(--sortable-transform, none);
+    transition: var(--sortable-transition, none);
+    // width: fit-content;
+
+    &[data-dragging="true"] {
+        opacity: 0.7;
+    }
+}
+
+.sortable-row__handle {
+    cursor: grab;
+}

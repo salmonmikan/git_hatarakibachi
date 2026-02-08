@@ -1,0 +1,4 @@
+・履歴修復
+npx supabase migration repair --status applied 20260201160638
+・リモートからのpull
+npx supabase db pull
