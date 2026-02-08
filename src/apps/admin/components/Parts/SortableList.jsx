@@ -99,6 +99,7 @@ function SortableRow({ id, children }) {
                 "--sortable-transition": transition ?? "none",
             }}
         >
+            {children}
             <button
                 type="button"
                 ref={setActivatorNodeRef}
@@ -109,8 +110,6 @@ function SortableRow({ id, children }) {
             >
                 ≡
             </button>
-
-            {children}
         </div>
     );
 }

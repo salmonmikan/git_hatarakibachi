@@ -69,7 +69,7 @@ export default function AdminMembers() {
                 <Link to="new" className="admin-view__link" data-visual="button">
                     追加
                 </Link>
-
+                <p className="admin-view__hint">右手のトグルで、web上の表示順を変更できます。</p>
                 <div className="admin-view__list">
                     <SortableList
                         items={membersUI}

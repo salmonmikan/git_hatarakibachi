@@ -9,13 +9,13 @@
 }
 
 .admin-view__stack {
-    display: inline-grid;
-    gap: 12px;
+    display: block;
+    // gap: 12px;
     justify-items: stretch;
 }
 
 .admin-view__list {
-    margin-top: 12px;
+    // margin-top: 12px;
     display: grid;
     gap: 8px;
 }
@@ -23,12 +23,13 @@
 .admin-view__list-inner {
     display: grid;
     gap: 8px;
-    justify-items: start;
+    // justify-items: start;
 }
 
 .admin-view__link {
     display: block;
     border: 1px solid #eee;
+    // width: 100%;
     border-radius: 12px;
     padding: 10px;
     text-decoration: none;

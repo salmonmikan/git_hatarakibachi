@@ -2,11 +2,11 @@
     user-select: none;
     touch-action: none;
     display: flex;
-    align-items: center;
+    // align-items: center;
     gap: 8px;
     transform: var(--sortable-transform, none);
     transition: var(--sortable-transition, none);
-    width: fit-content;
+    // width: fit-content;
 
     &[data-dragging="true"] {
         opacity: 0.7;
