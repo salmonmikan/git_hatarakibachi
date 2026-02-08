@@ -153,6 +153,23 @@ export default function DashBoard() {
             </Panel>
 
             <Panel
+                kind="recent-news"
+                title="Recent News"
+                meta="latest 5"
+            >
+                <ListShell loading={loading} hasItems={recent?.length > 0}>
+                    {recent.map((n) => (
+                        <article key={n.id} className="adm-item" data-surface="soft" data-status={String(n.status)}>
+                            <div className="adm-item__title">{n.news_title}</div>
+                            <div className="adm-item__meta" data-tone="muted">
+                                {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
+                            </div>
+                        </article>
+                    ))}
+                </ListShell>
+            </Panel>
+
+            <Panel
                 // kind="recent-news"
                 title="Update Info"
                 meta="latest 10"
@@ -204,20 +221,22 @@ export default function DashBoard() {
             </Panel>
 
             <Panel
-                kind="recent-news"
-                title="Recent News"
-                meta="latest 5"
+                kind="Future Releases"
+                title="Future Releases"
+                meta="対応予定機能"
             >
-                <ListShell loading={loading} hasItems={recent?.length > 0}>
-                    {recent.map((n) => (
-                        <article key={n.id} className="adm-item" data-surface="soft" data-status={String(n.status)}>
-                            <div className="adm-item__title">{n.news_title}</div>
-                            <div className="adm-item__meta" data-tone="muted">
-                                {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
-                            </div>
-                        </article>
-                    ))}
-                </ListShell>
+                <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
+                    <Link
+                        to="https://github.com/salmonmikan/git_hatarakibachi/issues"
+                        className="adm-card"
+                        data-surface="paper"
+                        data-kind="metric"
+                    >
+                        <div className="adm-card__label" data-color="black">
+                            {`GitHub Issues`}
+                        </div>
+                    </Link>
+                </div>
             </Panel>
 
             <Panel
