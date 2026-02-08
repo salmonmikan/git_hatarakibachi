@@ -51,7 +51,7 @@ export default function Member() {
                 .is("deleted_at", null)
                 .eq("state_flag", 1)
                 .is('credits.deleted_at', null)
-                .order('id', { ascending: true });
+                .order("display_order", { ascending: true })
 
             if (error) {
                 console.error('supabase select error ->', error);
