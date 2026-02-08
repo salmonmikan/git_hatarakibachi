@@ -1,20 +1,32 @@
-/* src/admin/pages/AdminMembers.scss */
+/* src/admin/pages/admin_view.scss */
 
-.admin-members {
+.admin-view {
     padding: 16px;
 }
 
-.admin-members__title {
+.admin-view__title {
     margin: 0;
 }
 
-.admin-members__list {
+.admin-view__stack {
+    display: inline-grid;
+    gap: 12px;
+    justify-items: stretch;
+}
+
+.admin-view__list {
     margin-top: 12px;
     display: grid;
     gap: 8px;
 }
 
-.admin-members__link {
+.admin-view__list-inner {
+    display: grid;
+    gap: 8px;
+    justify-items: start;
+}
+
+.admin-view__link {
     display: block;
     border: 1px solid #eee;
     border-radius: 12px;
@@ -29,11 +41,16 @@
     }
 }
 
-.admin-members__name {
+.admin-view__list-inner .admin-view__link {
+    display: block;
+    width: 100%;
+}
+
+.admin-view__name {
     font-weight: 700;
 }
 
-.admin-members__button {
+.admin-view__button {
     border: 1px solid var(--color-border);
     border-radius: 10px;
     padding: 10px 14px;
@@ -41,3 +58,5 @@
     color: var(--color-text);
     cursor: pointer;
 }
+
+

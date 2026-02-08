@@ -383,6 +383,7 @@ export default function AdminLayout() {
             .from("member_affiliations")
             .select("*")
             .eq("is_active", true)
+            .order("sort_order", { ascending: true })
             .order("code", { ascending: true });
 
         if (res.error) {
@@ -465,7 +466,7 @@ export default function AdminLayout() {
             {/* ここに管理画面の共通ヘッダー/サイドバーを置く */}
             <Outlet context={ctx} />
             {!dashboard &&
-                <button className="admin-members__button" type="button" onClick={back}>
+                <button className="admin-view__button" type="button" onClick={back}>
                     back
                 </button>
             }

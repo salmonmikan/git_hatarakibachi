@@ -3,7 +3,7 @@ import { Link, Outlet } from "react-router-dom";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAdminCtx } from "../hooks/useAdminCtx";
 import { SortableList } from "../components/Parts/SortableList.jsx";
-import "./AdminMembers.scss";
+import "./admin_view.scss";
 import supabase from '@src/utils/supabase.ts'
 
 const GAP = 100;
@@ -27,7 +27,6 @@ export default function AdminMembers() {
     // const supabase = supabase; // ↁEctxにsupabase入れてなぁE��ら、supabaseの取り方に合わせて
     const refreshMembers = ctx.lists.members.refresh;
 
-    // DnD用�E�表示配�Eをローカルstateにコピ�E
     const [membersUI, setMembersUI] = useState([]);
 
     useEffect(() => {
@@ -49,10 +48,8 @@ export default function AdminMembers() {
                 .eq("id", moved.id);
 
             if (res.error) {
-                // DB正で戻ぁE
                 await refreshMembers();
             } else {
-                // 成功時、ローカルにも反映�E�任意！E
                 setMembersUI((arr) =>
                     arr.map((m) => (m.id === moved.id ? { ...m, display_order: newOrder } : m))
                 );
@@ -61,31 +58,34 @@ export default function AdminMembers() {
         [supabase, refreshMembers]
     );
 
-    if (membersLoading) return <div className="admin-members">Loading...</div>;
-    if (membersError) return <div className="admin-members">Error: {membersError}</div>;
+    if (membersLoading) return <div className="admin-view">Loading...</div>;
+    if (membersError) return <div className="admin-view">Error: {membersError}</div>;
 
     return (
-        <div className="admin-members">
-            <h1 className="admin-members__title">Manage Members</h1>
+        <div className="admin-view">
+            <h1 className="admin-view__title">Manage Members</h1>
 
-                <Link to="new" className="admin-members__link" data-visual="button">
+            <div className="admin-view__stack">
+                <Link to="new" className="admin-view__link" data-visual="button">
                     追加
                 </Link>
 
-                <div className="admin-members__list">
+                <div className="admin-view__list">
                     <SortableList
                         items={membersUI}
                         getId={(m) => m.id}
                         onReorder={onReorder}
-                        className="admin-members__list-inner"
+                        className="admin-view__list-inner"
                         renderItem={(m) => (
-                            <Link to={String(m.id)} className="admin-members__link">
-                                <div className="admin-members__name">{m.name ?? `member#${m.id}`}</div>
+                            <Link to={String(m.id)} className="admin-view__link">
+                                <div className="admin-view__name">{m.name ?? `member#${m.id}`}</div>
                             </Link>
                         )}
                     />
-                    <Outlet context={ctx} />
+                </div>
             </div>
+
+            <Outlet context={ctx} />
         </div>
     );
 }
