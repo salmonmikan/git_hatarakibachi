@@ -35,7 +35,7 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
                 <img 
                     className='member-photo upper'
                     loading="eager"
-                    src={returnPhotoUrl(photoUrl)} 
+                    src={returnPhotoUrl(photoUrl, 400, "top")} 
                     alt={name}
                 />
             ) : (
