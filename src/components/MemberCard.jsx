@@ -32,7 +32,12 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
             aria-label={`${name} の詳細を開く`}
         >
             {hasPhoto ? (
-                <img className='member-photo upper' src={returnPhotoUrl(photoUrl)} alt={name} />
+                <img 
+                    className='member-photo upper'
+                    loading="eager"
+                    src={returnPhotoUrl(photoUrl)} 
+                    alt={name}
+                />
             ) : (
                 <div
                     className="member-no-photo"
