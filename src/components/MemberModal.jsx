@@ -63,9 +63,11 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                         {member && (
                             <div className="modal-content">
                                 {member.photoUrl ? (
-                                    <img className='modal-photo upper'
-                                    src={returnPhotoUrl(photoUrl, 400, "top")}
-                                    alt={name} 
+                                    <img 
+                                        className='modal-photo upper'
+                                        loading="lazy"
+                                        src={returnPhotoUrl(photoUrl, 400, "top")}
+                                        alt={name} 
                                 />
                                 ) : (
                                     <div className="member-photo-placeholder modal-photo" aria-hidden="true" />

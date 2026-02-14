@@ -35,6 +35,7 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
                 <img
                     className="member-photo upper"
                     loading="eager"
+                    // priority
                     fetchpriority="high"
                     decoding="async"
                     width={400}

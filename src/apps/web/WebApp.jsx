@@ -26,6 +26,7 @@ function WebApp() {
           <div className="nav-left">
             <img
               src="/hatarakibachi_logo.jpg"
+              srcSet="/hatarakibachi_logo-64.jpg 1x, /hatarakibachi_logo-128.jpg 2x"
               className="logo"
               width={64}
               height={64}

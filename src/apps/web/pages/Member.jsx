@@ -5,7 +5,7 @@ import MemberCard from "@src/components/MemberCard.jsx";
 import MemberModal from "@src/components/MemberModal.jsx";
 import './Member.scss'
 
-import supabase from '@src/utils/supabase.ts'
+// import supabase from '@src/utils/supabase.ts'
 
 
 export default function Member() {
@@ -48,7 +48,7 @@ export default function Member() {
             } catch (e) {
                 console.error(e)
                 setMembers([])
-                setError(e?.message ?? "読み込みに失敗しました")
+                setError("読み込みに失敗しました")
             } finally {
                 setLoading(false)
             }

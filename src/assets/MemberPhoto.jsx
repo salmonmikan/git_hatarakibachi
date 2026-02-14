@@ -2,6 +2,8 @@
 import React from "react";
 
 /**
+ * dont use...
+ * 
  * MemberPhoto
  *
  * - 単一コンポーネント内に URL 生成ロジックを内包（func を分けない）
