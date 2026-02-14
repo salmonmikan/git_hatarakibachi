@@ -5,7 +5,7 @@ import MemberCard from "@src/components/MemberCard.jsx";
 import MemberModal from "@src/components/MemberModal.jsx";
 import './Member.scss'
 
-import supabase from '@src/utils/supabase.ts'
+// import supabase from '@src/utils/supabase.ts'
 
 
 export default function Member() {
@@ -32,38 +32,26 @@ export default function Member() {
             return byYear;
         }
 
-        async function getMembers() {
-            setLoading(true);
-            setError(null);
+        const getMembers = async () => {
+            setLoading(true)
+            setError(null)
 
-            const { data, error } = await supabase
-                .from('members')
-                .select(`
-                    *,
-                    credits:credits (
-                        id,
-                        credit_title,
-                        credit_role,
-                        credit_date,
-                        deleted_at
-                    )
-                `)
-                .is("deleted_at", null)
-                .eq("state_flag", 1)
-                .is('credits.deleted_at', null)
-                .order("display_order", { ascending: true })
+            try {
+                const res = await fetch("/api/web-members")
+                if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
+                const data = await res.json()
 
-            if (error) {
-                console.error('supabase select error ->', error);
-                setMembers([]);
-                setError(error.message ?? '読み込みに失敗しました');
-            } else {
-                setMembers((data ?? []).map(m => ({
+                setMembers((data ?? []).map((m) => ({
                     ...m,
                     creditsByYear: groupByYear(m.credits ?? []),
-                })));
+                })))
+            } catch (e) {
+                console.error(e)
+                setMembers([])
+                setError("読み込みに失敗しました")
+            } finally {
+                setLoading(false)
             }
-            setLoading(false);
         }
 
         getMembers()

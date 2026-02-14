@@ -32,10 +32,15 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
             aria-label={`${name} の詳細を開く`}
         >
             {hasPhoto ? (
-                <img 
-                    className='member-photo upper'
+                <img
+                    className="member-photo upper"
                     loading="eager"
-                    src={returnPhotoUrl(photoUrl, 400, "top")} 
+                    // priority
+                    fetchpriority="high"
+                    decoding="async"
+                    width={400}
+                    height={400}
+                    src={returnPhotoUrl(photoUrl, 400, "top")}
                     alt={name}
                 />
             ) : (
@@ -47,8 +52,8 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
                     No Image
                 </div>
             )}
-                <h2 className="member-name">{name}</h2>
-                <span className="member-hurigana">{hurigana}</span>
+            <h2 className="member-name">{name}</h2>
+            <span className="member-hurigana">{hurigana}</span>
             <p className="member-role">{role}</p>
             {/* {bio && <p className="member-bio">{bio}</p>} */}
         </article >

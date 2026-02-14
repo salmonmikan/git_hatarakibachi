@@ -24,7 +24,14 @@ function WebApp() {
       <header>
         <nav className="main-nav">
           <div className="nav-left">
-            <img src="/hatarakibachi_logo.jpg" className="logo" alt="Hatarakibachi Logo" />
+            <img
+              src="/hatarakibachi_logo.jpg"
+              srcSet="/hatarakibachi_logo-64.jpg 1x, /hatarakibachi_logo-128.jpg 2x"
+              className="logo"
+              width={64}
+              height={64}
+              alt="Hatarakibachi Logo"
+            />
           </div>
           <div className="nav-center">
             <NavLink to="/" end className="site-title" aria-label="ホームに戻る">
