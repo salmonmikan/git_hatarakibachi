@@ -7,6 +7,17 @@ import './Member.scss'
 
 // import supabase from '@src/utils/supabase.ts'
 
+let membersPromise;
+function prefetchMembers() {
+    if (!membersPromise) {
+        membersPromise = fetch("/api/web-members").then(async (res) => {
+            if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+            return res.json();
+        });
+    }
+    return membersPromise;
+}
+
 
 export default function Member() {
     const reduce = useReducedMotion();
@@ -37,25 +48,21 @@ export default function Member() {
             setError(null)
 
             try {
-                const res = await fetch("/api/web-members")
-                if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
-                const data = await res.json()
-
+                const data = await prefetchMembers(); // ここが“既に走ってる”可能性がある
                 setMembers((data ?? []).map((m) => ({
                     ...m,
                     creditsByYear: groupByYear(m.credits ?? []),
-                })))
+                })));
             } catch (e) {
-                console.error(e)
-                setMembers([])
-                setError("読み込みに失敗しました")
+                console.error(e);
+                setMembers([]);
+                setError("読み込みに失敗しました");
             } finally {
-                setLoading(false)
-            }
-        }
+                setLoading(false);
+            }}
 
-        getMembers()
-    }, [])
+            getMembers()
+        }, [])
 
 
     return (
