@@ -3,6 +3,18 @@ import "./NewsList.scss";
 import { useState, useEffect } from "react";
 import supabase from '../utils/supabase.ts'
 
+let sitenewsPromise;
+function prefetchSitenews() {
+    if (!sitenewsPromise) {
+        sitenewsPromise = fetch("/api/web-sitenews").then(async (res) => {
+            if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+            return res.json();
+        });
+    }
+    return sitenewsPromise;
+}
+
+
 export default function NewsList({ items, limit, className = "" }) {
     // const reduce = useReducedMotion();
     const [selected, setSelected] = useState(null);
@@ -32,61 +44,20 @@ export default function NewsList({ items, limit, className = "" }) {
             setLoading(true);
             setError(null);
 
-            const { data, error } = await supabase
-                .from('site_news')
-                .select(`*`)
-                .limit(5)
-                .eq("news_status", 1)
-                .order('id', { ascending: true });
-
-            if (error) {
-                console.error('supabase select error ->', error);
+            try {
+                const data = await prefetchSitenews(); // ここが“既に走ってる”可能性がある
+                setNews((data));
+            } catch (e) {
+                console.error(e);
                 setNews([]);
-                setError(error.message ?? '読み込みに失敗しました');
-            } else {
-                setNews(data);
-            }
-            setLoading(false);
-        }
-        getNews()
+                setError("読み込みに失敗しました");
+            } finally {
+                setLoading(false);
+            }}
+
+            getNews()
     }, [])
 
-// ---- ダミーJSON（まずは直書き） ----
-// const NEWS = [
-//     {
-//         id: "1",
-//         category: "公演情報",
-//         title: "公演情報を更新しました",
-//         // url: "https://example.com/post/serverless-news",
-//         imageUrl: "https://picsum.photos/seed/news1/800/420",
-//         publishedAt: "2025-09-29T12:34:56Z",
-//         tags: ["公演", "脚本"],
-//         summary:
-//             "新作公演『はたらきばち』の詳細情報を公開しました。",
-//     },
-//     {
-//         id: "2",
-//         category: "メンバー募集",
-//         title: "メンバー募集を開始しました",
-//         // url: "https://example.com/post/serverless-news-2",
-//         imageUrl: "https://picsum.photos/seed/news2/800/420",
-//         publishedAt: "2025-10-05T09:00:00Z",
-//         tags: ["募集", "役者"],
-//         summary:
-//             "新作公演に向けて、役者やスタッフを募集しています。興味のある方はぜひご応募ください。",
-//     },
-//     {
-//         id: "3",
-//         category: "イベント",
-//         title: "オンラインイベントを開催しました",
-//         // url: "https://example.com/post/serverless-news-3",
-//         imageUrl: "https://picsum.photos/seed/news3/800/420",
-//         publishedAt: "2025-10-15T18:00:00Z",
-//         tags: ["イベント", "オンライン"],
-//         summary:
-//             "オンラインでのトークイベントを開催しました。多くの方にご参加いただき、ありがとうございました。",
-//     },
-// ];
 
 // ---- ユーティリティ ----
 const formatDate = (iso) => {
