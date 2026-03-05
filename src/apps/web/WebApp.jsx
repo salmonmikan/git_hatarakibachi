@@ -6,6 +6,7 @@ import Contact from "./pages/Contact.jsx";
 import Home from "./pages/Home.jsx";
 import Member from "./pages/Member.jsx";
 import Scenario from "./pages/Scenario.jsx";
+import PostDetail from "./pages/PostDetail.jsx";
 import ScrollToTop from "@src/components/ScrollToTop.jsx";
 import FloatingLinks from "@src/components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
@@ -62,6 +63,7 @@ function WebApp() {
             <Route path="archive" element={<Archive onEntered={() => mainRef.current?.focus()} />} />
             <Route path="scenario" element={<Scenario onEntered={() => mainRef.current?.focus()} />} />
             <Route path="contact" element={<Contact onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="post/:slug" element={<PostDetail onEntered={() => mainRef.current?.focus()} />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

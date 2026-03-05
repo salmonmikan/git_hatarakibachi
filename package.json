@@ -8,12 +8,10 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-
     "sb:init": "supabase init",
     "sb:start": "supabase start",
     "sb:stop": "supabase stop",
     "sb:reset": "supabase db reset",
-
     "predev": "node src/assets/gen-logo.mjs",
     "prebuild": "node src/assets/gen-logo.mjs"
   },
@@ -21,6 +19,7 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@portabletext/react": "^6.0.3",
     "@supabase/supabase-js": "^2.76.1",
     "motion": "^12.23.19",
     "prop-types": "^15.8.1",

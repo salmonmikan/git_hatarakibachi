@@ -1,9 +1,10 @@
 import { motion, useReducedMotion } from "motion/react"
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 import NewsList from "@src/components/NewsList.jsx";
+import FeaturedArticles from "@src/components/FeaturedArticles.jsx";
 import './Home.scss'
 
-export default function Home() {
+export default function Home({ onEntered }) {
     const reduce = useReducedMotion();
 
     return (
@@ -24,6 +25,8 @@ export default function Home() {
                 {/* 公演情報について */}
                 <h2 className="home-title">公演情報</h2>
                 <p>現在、公演情報はありません</p>
+                {/* 注目記事の画面 */}
+                <FeaturedArticles />
                 {/* ニュース一覧の画面 */}
                 <h2 className="home-title">News Release</h2>
                 <NewsList />
