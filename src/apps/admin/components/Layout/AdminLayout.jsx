@@ -7,6 +7,7 @@ const initialLists = {
     members: { data: [], loading: true, error: null },
     news: { data: [], loading: true, error: null },
     credits: { data: [], loading: true, error: null },
+    updates: { data: [], loading: true, error: null },
     members_affiliation: { data: [], loading: true, error: null },
 };
 
@@ -146,6 +147,115 @@ export default function AdminLayout() {
             });
 
             setListLoading("news", false);
+            return { data: { id }, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
+    // UpdateInfoAPI
+    const refreshUpdates = useCallback(async () => {
+        setListLoading("updates", true);
+        setListError("updates", null);
+
+        const res = await supabase
+            .from("update_info")
+            .select("*")
+            .is("deleted_at", null)
+            .order("update_date", { ascending: false })
+            .limit(1000);
+
+        if (res.error) {
+            setListError("updates", res.error.message);
+            setListData("updates", []);
+            setListLoading("updates", false);
+            return;
+        }
+
+        setListData("updates", res.data ?? []);
+        setListLoading("updates", false);
+    }, [setListLoading, setListError, setListData]);
+
+    const addUpdate = useCallback(
+        async (payload) => {
+            setListLoading("updates", true);
+            setListError("updates", null);
+
+            const res = await supabase
+                .from("update_info")
+                .insert(payload)
+                .select("*")
+                .single();
+
+            if (res.error) {
+                setListError("updates", res.error.message);
+                setListLoading("updates", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = [res.data, ...(prev.updates.data ?? [])].sort((a, b) => new Date(b.update_date) - new Date(a.update_date));
+                return { ...prev, updates: { ...prev.updates, data: next } };
+            });
+
+            setListLoading("updates", false);
+            return { data: res.data, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
+    const updateUpdate = useCallback(
+        async (id, payload) => {
+            setListLoading("updates", true);
+            setListError("updates", null);
+
+            const res = await supabase
+                .from("update_info")
+                .update(payload)
+                .eq("id", id)
+                .select("*")
+                .single();
+
+            if (res.error) {
+                setListError("updates", res.error.message);
+                setListLoading("updates", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = (prev.updates.data ?? []).map((c) => (c.id === id ? res.data : c));
+                return { ...prev, updates: { ...prev.updates, data: next } };
+            });
+
+            setListLoading("updates", false);
+            return { data: res.data, error: null };
+        },
+        [setListLoading, setListError, setLists]
+    );
+
+    const removeUpdate = useCallback(
+        async (id) => {
+            setListLoading("updates", true);
+            setListError("updates", null);
+
+            const res = await supabase
+                .from("update_info")
+                .update({ deleted_at: new Date().toISOString() })
+                .eq("id", id)
+                .select("id")
+                .single();
+
+            if (res.error) {
+                setListError("updates", res.error.message);
+                setListLoading("updates", false);
+                return { data: null, error: res.error };
+            }
+
+            setLists((prev) => {
+                const next = (prev.updates.data ?? []).filter((c) => c.id !== id);
+                return { ...prev, updates: { ...prev.updates, data: next } };
+            });
+
+            setListLoading("updates", false);
             return { data: { id }, error: null };
         },
         [setListLoading, setListError, setLists]
@@ -407,6 +517,7 @@ export default function AdminLayout() {
                 refreshMembers(),
                 refreshNews(), 
                 refreshCredits(),
+                refreshUpdates(),
                 loadMembers_affiliation()
             ]);
             if (!alive) return;
@@ -419,6 +530,7 @@ export default function AdminLayout() {
         refreshMembers, 
         refreshNews, 
         refreshCredits,
+        refreshUpdates,
         loadMembers_affiliation
         ]);
 
@@ -448,6 +560,13 @@ export default function AdminLayout() {
                     add: addCredit,
                     update: updateCredit,
                     remove: removeCredit,
+                },
+                updates: {
+                    ...lists.updates,
+                    refresh: refreshUpdates,
+                    add: addUpdate,
+                    update: updateUpdate,
+                    remove: removeUpdate,
                 },
                 master: {
                     members_affiliation: {

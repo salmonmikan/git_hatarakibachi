@@ -100,6 +100,13 @@ export default function DashBoard() {
             value: credits?.length ?? 0,
             loading: creditsLoading,
         },
+        {
+            key: "total-updates",
+            to: "update-info",
+            label: "更新情報登録数",
+            value: lists.updates.data?.length ?? 0,
+            loading: lists.updates.loading,
+        },
     ];
 
     const cards = useMemo(() => ([
@@ -173,6 +180,11 @@ export default function DashBoard() {
                 // kind="recent-news"
                 title="Update Info"
                 meta="latest 10"
+                headRight={
+                    <Link to="update-info" className="admin-view__link" data-visual="button" style={{ margin: 0 }}>
+                        管理
+                    </Link>
+                }
             >
                 <PanelSection title="">
                     <ul className="adm-update">
