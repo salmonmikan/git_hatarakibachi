@@ -23,12 +23,11 @@ export default function Home({ onEntered }) {
                 <p>はたらきばち準備中...</p>
                 <p>最新の情報は各種SNSをご覧ください</p>
                 {/* 公演情報について */}
-                <h2 className="home-title">公演情報</h2>
-                <p>現在、公演情報はありません</p>
+                {/* <h2 className="home-title">公演情報</h2>
+                <p>現在、公演情報はありません</p> */}
                 {/* 注目記事の画面 */}
                 <FeaturedArticles />
                 {/* ニュース一覧の画面 */}
-                <h2 className="home-title">News Release</h2>
                 <NewsList />
             </section>
         </motion.section>

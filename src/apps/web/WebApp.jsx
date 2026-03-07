@@ -54,7 +54,7 @@ function WebApp() {
         </nav>
       </header>
       <FloatingLinks behavior="fixed" /> {/* fixed or "sticky" */}
-      <main className="content" id="main-content" ref={mainRef} tabIndex={-1}>
+      <main className="content" id="main-content" ref={mainRef}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<Home onEntered={() => mainRef.current?.focus()} />} />

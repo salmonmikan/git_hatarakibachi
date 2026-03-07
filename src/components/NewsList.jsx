@@ -100,6 +100,7 @@ const formatDate = (iso) => {
 
     return (
         <div className={`news-list ${className}`}>
+            <h2 className="home-title">News Release</h2>
             {data.map((n) => (
                 <article key={n.id} className="news-card">
                     <a

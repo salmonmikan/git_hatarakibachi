@@ -10,8 +10,9 @@
 
 /* グリッド */
 .news-list {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 20px;
 }
 
@@ -34,6 +35,7 @@
     box-shadow: var(--nl-shadow);
     transition: box-shadow 0.2s ease, transform 0.2s ease;
     max-width: 300px;
+    width: 100%;
 }
 
 .news-card__link {
