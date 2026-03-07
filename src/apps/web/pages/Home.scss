@@ -1,5 +1,11 @@
 .home {
     &-title {
+        text-align: center;
         text-decoration: underline;
+        margin: 2rem 0 1rem;
+
+        &:first-of-type {
+            margin-top: 0.5rem; /* 最初の見出しは上に詰めすぎない程度に */
+        }
     }
 }

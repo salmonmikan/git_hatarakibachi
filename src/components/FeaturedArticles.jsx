@@ -18,7 +18,26 @@ export default function FeaturedArticles() {
     fetchData();
   }, []);
 
-  if (loading) return <div className="featured-articles-loading">Loading...</div>;
+  if (loading) {
+    return (
+      <section className="featured-articles featured-articles-loading">
+        <h2 className="home-title">Featured Articles</h2>
+        <div className="featured-grid">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <article key={i} className="featured-card">
+              <div className="featured-card__image skeleton-pulse" />
+              <div className="featured-card__content">
+                <div className="featured-card__title skeleton-pulse" style={{ height: '1.2rem', width: '90%', marginBottom: '0.5rem' }} />
+                <div className="featured-card__title skeleton-pulse" style={{ height: '1.2rem', width: '70%', marginBottom: '0.8rem' }} />
+                <div className="featured-card__date skeleton-pulse" style={{ height: '0.85rem', width: '30%' }} />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   if (!data || !data.posts || data.posts.length === 0) return null;
 
   return (

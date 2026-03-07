@@ -1,11 +1,18 @@
 .featured-articles {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  text-align: center;
   margin-bottom: 2rem;
 
   .featured-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 320px)); /* auto-fit で空カラムを詰め、中央寄せを有効にする */
     gap: 1.5rem;
-    margin-top: 1rem;
+    margin: 1rem auto 0;
+    justify-content: center;
+    max-width: 1200px;
+    width: 100%;
   }
 
   .featured-card-link {
@@ -28,9 +35,11 @@
     }
 
     &__image {
+      width: 100%;
       aspect-ratio: 16 / 9;
       overflow: hidden;
       background: var(--color-bg-secondary);
+      flex-shrink: 0;
 
       img {
         width: 100%;
@@ -56,8 +65,11 @@
   }
 
   &-loading {
-    padding: 2rem;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.6);
+    border: none;
+    outline: none;
+    
+    .featured-grid {
+      margin-top: 1rem;
+    }
   }
 }

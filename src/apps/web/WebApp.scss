@@ -17,11 +17,20 @@ header {
 }
 
 main {
-  padding-top: 120px;
-  /* navの高さ + 余白 */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 180px; /* 十分な余白を確保 */
   padding-bottom: 2rem;
-  min-height: calc(100vh - 140px - 4rem);
+  min-height: calc(100vh - 180px - 4rem);
   /* navの高さ + 余白 + footerの高さ */
+
+  &:focus {
+    outline: none;
+  }
 }
 
 .site-title {

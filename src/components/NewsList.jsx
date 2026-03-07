@@ -94,6 +94,26 @@ const formatDate = (iso) => {
 // ---- コンポーネント本体 ----
     const data = (news || NEWS).slice(0, limit || (news || NEWS).length);
 
+    if (loading) {
+        return (
+            <div className={`news-list ${className}`}>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <article key={i} className="news-card">
+                        <div className="news-card__link">
+                            <div className="news-card__title skeleton-pulse" style={{ height: '1.35rem', width: '90%', marginBottom: '8px' }} />
+                            <div className="news-card__title skeleton-pulse" style={{ height: '1.35rem', width: '60%', marginBottom: '12px' }} />
+                            <div className="news-card__meta">
+                                <div className="skeleton-pulse" style={{ height: '0.8rem', width: '100px' }} />
+                                <span className="news-card__dot">•</span>
+                                <div className="skeleton-pulse" style={{ height: '0.8rem', width: '60px' }} />
+                            </div>
+                        </div>
+                    </article>
+                ))}
+            </div>
+        );
+    }
+
     if (data.length === 0) {
         return <div className={`news-list__empty ${className}`}>ニュースはまだありません。</div>;
     }

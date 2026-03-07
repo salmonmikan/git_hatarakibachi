@@ -10,20 +10,22 @@
 
 /* グリッド */
 .news-list {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 320px)); /* auto-fit を使用して中央寄せを確実に */
     gap: 20px;
-}
-
-@media (min-width: 640px) {
-    .news-list {
-        // grid-template-columns: repeat(2, 1fr);
-    }
+    justify-items: center;
+    justify-content: center; /* カラム全体を中央に */
 }
 
 .news-list__empty {
-    font-size: 0.9rem;
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
     color: var(--nl-text-muted);
+    width: 100%;
 }
 
 /* カード */
@@ -34,6 +36,7 @@
     box-shadow: var(--nl-shadow);
     transition: box-shadow 0.2s ease, transform 0.2s ease;
     max-width: 300px;
+    width: 100%;
 }
 
 .news-card__link {
