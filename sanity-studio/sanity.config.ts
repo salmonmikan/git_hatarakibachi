@@ -14,11 +14,12 @@ export default defineConfig({
     structureTool({
       structure: (S) =>
         S.list()
-          .title('Content')
+          .title('コンテンツ')
+          .id('root')
           .items([
-            // Singleton item
+            // Top Page Info Singleton
             S.listItem()
-              .title('注目記事設定')
+              .title('トップページ情報')
               .id('featuredArticles')
               .child(
                 S.document()
@@ -26,7 +27,7 @@ export default defineConfig({
                   .documentId('featuredArticles')
               ),
             S.divider(),
-            // Regular items (excluding singleton)
+            // Regular items
             ...S.documentTypeListItems().filter(
               (listItem) => !['featuredArticles'].includes(listItem.getId())
             ),

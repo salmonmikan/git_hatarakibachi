@@ -2,7 +2,7 @@ import {defineField, defineType} from 'sanity'
 
 export default defineType({
   name: 'featuredArticles',
-  title: '注目記事設定',
+  title: 'トップページ情報',
   type: 'document',
   fields: [
     defineField({
@@ -12,16 +12,11 @@ export default defineType({
       initialValue: 'Featured Articles',
     }),
     defineField({
-      name: 'posts',
-      title: '注目の投稿',
-      type: 'array',
-      of: [
-        {
-          type: 'reference',
-          to: [{type: 'post'}],
-        },
-      ],
-      validation: (Rule) => Rule.max(5).warning('注目記事は最大5件までを推奨します。'),
+      name: 'featuredPerformance',
+      title: '表示する公演情報',
+      description: 'ホーム画面の特設セクションに表示する公演を選択します。',
+      type: 'reference',
+      to: [{type: 'performance'}],
     }),
   ],
 })

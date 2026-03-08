@@ -2,17 +2,17 @@ import {defineField, defineType} from 'sanity'
 
 export default defineType({
   name: 'post',
-  title: 'Post',
+  title: '記事投稿',
   type: 'document',
   fields: [
     defineField({
       name: 'title',
-      title: 'Title',
+      title: 'タイトル',
       type: 'string',
     }),
     defineField({
       name: 'slug',
-      title: 'Slug',
+      title: 'URLスラッグ',
       type: 'slug',
       options: {
         source: 'title',
@@ -21,13 +21,13 @@ export default defineType({
     }),
     defineField({
       name: 'author',
-      title: 'Author',
+      title: '著者',
       type: 'reference',
       to: {type: 'author'},
     }),
     defineField({
       name: 'mainImage',
-      title: 'Main image',
+      title: 'メイン画像',
       type: 'image',
       options: {
         hotspot: true,
@@ -35,18 +35,18 @@ export default defineType({
     }),
     defineField({
       name: 'categories',
-      title: 'Categories',
+      title: 'カテゴリー',
       type: 'array',
       of: [{type: 'reference', to: {type: 'category'}}],
     }),
     defineField({
       name: 'publishedAt',
-      title: 'Published at',
+      title: '公開日',
       type: 'datetime',
     }),
     defineField({
       name: 'body',
-      title: 'Body',
+      title: '本文',
       type: 'blockContent',
     }),
   ],
@@ -59,7 +59,7 @@ export default defineType({
     },
     prepare(selection) {
       const {author} = selection
-      return {...selection, subtitle: author && `by ${author}`}
+      return {...selection, subtitle: author && `著者: ${author}`}
     },
   },
 })
