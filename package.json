@@ -20,6 +20,8 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@portabletext/react": "^6.0.3",
+    "@sanity/client": "^7.16.0",
+    "@sanity/visual-editing": "^5.3.0",
     "@supabase/supabase-js": "^2.76.1",
     "motion": "^12.23.19",
     "prop-types": "^15.8.1",

@@ -1,17 +1,45 @@
+import { createClient } from '@sanity/client';
+
 const PROJECT_ID = 'pz9uficf';
 const DATASET = 'production';
 const API_VERSION = '2023-05-03';
 
-export async function sanityFetch(query) {
-  const encodeQuery = encodeURIComponent(query);
-  const url = `https://${PROJECT_ID}.api.sanity.io/v${API_VERSION}/data/query/${DATASET}?query=${encodeQuery}`;
+// 通常のクライアント（公開データのみ）
+const client = createClient({
+  projectId: PROJECT_ID,
+  dataset: DATASET,
+  useCdn: true,
+  apiVersion: API_VERSION,
+  stega: {
+    enabled: true,
+    studioUrl: 'http://localhost:3333', // Sanity Studio の URL
+  },
+});
+
+// プレビュー用クライアント（トークンが必要、キャッシュ無効）
+const previewClient = createClient({
+  projectId: PROJECT_ID,
+  dataset: DATASET,
+  useCdn: false,
+  apiVersion: API_VERSION,
+  token: import.meta.env.VITE_SANITY_READ_TOKEN, // プレビュー用トークン
+  perspective: 'previewDrafts',
+});
+
+// プレビューモードかどうかを判定する関数（例えばURLパラメーターや環境変数などで制御）
+const isPreviewMode = () => {
+  // window.location が存在する場合（ブラウザ環境）に URL をチェック
+  if (typeof window !== 'undefined') {
+    return window.location.search.includes('preview=true') || window.location.hostname === 'localhost';
+  }
+  return false;
+};
+
+export async function sanityFetch(query, params = {}) {
+  const currentClient = isPreviewMode() && import.meta.env.VITE_SANITY_READ_TOKEN ? previewClient : client;
 
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Sanity fetch failed: ${response.statusText}`);
-    }
-    const { result } = await response.json();
+    const result = await currentClient.fetch(query, params);
     return result;
   } catch (error) {
     console.error('Sanity fetch error:', error);
@@ -22,12 +50,14 @@ export async function sanityFetch(query) {
 export async function getFeaturedArticles() {
   const query = `*[_type == "featuredArticles" && _id == "featuredArticles"][0]{
     title,
-    posts[]->{
+    featuredPerformance->{
       _id,
       title,
-      "slug": slug.current,
-      "mainImage": mainImage.asset->url,
-      publishedAt
+      performanceDate,
+      cast,
+      venue,
+      description,
+      "mainImage": mainImage.asset->url
     }
   }`;
   return sanityFetch(query);
@@ -48,21 +78,5 @@ export async function getPostBySlug(slug) {
       title
     }
   }`;
-  // sanityFetch を拡張してパラメータを渡せるようにするか、
-  // ここで直接 fetch を呼ぶようにします。
-  const encodeQuery = encodeURIComponent(query);
-  const encodeParams = encodeURIComponent(JSON.stringify({ slug }));
-  const url = `https://${PROJECT_ID}.api.sanity.io/v${API_VERSION}/data/query/${DATASET}?query=${encodeQuery}&$slug=%22${slug}%22`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-        throw new Error(`Sanity fetch failed: ${response.statusText}`);
-    }
-    const { result } = await response.json();
-    return result;
-  } catch (error) {
-    console.error('Sanity fetch error:', error);
-    return null;
-  }
+  return sanityFetch(query, { slug });
 }

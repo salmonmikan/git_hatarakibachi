@@ -13,6 +13,7 @@ import { AnimatePresence } from "framer-motion";
 import './WebApp.scss'
 import BackToTop from '@src/components/BackToTop.jsx';
 import NotFound from '@src/components/NotFound.jsx';
+import VisualEditing from '@src/components/VisualEditing.jsx';
 // import supabase from './utils/supabase.ts'
 
 function WebApp() {
@@ -22,6 +23,7 @@ function WebApp() {
   return (
     <>
       <ScrollToTop />
+      <VisualEditing />
       <header>
         <nav className="main-nav">
           <div className="nav-left">
