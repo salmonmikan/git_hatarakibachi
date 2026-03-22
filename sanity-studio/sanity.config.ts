@@ -4,6 +4,10 @@ import {visionTool} from '@sanity/vision'
 import {presentationTool} from 'sanity/presentation'
 import {schemaTypes} from './schemaTypes'
 
+const isLocalStudio = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+const previewOrigin = isLocalStudio ? 'http://localhost:5173' : 'https://hatarakibachi.pages.dev'
+const previewSecret = process.env.SANITY_PREVIEW_SECRET ?? ''
+
 export default defineConfig({
   name: 'default',
   title: 'hatarakibachi',
@@ -18,7 +22,6 @@ export default defineConfig({
           .title('コンテンツ')
           .id('root')
           .items([
-            // Top Page Info Singleton
             S.listItem()
               .title('トップページ情報')
               .id('featuredArticles')
@@ -28,19 +31,58 @@ export default defineConfig({
                   .documentId('featuredArticles')
               ),
             S.divider(),
-            // Regular items
             ...S.documentTypeListItems().filter(
               (listItem) => !['featuredArticles'].includes(listItem.getId())
             ),
           ]),
     }),
     presentationTool({
+      resolve: {
+        locations: {
+          post: {
+            select: {title: 'title', slug: 'slug.current'},
+            resolve: (doc) => {
+              if (!doc?.slug) return null
+
+              return {
+                locations: [
+                  {
+                    title: doc.title || 'Post',
+                    href: `/post/${doc.slug}`,
+                  },
+                ],
+              }
+            },
+          },
+          featuredArticles: {
+            select: {title: 'title'},
+            resolve: (doc) => ({
+              locations: [
+                {
+                  title: doc?.title || 'Home',
+                  href: '/',
+                },
+              ],
+            }),
+          },
+          performance: {
+            select: {title: 'title'},
+            resolve: (doc) => ({
+              locations: [
+                {
+                  title: doc?.title || 'Home',
+                  href: '/',
+                },
+              ],
+            }),
+          },
+        },
+      },
       previewUrl: {
-        origin: typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-          ? 'http://localhost:5173' 
-          : 'https://hatarakibachi.pages.dev', // デフォルトの本番/STG URL（必要に応じて変更）
+        initial: previewOrigin,
         previewMode: {
-          enable: '/api/draft',
+          enable: `/api/draft?secret=${encodeURIComponent(previewSecret)}`,
+          disable: '/api/disable-draft',
         },
       },
     }),
