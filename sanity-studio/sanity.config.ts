@@ -5,7 +5,7 @@ import {presentationTool} from 'sanity/presentation'
 import {schemaTypes} from './schemaTypes'
 
 const isLocalStudio = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-const previewOrigin = isLocalStudio ? 'http://localhost:5173' : 'https://hatarakibachi.pages.dev'
+const previewOrigin = isLocalStudio ? 'http://localhost:5173' : 'https://dev-sanity.git-hatarakibachi.pages.dev'
 const previewSecret = process.env.SANITY_PREVIEW_SECRET ?? ''
 
 export default defineConfig({
