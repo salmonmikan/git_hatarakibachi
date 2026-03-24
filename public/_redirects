@@ -1,3 +1,2 @@
 /api/*  /api/:splat  200
-/performance/*  /performance/:splat  200
 /*      /index.html  200

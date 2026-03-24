@@ -67,6 +67,7 @@ function WebApp() {
             <Route path="scenario" element={<Scenario onEntered={() => mainRef.current?.focus()} />} />
             <Route path="contact" element={<Contact onEntered={() => mainRef.current?.focus()} />} />
             <Route path="post/:slug" element={<PostDetail onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="performance/:slug" element={<PerformanceDetail onEntered={() => mainRef.current?.focus()} />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
