@@ -7,6 +7,7 @@ import Home from "./pages/Home.jsx";
 import Member from "./pages/Member.jsx";
 import Scenario from "./pages/Scenario.jsx";
 import PostDetail from "./pages/PostDetail.jsx";
+import PerformanceDetail from "./pages/PerformanceDetail.jsx";
 import ScrollToTop from "@src/components/ScrollToTop.jsx";
 import FloatingLinks from "@src/components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";

@@ -49,24 +49,26 @@ export default function FeaturedArticles() {
           </Link>
         ))}
         {performance && (
-          <article className="featured-card">
-            {performance.mainImage && (
-              <div className="featured-card__image">
-                <img src={performance.mainImage} alt={performance.title} />
+          <Link to={`/performance/${performance.slug}`} className="featured-card-link">
+            <article className="featured-card">
+              {performance.mainImage && (
+                <div className="featured-card__image">
+                  <img src={performance.mainImage} alt={performance.title} />
+                </div>
+              )}
+              <div className="featured-card__content">
+                <h3 className="featured-card__title">{performance.title}</h3>
+                {performance.performanceDate && (
+                  <time className="featured-card__date" dateTime={performance.performanceDate}>
+                    {new Date(performance.performanceDate).toLocaleDateString('ja-JP')}
+                  </time>
+                )}
+                {performance.venue && (
+                  <p className="featured-card__meta">{performance.venue}</p>
+                )}
               </div>
-            )}
-            <div className="featured-card__content">
-              <h3 className="featured-card__title">{performance.title}</h3>
-              {performance.performanceDate && (
-                <time className="featured-card__date" dateTime={performance.performanceDate}>
-                  {new Date(performance.performanceDate).toLocaleDateString('ja-JP')}
-                </time>
-              )}
-              {performance.venue && (
-                <p className="featured-card__meta">{performance.venue}</p>
-              )}
-            </div>
-          </article>
+            </article>
+          </Link>
         )}
       </div>
     </section>

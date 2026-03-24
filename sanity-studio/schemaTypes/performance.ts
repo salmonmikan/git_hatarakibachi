@@ -11,6 +11,15 @@ export default defineType({
       type: 'string',
     }),
     defineField({
+      name: 'slug',
+      title: 'スラッグ',
+      type: 'slug',
+      options: {
+        source: 'title',
+        maxLength: 96,
+      },
+    }),
+    defineField({
       name: 'performanceDate',
       title: '公演日時',
       type: 'datetime',

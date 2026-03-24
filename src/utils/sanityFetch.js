@@ -54,6 +54,7 @@ export async function getFeaturedArticles() {
     featuredPerformance->{
       _id,
       title,
+      "slug": slug.current,
       performanceDate,
       cast,
       venue,
@@ -62,6 +63,19 @@ export async function getFeaturedArticles() {
     }
   }`
   return sanityFetch(query)
+}
+
+export async function getPerformanceBySlug(slug) {
+  const query = `*[_type == "performance" && slug.current == $slug][0]{
+    title,
+    "slug": slug.current,
+    "mainImage": mainImage.asset->url,
+    performanceDate,
+    cast,
+    venue,
+    description
+  }`
+  return sanityFetch(query, { slug })
 }
 
 export async function getPostBySlug(slug) {

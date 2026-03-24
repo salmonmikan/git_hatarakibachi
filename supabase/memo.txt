@@ -2,3 +2,8 @@
 npx supabase migration repair --status applied 20260201160638
 ・リモートからのpull
 npx supabase db pull
+
+
+・リモートへのpush
+$ npx supabase login
+$ npx supabase db push
