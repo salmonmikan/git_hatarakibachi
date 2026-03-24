@@ -6,7 +6,7 @@ import {schemaTypes} from './schemaTypes'
 
 const isLocalStudio = typeof window !== 'undefined' && window.location.hostname === 'localhost'
 const previewOrigin = isLocalStudio ? 'http://localhost:5173' : 'https://hatarakibachi.com'
-const previewSecret = process.env.SANITY_PREVIEW_SECRET ?? ''
+const previewSecret = process.env.SANITY_STUDIO_PREVIEW_SECRET ?? ''
 
 export default defineConfig({
   name: 'default',

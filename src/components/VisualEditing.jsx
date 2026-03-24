@@ -1,4 +1,4 @@
-import { VisualEditing } from '@sanity/visual-editing/react-router'
+import { VisualEditing } from '@sanity/visual-editing/react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { canUsePreviewMode } from '@src/utils/previewMode.js'
 
