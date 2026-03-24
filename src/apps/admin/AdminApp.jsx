@@ -8,6 +8,8 @@ import AdminNews from "./pages/AdminNews.jsx";
 import AdminCredits from "./pages/AdminCredits.jsx";
 import CreditEditModal from "./components/Modal/CreditEditModal.jsx";
 import NewsEditModal from "./components/Modal/NewsEditModal.jsx";
+import AdminUpdateInfo from "./pages/AdminUpdateInfo.jsx";
+import UpdateInfoEditModal from "./components/Modal/UpdateInfoEditModal.jsx";
 
 import RequireAuth from "./components/RequireAuth";
 import NotFound from '@src/components/NotFound.jsx';
@@ -31,6 +33,9 @@ export default function AdminApp() {
           </Route>
           <Route path="news" element={<AdminNews />}>
             <Route path=":id" element={<NewsEditModal />} />
+          </Route>
+          <Route path="update-info" element={<AdminUpdateInfo />}>
+            <Route path=":id" element={<UpdateInfoEditModal />} />
           </Route>
           <Route path="analytics" element={<AnalyticsEmbed />} />
         </Route>

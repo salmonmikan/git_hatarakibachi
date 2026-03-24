@@ -6,12 +6,14 @@ import Contact from "./pages/Contact.jsx";
 import Home from "./pages/Home.jsx";
 import Member from "./pages/Member.jsx";
 import Scenario from "./pages/Scenario.jsx";
+import PostDetail from "./pages/PostDetail.jsx";
 import ScrollToTop from "@src/components/ScrollToTop.jsx";
 import FloatingLinks from "@src/components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
 import './WebApp.scss'
 import BackToTop from '@src/components/BackToTop.jsx';
 import NotFound from '@src/components/NotFound.jsx';
+import VisualEditing from '@src/components/VisualEditing.jsx';
 // import supabase from './utils/supabase.ts'
 
 function WebApp() {
@@ -21,6 +23,7 @@ function WebApp() {
   return (
     <>
       <ScrollToTop />
+      <VisualEditing />
       <header>
         <nav className="main-nav">
           <div className="nav-left">
@@ -53,7 +56,7 @@ function WebApp() {
         </nav>
       </header>
       <FloatingLinks behavior="fixed" /> {/* fixed or "sticky" */}
-      <main className="content" id="main-content" ref={mainRef} tabIndex={-1}>
+      <main className="content" id="main-content" ref={mainRef}>
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={<Home onEntered={() => mainRef.current?.focus()} />} />
@@ -62,6 +65,7 @@ function WebApp() {
             <Route path="archive" element={<Archive onEntered={() => mainRef.current?.focus()} />} />
             <Route path="scenario" element={<Scenario onEntered={() => mainRef.current?.focus()} />} />
             <Route path="contact" element={<Contact onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="post/:slug" element={<PostDetail onEntered={() => mainRef.current?.focus()} />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
