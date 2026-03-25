@@ -13,25 +13,17 @@ export default defineType({
     defineField({
       name: 'slug',
       title: 'スラッグ',
-      type: 'slug',
-      options: {
-        source: 'title',
-        maxLength: 96,
-      },
+      description: '公演詳細ページへのURLに使用されます。',
+      type: 'slug'
     }),
     defineField({
       name: 'performanceDate',
       title: '公演日時',
-      type: 'datetime',
-      options: {
-        dateFormat: 'YYYY-MM-DD',
-        timeFormat: 'HH:mm',
-        timeStep: 15,
-      },
+      type: 'text',
     }),
     defineField({
       name: 'cast',
-      title: 'キャスト',
+      title: 'キャスト・スタッフ',
       type: 'text',
       rows: 3,
     }),
@@ -47,11 +39,21 @@ export default defineType({
     }),
     defineField({
       name: 'mainImage',
-      title: '公演メイン画像',
+      title: '公演画像1',
       type: 'image',
       options: {
         hotspot: true,
       },
+      validation: (Rule) => Rule.custom((value) => {
+        if (!value?.asset?._ref) return true;
+        // アセットID（例: image-abc123-1200x800-jpg）からサイズを抽出
+        const dimensions = value.asset._ref.split('-')[2];
+        const [width, height] = dimensions.split('x').map(Number);
+        if (width > 2000 || height > 2000) {
+          return `画像サイズが大きすぎます（${width}x${height}px）。2000px 以下にしてください。`;
+        }
+        return true;
+      }),
     }),
   ],
   preview: {
