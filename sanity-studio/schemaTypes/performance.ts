@@ -41,6 +41,7 @@ export default defineType({
       name: 'mainImage',
       title: '公演画像1',
       type: 'image',
+      description: '上限は縦横2000pxです。',
       options: {
         hotspot: true,
       },

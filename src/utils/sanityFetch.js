@@ -2,7 +2,12 @@ import { createClient } from '@sanity/client'
 import { canUsePreviewMode } from '@src/utils/previewMode.js'
 
 const PROJECT_ID = 'pz9uficf'
-const DATASET = 'production'
+const isStaging =
+  import.meta.env.DEV ||
+  (typeof window !== 'undefined' &&
+    (window.location.hostname === 'staging.hatarakibachi.com' ||
+      window.location.hostname === '127.0.0.1'))
+const DATASET = isStaging ? 'staging' : 'production'
 const API_VERSION = '2023-05-03'
 const STUDIO_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'

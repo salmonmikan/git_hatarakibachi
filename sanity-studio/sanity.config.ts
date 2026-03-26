@@ -4,8 +4,12 @@ import {visionTool} from '@sanity/vision'
 import {presentationTool} from 'sanity/presentation'
 import {schemaTypes} from './schemaTypes'
 
-const isLocalStudio = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-const previewOrigin = isLocalStudio ? 'http://localhost:5173' : 'https://hatarakibachi.com'
+const isStagingStudio =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === 'staging.hatarakibachi.com')
+const previewOrigin = isStagingStudio ? 'http://localhost:8788' : 'https://hatarakibachi.com'
 const previewSecret = process.env.SANITY_STUDIO_PREVIEW_SECRET ?? ''
 
 export default defineConfig({
@@ -13,7 +17,7 @@ export default defineConfig({
   title: 'hatarakibachi',
 
   projectId: 'pz9uficf',
-  dataset: 'production',
+  dataset: isStagingStudio ? 'staging' : 'production',
 
   plugins: [
     structureTool({
