@@ -49,6 +49,7 @@ export async function sanityFetch(query, params = {}) {
 export async function getFeaturedArticles() {
   const query = `*[_type == "featuredArticles" && _id == "featuredArticles"][0]{
     title,
+    performanceDisplayMode,
     posts[]->{
       _id,
       title,

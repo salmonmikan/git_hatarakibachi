@@ -47,6 +47,19 @@ export default defineType({
       validation: (Rule) => Rule.max(3),
     }),
     defineField({
+      name: 'performanceDisplayMode',
+      title: '公演情報の表示形式',
+      type: 'string',
+      options: {
+        list: [
+          {title: 'グリッド（横並び）', value: 'grid'},
+          {title: 'カルーセル（スライド切替）', value: 'carousel'},
+        ],
+        layout: 'radio',
+      },
+      initialValue: 'grid',
+    }),
+    defineField({
       name: 'sideContentLeft',
       title: 'サイドコンテンツ（左）',
       type: 'object',
