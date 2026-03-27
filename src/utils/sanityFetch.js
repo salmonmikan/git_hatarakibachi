@@ -56,7 +56,7 @@ export async function getFeaturedArticles() {
       "mainImage": mainImage.asset->url,
       publishedAt
     },
-    featuredPerformance->{
+    featuredPerformance[]->{
       _id,
       title,
       "slug": slug.current,
@@ -71,13 +71,13 @@ export async function getFeaturedArticles() {
       mediaType,
       "imageUrl": image.asset->url,
       "videoUrl": video.asset->url,
-      link
+      externalUrl
     },
     sideContentRight {
       mediaType,
       "imageUrl": image.asset->url,
       "videoUrl": video.asset->url,
-      link
+      externalUrl
     }
   }`
   return sanityFetch(query)

@@ -21,10 +21,10 @@ export default function FeaturedArticles() {
   }, [])
 
   const posts = data?.posts ?? []
-  const performance = data?.featuredPerformance ?? null
+  const performances = data?.featuredPerformance ?? []
 
   if (loading) return <div className="featured-articles-loading">Loading...</div>
-  if (!data || (posts.length === 0 && !performance)) return null
+  if (!data || (posts.length === 0 && performances.length === 0)) return null
 
   return (
     <>
@@ -52,8 +52,8 @@ export default function FeaturedArticles() {
             </article>
           </Link>
         ))}
-        {performance && (
-          <Link to={`/performance/${performance.slug}`} className="featured-card-link">
+        {performances.map((performance) => (
+          <Link key={performance._id} to={`/performance/${performance.slug}`} className="featured-card-link">
             <article className="featured-card">
               {performance.mainImage && (
                 <div className="featured-card__image">
@@ -75,7 +75,7 @@ export default function FeaturedArticles() {
               )}
             </article>
           </Link>
-        )}
+        ))}
       </div>
     </section>
     </>
