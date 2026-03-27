@@ -64,7 +64,20 @@ export async function getFeaturedArticles() {
       cast,
       venue,
       description,
+      displayMode,
       "mainImage": mainImage.asset->url
+    },
+    sideContentLeft {
+      mediaType,
+      "imageUrl": image.asset->url,
+      "videoUrl": video.asset->url,
+      link
+    },
+    sideContentRight {
+      mediaType,
+      "imageUrl": image.asset->url,
+      "videoUrl": video.asset->url,
+      link
     }
   }`
   return sanityFetch(query)
@@ -76,6 +89,7 @@ export async function getPerformanceBySlug(slug) {
     "slug": slug.current,
     "mainImage": mainImage.asset->url,
     performanceDate,
+    displayMode,
     cast,
     venue,
     description

@@ -22,6 +22,19 @@ export default defineType({
       type: 'text',
     }),
     defineField({
+      name: 'displayMode',
+      title: '表示モード',
+      type: 'string',
+      options: {
+        list: [
+          {title: '通常（詳細あり）', value: 'standard'},
+          {title: '画像のみ', value: 'imageOnly'},
+        ],
+        layout: 'radio',
+      },
+      initialValue: 'standard',
+    }),
+    defineField({
       name: 'cast',
       title: 'キャスト・スタッフ',
       type: 'text',

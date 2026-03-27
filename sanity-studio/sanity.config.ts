@@ -14,7 +14,7 @@ const previewSecret = process.env.SANITY_STUDIO_PREVIEW_SECRET ?? ''
 
 export default defineConfig({
   name: 'default',
-  title: 'hatarakibachi',
+  title: `hatarakibachi [${isStagingStudio ? 'staging' : 'production'}]`,
 
   projectId: 'pz9uficf',
   dataset: isStagingStudio ? 'staging' : 'production',

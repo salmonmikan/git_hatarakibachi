@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getFeaturedArticles } from '../utils/sanityFetch'
+import SideBanner from './SideBanner'
 import './FeaturedArticles.scss'
 
 export default function FeaturedArticles() {
@@ -26,7 +27,10 @@ export default function FeaturedArticles() {
   if (!data || (posts.length === 0 && !performance)) return null
 
   return (
-    <section className="featured-articles">
+    <>
+      <SideBanner side="left" content={data.sideContentLeft} />
+      <SideBanner side="right" content={data.sideContentRight} />
+      <section className="featured-articles">
       <h2 className="home-title">{data.title || 'Featured Articles'}</h2>
       <div className="featured-grid">
         {posts.map((post) => (
@@ -56,21 +60,24 @@ export default function FeaturedArticles() {
                   <img src={performance.mainImage} alt={performance.title} />
                 </div>
               )}
-              <div className="featured-card__content">
-                <h3 className="featured-card__title">{performance.title}</h3>
-                {performance.performanceDate && (
-                  <time className="featured-card__date" dateTime={performance.performanceDate}>
-                    {new Date(performance.performanceDate).toLocaleDateString('ja-JP')}
-                  </time>
-                )}
-                {performance.venue && (
-                  <p className="featured-card__meta">{performance.venue}</p>
-                )}
-              </div>
+              {performance.displayMode !== 'imageOnly' && (
+                <div className="featured-card__content">
+                  <h3 className="featured-card__title">{performance.title}</h3>
+                  {performance.performanceDate && (
+                    <time className="featured-card__date" dateTime={performance.performanceDate}>
+                      {new Date(performance.performanceDate).toLocaleDateString('ja-JP')}
+                    </time>
+                  )}
+                  {performance.venue && (
+                    <p className="featured-card__meta">{performance.venue}</p>
+                  )}
+                </div>
+              )}
             </article>
           </Link>
         )}
       </div>
     </section>
+    </>
   )
 }
