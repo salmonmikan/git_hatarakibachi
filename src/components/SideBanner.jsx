@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom'
+import { motion } from 'motion/react'
 import './SideBanner.scss'
 
 export default function SideBanner({ side, content }) {
@@ -48,11 +50,18 @@ export default function SideBanner({ side, content }) {
     return null
   }
 
-  return (
-    <div className={`side-banner side-${side}`}>
+  return createPortal(
+    <motion.div
+      className={`side-banner side-${side}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4, ease: "easeInOut" }}
+    >
       <div className="side-banner__content">
         {renderMedia()}
       </div>
-    </div>
+    </motion.div>,
+    document.body
   )
 }
