@@ -2,20 +2,112 @@
   margin-bottom: 2rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-width: 1200px;
+  // max-width: 1200px;
+
+  .featured-carousel-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 2rem auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  .featured-carousel {
+    position: relative;
+    width: 90%;
+    margin: 0 auto;
+    overflow: visible; // To allow animations to go slightly out of bounds if needed
+
+    .carousel-slide {
+      width: 100%;
+    }
+
+    .carousel-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: var(--color-text);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.3s ease;
+      font-size: 1.2rem;
+      padding: 0;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.4);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-50%) scale(1.1);
+      }
+
+      &.prev { left: -22px; }
+      &.next { right: -22px; }
+
+      @media (max-width: 650px) {
+        width: 36px;
+        height: 36px;
+        &.prev { left: -10px; }
+        &.next { right: -10px; }
+      }
+    }
+
+    .carousel-dots {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+
+      .carousel-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--color-border);
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &.active {
+          background: var(--color-nav-active-bg);
+          transform: scale(1.2);
+        }
+      }
+    }
+  }
+
+  .secondary-grid {
+    margin-top: 1rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border);
+  }
 
   .featured-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-    gap: 1.5rem;
-    margin-top: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem;
+    width: 90%;
+    max-width: 800px;
+    margin: 1.5rem auto 0;
   }
 
   .featured-card-link {
-    text-decoration: none;
-    display: block;
-    color: inherit;
+    width: 100%;
+    min-width: 0;
+  }
+
+  @media (max-width: 650px) {
+    .featured-grid {
+      grid-template-columns: 1fr;
+    }
   }
 
   .featured-card {

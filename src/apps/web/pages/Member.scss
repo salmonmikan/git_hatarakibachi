@@ -2,21 +2,30 @@
     margin-bottom: 0;
 }
 
+/* メンバー一覧のグリッドコンテナ。PCで最大3列に収まるよう最小350px幅を維持する。 */
+.members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 3rem;
+    justify-content: center;
+    margin-top: 2rem;
+    padding: 0 1rem;
+}
+
 .member {
+    /* 個別のメンバーカード。グリッド内でカード幅を自動で100%にする。 */
     &-card {
         display: flex;
-        flex-wrap: wrap;
-        // gap: 20px;
-        justify-content: center;
-        // margin-top: 20px;
         flex-direction: column;
-        margin: 20px;
         align-items: center;
+        margin: 0;
+        width: 100%;
+        cursor: pointer;
     }
 
-    &-no-photo, &-photo{
-        width: 150px;
-        height: 150px;
+    &-no-photo, &-photo {
+        width: 250px;
+        height: 250px;
         object-fit: cover;
         background-color: var(--color-bg-secondary);
         display: flex;
@@ -24,13 +33,16 @@
         justify-content: center;
         font-size: 1.4rem;
         color: var(--color-text-muted);
-        border-radius: 10%;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px var(--color-shadow);
+        transition: transform 0.3s ease;
 
         &.upper {
             object-position: top;
-            // width: 150px;
-            // height: 150px;
-            // border-radius: 50%;
+        }
+
+        &:hover {
+            transform: scale(1.03);
         }
     }
 
@@ -42,6 +54,13 @@
         color: var(--color-text);
     }
 
+    &-hurigana {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+        text-align: center;
+        margin-top: -0.2rem;
+    }
+
     &-role {
         margin: 0.25rem 0;
         text-align: center;
@@ -49,4 +68,4 @@
         font-size: 1rem;
         font-weight: 500;
     }
-}
+}

@@ -85,7 +85,7 @@ export default function Member() {
                 {loading && <p>読み込み中...</p>}
                 {error && <p className="error">{error}</p>}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="members-grid">
                     {members.map((m) => (
                         <MemberCard
                             key={m.id || m.name}

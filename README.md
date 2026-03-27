@@ -1,17 +1,52 @@
-## 劇団はたらきばち公式サイト
-はたらきばちのwebサイトを構成するファイル群です。
+# 劇団はたらきばち公式サイト
 
-ローカル環境開発時-起動時コマンド <br/>
-npx wrangler pages dev --local --proxy 5173 -- npm run dev <br/>
-※wrangler pages dev --local --proxy 5173 -- npm run dev を実行すると、Cloudflare Pages の開発サーバ（Functions）と Vite の開発サーバ（HMR）を一度に起動し、Wrangler が Vite のポートをリバースプロキシします。その結果、フロントの HMR と Functions のホットリロードが同時に動作し、開発体験（DX）が大幅に向上します。
+劇団はたらきばちの公式サイトを構成するリポジトリです。
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## アーキテクチャ構成
 
-Currently, two official plugins are available:
+- **フロントエンド**: React + Vite
+- **デプロイ・ホスティング**: Cloudflare Pages
+- **CMS (コンテンツ管理)**: Sanity Studio (v3)
+- **データベース / 認証**: Supabase
+- **スタイリング**: Vanilla CSS
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ディレクトリ構成
 
-## Expanding the ESLint configuration 
+- `/src`: フロントエンド（React）のソースコード
+- `/sanity-studio`: Sanity Studio の設定・定義一式
+- `/functions`: Cloudflare Pages Functions (サーバーサイドロジック)
+- `/supabase`: Supabase の設定・マイグレーション関連
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## ローカル開発
+
+### 1. フロントエンドの起動
+
+以下のコマンドを実行することで、Cloudflare Pages の開発サーバ（Functions）と Vite の開発サーバ（HMR）が同時に起動し、リバースプロキシ経由で開発環境にアクセスできます。
+
+```bash
+npm run dev:proxy
+```
+
+### 2. Sanity Studio の起動
+
+CMS の管理画面をローカルで起動します。
+
+```bash
+cd sanity-studio
+npm run dev
+```
+
+- ブラウザで `http://localhost:3333` にアクセスしてください。
+- **注意**: ローカル実行時は自動的に `staging` データセットに向くように設定されています。本番データに影響を与えずにコンテンツの編集や検証が可能です。
+
+## 主要なコマンド
+
+- `npm run dev:proxy`: フロントエンド開発サーバ + Cloudflare Proxy の起動（推奨）
+- `npm run dev`: フロントエンド開発サーバのみ起動（Vite HMR）
+- `npm run build`: プロダクションビルドの作成
+- `npm run lint`: ESLint による静的解析
+- `npm run sb:*`: Supabase 関連の操作（詳細は `package.json` 参照）
+
+## ロゴ生成について
+
+`src/assets/gen-logo.mjs` を通じてロゴ画像が自動生成されます。`npm run dev` や `npm run build` の実行前に自動的に動作するよう設定されています。

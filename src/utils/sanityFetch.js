@@ -2,7 +2,12 @@ import { createClient } from '@sanity/client'
 import { canUsePreviewMode } from '@src/utils/previewMode.js'
 
 const PROJECT_ID = 'pz9uficf'
-const DATASET = 'production'
+const isStaging =
+  import.meta.env.DEV ||
+  (typeof window !== 'undefined' &&
+    (window.location.hostname === 'staging.hatarakibachi.com' ||
+      window.location.hostname === '127.0.0.1'))
+const DATASET = isStaging ? 'staging' : 'production'
 const API_VERSION = '2023-05-03'
 const STUDIO_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
@@ -44,6 +49,7 @@ export async function sanityFetch(query, params = {}) {
 export async function getFeaturedArticles() {
   const query = `*[_type == "featuredArticles" && _id == "featuredArticles"][0]{
     title,
+    performanceDisplayMode,
     posts[]->{
       _id,
       title,
@@ -51,7 +57,7 @@ export async function getFeaturedArticles() {
       "mainImage": mainImage.asset->url,
       publishedAt
     },
-    featuredPerformance->{
+    featuredPerformance[]->{
       _id,
       title,
       "slug": slug.current,
@@ -59,7 +65,20 @@ export async function getFeaturedArticles() {
       cast,
       venue,
       description,
+      displayMode,
       "mainImage": mainImage.asset->url
+    },
+    sideContentLeft {
+      mediaType,
+      "imageUrl": image.asset->url,
+      "videoUrl": video.asset->url,
+      externalUrl
+    },
+    sideContentRight {
+      mediaType,
+      "imageUrl": image.asset->url,
+      "videoUrl": video.asset->url,
+      externalUrl
     }
   }`
   return sanityFetch(query)
@@ -71,6 +90,7 @@ export async function getPerformanceBySlug(slug) {
     "slug": slug.current,
     "mainImage": mainImage.asset->url,
     performanceDate,
+    displayMode,
     cast,
     venue,
     description
