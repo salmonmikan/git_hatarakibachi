@@ -133,7 +133,7 @@ export default function DashBoard() {
             <header className="adm-dash__head">
                 <h1 className="adm-dash__title">hatarakibachi Dashboard</h1>
                 <p className="adm-dash__lead">
-                    {`管理画面ダッシュボード \n ※この画面での変更はwebサイトへ即時反映されます。`}
+                    {`管理画面ダッシュボード`}
                 </p>
             </header>
 
@@ -148,7 +148,7 @@ export default function DashBoard() {
             <Panel
                 kind="recent-news"
                 title="Database Index"
-                meta="各指標から編集画面へ遷移できます"
+                meta={`各指標から編集画面へ遷移できます \n ※webサイトへ即時反映されます。`}
             >
                 <PanelSection title="劇団員管理">
                     <MetricGrid items={memberItems} />
@@ -163,7 +163,7 @@ export default function DashBoard() {
                 <Panel
                     kind="WEB"
                     title="Website URLs"
-                    meta="公開サイト・検証サイトはこちら"
+                    meta="公開サイト・検証サイトの確認はこちら"
                 >
                     <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
                         <Link
@@ -196,7 +196,7 @@ export default function DashBoard() {
                 <Panel
                     kind="CMS"
                     title="Sanity Studio"
-                    meta="トップページ等の管理はこちら"
+                    meta="トップページ等のコンテンツ管理はこちら"
                 >
                     <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
                         <Link
