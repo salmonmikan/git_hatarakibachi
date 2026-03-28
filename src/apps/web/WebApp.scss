@@ -1,20 +1,15 @@
 #root {
   width: 80vw;
   max-width: 1280px;
+  // display: flex;
+  // justify-content: center;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
 }
 
 header {
-  // position: sticky;
-  // top: 0;
   background: var(--color-header-bg);
-  // z-index: 100;
-  // margin-bottom: 2rem;
-  // padding-top: 1rem;
-  // padding-bottom: 1rem;
-  // border-bottom: 1px solid #eee;
 }
 
 main {
