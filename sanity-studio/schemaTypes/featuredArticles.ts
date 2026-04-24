@@ -62,14 +62,14 @@ export default defineType({
     defineField({
       name: 'sideContentLeft',
       title: 'トップページサイドコンテンツ（左）',
-      description: '縦長の画像・動画を推奨します',
+      description: 'スマホなどの縦長の画像・動画を推奨します。PC等で横画面が広い場合にのみ表示されます。',
       type: 'object',
       fields: createSideContentFields()
     }),
     defineField({
       name: 'sideContentRight',
       title: 'トップページサイドコンテンツ（右）',
-      description: '縦長の画像・動画を推奨します',
+      description: 'スマホなどの縦長の画像・動画を推奨しますPC等で横画面が広い場合にのみ表示されます。',
       type: 'object',
       fields: createSideContentFields()
     }),
