@@ -97,7 +97,8 @@
 }
 
 .mem-form__input,
-.mem-form__textarea {
+.mem-form__textarea,
+.mem-form__file {
     padding: 10px;
     border-radius: 10px;
     border: 1px solid #ddd;
@@ -105,6 +106,51 @@
 
 .mem-form__textarea {
     resize: vertical;
+}
+
+.mem-upload {
+    display: grid;
+    gap: 10px;
+    justify-items: stretch;
+}
+
+.mem-upload__row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.mem-upload__hint,
+.mem-upload__meta {
+    margin: 0;
+    font-size: 12px;
+    color: #555;
+    width: 100%;
+    text-align: left;
+}
+
+.mem-upload__link {
+    width: 100%;
+    display: block;
+    font-size: 13px;
+    color: inherit;
+    text-align: left;
+}
+
+.mem-upload__preview {
+    width: min(100%, 320px);
+    max-height: 320px;
+    display: block;
+    justify-self: center;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+}
+
+.mem-upload__clear {
+    padding: 8px 12px;
 }
 
 .mem-form__actions {

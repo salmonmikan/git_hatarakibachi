@@ -8,6 +8,13 @@
   text-align: center;
 }
 
+@media (min-width: 1440px) {
+  #root {
+    width: calc(70vw - 4rem);
+    max-width: none;
+  }
+}
+
 header {
   background: var(--color-header-bg);
 }
