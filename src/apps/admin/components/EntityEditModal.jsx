@@ -11,6 +11,7 @@ export default function EntityEditModal({
     renderFields,         // ({form,onChange,busy,loading,isNew,extras}) => JSX
     renderActions,        // 任意
     extras = {},
+    preparePayload,
 }) {
     const nav = useNavigate();
     const { id } = useParams();
@@ -22,7 +23,7 @@ export default function EntityEditModal({
 
     const entity = useMemo(() => {
         if (isNew) return null;
-        return (data ?? []).find((x) => x.id === entityId) ?? null;
+        return (data ?? []).find((item) => item.id === entityId) ?? null;
     }, [data, entityId, isNew]);
 
     const [busy, setBusy] = useState(false);
@@ -47,50 +48,68 @@ export default function EntityEditModal({
 
     // 編集時：defaults を土台に entity を流し込む（null/undefined は defaults に落とす）
     useEffect(() => {
+        if (isNew) {
+            setForm({ ...defaults });
+            return;
+        }
+
         if (!entity) return;
 
         const next = { ...defaults };
         for (const key of Object.keys(defaults)) {
-            const v = entity[key];
-            next[key] = v === null || v === undefined ? defaults[key] : v;
+            const value = entity[key];
+            next[key] = value === null || value === undefined ? defaults[key] : value;
         }
         setForm(next);
     }, [entity?.id]); // entity切替時だけ
 
     const onChange = (e) => {
         const { name, value } = e.target;
-        setForm((p) => ({ ...p, [name]: value }));
+        setForm((prev) => ({ ...prev, [name]: value }));
     };
 
-    const buildPayload = (f) => {
-        const payload = { ...f };
+    const buildPayload = (currentForm) => {
+        const payload = { ...currentForm };
 
         // coerceが指定されてるキーだけ変換
-        for (const [k, fn] of Object.entries(coerce)) {
-            payload[k] = fn(payload[k], payload);
+        for (const [key, fn] of Object.entries(coerce)) {
+            payload[key] = fn(payload[key], payload);
         }
 
         // よくある事故防止：空文字だけ残したくない場合に備えてそのまま返す
         return payload;
     };
 
+    const finalizePayload = preparePayload ?? (async (payload) => payload);
+
     const onSave = async (e) => {
         e.preventDefault();
         setBusy(true);
         setLocalError(null);
 
-        const payload = buildPayload(form);
-        const res = isNew ? await add(payload) : await update(entityId, payload);
+        try {
+            const basePayload = buildPayload(form);
+            const payload = await finalizePayload(basePayload, {
+                entity,
+                entityId,
+                form,
+                isNew,
+            });
+            const res = isNew ? await add(payload) : await update(entityId, payload);
 
-        if (res?.error) {
-            setLocalError(res.error.message ?? "保存に失敗しました。");
+            if (res?.error) {
+                setLocalError(res.error.message ?? "保存に失敗しました。");
+                setBusy(false);
+                return;
+            }
+
+            await refresh?.();
             setBusy(false);
-            return;
+            onClose();
+        } catch (err) {
+            setLocalError(err?.message ?? "保存前の処理に失敗しました。");
+            setBusy(false);
         }
-
-        await refresh?.();
-        setBusy(false);
-        onClose();
     };
 
     const onDelete = async () => {

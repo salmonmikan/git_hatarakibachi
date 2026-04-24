@@ -133,7 +133,7 @@ export default function DashBoard() {
             <header className="adm-dash__head">
                 <h1 className="adm-dash__title">hatarakibachi Dashboard</h1>
                 <p className="adm-dash__lead">
-                    {`管理画面ダッシュボード \n ※この画面での変更はwebサイトへ即時反映されます。`}
+                    {`管理画面ダッシュボード`}
                 </p>
             </header>
 
@@ -148,7 +148,7 @@ export default function DashBoard() {
             <Panel
                 kind="recent-news"
                 title="Database Index"
-                meta="各指標から編集画面へ遷移できます"
+                meta={`各指標から編集画面へ遷移できます \n ※webサイトへ即時反映されます。`}
             >
                 <PanelSection title="劇団員管理">
                     <MetricGrid items={memberItems} />
@@ -159,22 +159,90 @@ export default function DashBoard() {
                 </PanelSection>
             </Panel>
 
-            <Panel
-                kind="recent-news"
-                title="Recent News"
-                meta="latest 5"
-            >
-                <ListShell loading={loading} hasItems={recent?.length > 0}>
-                    {recent.map((n) => (
-                        <article key={n.id} className="adm-item" data-surface="soft" data-status={String(n.status)}>
-                            <div className="adm-item__title">{n.news_title}</div>
-                            <div className="adm-item__meta" data-tone="muted">
-                                {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
+            <div className="adm-dash__column-group">
+                <Panel
+                    kind="WEB"
+                    title="Website URLs"
+                    meta="公開サイト・検証サイトの確認はこちら"
+                >
+                    <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
+                        <Link
+                            to="https://hatarakibachi.com"
+                            className="adm-card"
+                            data-surface="paper"
+                            data-kind="metric"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div className="adm-card__label" data-color="black">
+                                {`本番 (Prod)`}
                             </div>
-                        </article>
-                    ))}
-                </ListShell>
-            </Panel>
+                        </Link>
+                        <Link
+                            to="https://staging.hatarakibachi.com"
+                            className="adm-card"
+                            data-surface="paper"
+                            data-kind="metric"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div className="adm-card__label" data-color="black">
+                                {`検証 (Staging)`}
+                            </div>
+                        </Link>
+                    </div>
+                </Panel>
+
+                <Panel
+                    kind="CMS"
+                    title="Sanity Studio"
+                    meta="トップページ等のコンテンツ管理はこちら"
+                >
+                    <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
+                        <Link
+                            to="https://hatarakibachi.sanity.studio/production"
+                            className="adm-card"
+                            data-surface="paper"
+                            data-kind="metric"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div className="adm-card__label" data-color="black">
+                                {`本番 (Prod)`}
+                            </div>
+                        </Link>
+                        <Link
+                            to="https://hatarakibachi.sanity.studio/staging"
+                            className="adm-card"
+                            data-surface="paper"
+                            data-kind="metric"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div className="adm-card__label" data-color="black">
+                                {`検証 (Staging)`}
+                            </div>
+                        </Link>
+                    </div>
+                </Panel>
+
+                <Panel
+                    kind="recent-news"
+                    title="Recent News"
+                    meta="latest 5"
+                >
+                    <ListShell loading={loading} hasItems={recent?.length > 0}>
+                        {recent.map((n) => (
+                            <article key={n.id} className="adm-item" data-surface="soft" data-status={String(n.status)}>
+                                <div className="adm-item__title">{n.news_title}</div>
+                                <div className="adm-item__meta" data-tone="muted">
+                                    {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
+                                </div>
+                            </article>
+                        ))}
+                    </ListShell>
+                </Panel>
+            </div>
 
             <Panel
                 // kind="recent-news"
@@ -229,46 +297,47 @@ export default function DashBoard() {
                         })}
                     </ul>
                 </PanelSection>
-
             </Panel>
 
-            <Panel
-                kind="Future Releases"
-                title="Future Releases"
-                meta="対応予定機能"
-            >
-                <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
-                    <Link
-                        to="https://github.com/salmonmikan/git_hatarakibachi/issues"
-                        className="adm-card"
-                        data-surface="paper"
-                        data-kind="metric"
-                    >
-                        <div className="adm-card__label" data-color="black">
-                            {`GitHub Issues`}
-                        </div>
-                    </Link>
-                </div>
-            </Panel>
+            <div className="adm-dash__column-group">
+                <Panel
+                    kind="Future Releases"
+                    title="Future Releases"
+                    meta="対応予定機能"
+                >
+                    <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
+                        <Link
+                            to="https://github.com/salmonmikan/git_hatarakibachi/issues"
+                            className="adm-card"
+                            data-surface="paper"
+                            data-kind="metric"
+                        >
+                            <div className="adm-card__label" data-color="black">
+                                {`GitHub Issues`}
+                            </div>
+                        </Link>
+                    </div>
+                </Panel>
 
-            <Panel
-                kind="analytics"
-                title="Analytics"
-                meta="サイトアナリティクス"
-            >
-                <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
-                    <Link
-                        to="analytics"
-                        className="adm-card"
-                        data-surface="paper"
-                        data-kind="metric"
-                    >
-                        <div className="adm-card__label" data-color="black">
-                            {`Google Analytics(GA4)`}
-                        </div>
-                    </Link>
-                </div>
-            </Panel>
+                <Panel
+                    kind="analytics"
+                    title="Analytics"
+                    meta="サイトアナリティクス"
+                >
+                    <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
+                        <Link
+                            to="analytics"
+                            className="adm-card"
+                            data-surface="paper"
+                            data-kind="metric"
+                        >
+                            <div className="adm-card__label" data-color="black">
+                                {`Google Analytics(GA4)`}
+                            </div>
+                        </Link>
+                    </div>
+                </Panel>
+            </div>
 
             <div className="adm-dash__foot">
                 <LogoutButton />

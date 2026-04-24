@@ -39,13 +39,24 @@ npm run dev
 - ブラウザで `http://localhost:3333` にアクセスしてください。
 - **注意**: ローカル実行時は自動的に `staging` データセットに向くように設定されています。本番データに影響を与えずにコンテンツの編集や検証が可能です。
 
+### 3. Sanity Studio のデプロイ
+
+スキーマ変更や設定変更後に内容を本番の管理画面へ反映するために、以下のコマンドを実行します。
+
+```bash
+cd sanity-studio
+npx sanity deploy
+```
+
+デプロイ完了後、`https://hatarakibachi.sanity.studio/` にて、本番の CMS が更新されていることを確認できます。
+
 ## 主要なコマンド
 
 - `npm run dev:proxy`: フロントエンド開発サーバ + Cloudflare Proxy の起動（推奨）
-- `npm run dev`: フロントエンド開発サーバのみ起動（Vite HMR）
-- `npm run build`: プロダクションビルドの作成
-- `npm run lint`: ESLint による静的解析
+- `npm run build`: プロダクションビルドの作成（Cloudflare Pages 用）
+- `npm run lint`: ESLint による静的解析（`src/` 配下）
 - `npm run sb:*`: Supabase 関連の操作（詳細は `package.json` 参照）
+- `npx sanity deploy`: Sanity Studio のデプロイ（`sanity-studio/` 配下で実行）
 
 ## ロゴ生成について
 

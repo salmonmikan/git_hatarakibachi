@@ -2,6 +2,7 @@ export const PREVIEW_COOKIE_NAME = 'sanity-preview'
 
 const ROBOTS_HEADER = 'noindex, nofollow'
 const ONE_DAY_SECONDS = 60 * 60 * 24
+const SANITY_PREVIEW_PATHNAME_PARAM = 'sanity-preview-pathname'
 
 function isSecureRequest(request: Request) {
   return new URL(request.url).protocol === 'https:'
@@ -30,7 +31,11 @@ export function hasPreviewCookie(request: Request) {
 
 export function getSafeRedirect(request: Request, fallback = '/') {
   const url = new URL(request.url)
-  const redirect = url.searchParams.get('redirect') ?? url.searchParams.get('url') ?? fallback
+  const redirect =
+    url.searchParams.get('redirect') ??
+    url.searchParams.get('url') ??
+    url.searchParams.get(SANITY_PREVIEW_PATHNAME_PARAM) ??
+    fallback
 
   if (!redirect.startsWith('/') || redirect.startsWith('//')) {
     return fallback

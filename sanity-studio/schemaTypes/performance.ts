@@ -13,7 +13,7 @@ export default defineType({
     defineField({
       name: 'slug',
       title: 'スラッグ',
-      description: '公演詳細ページへのURLに使用されます。',
+      description: 'このページのURLパスに使用されます。',
       type: 'slug'
     }),
     defineField({
