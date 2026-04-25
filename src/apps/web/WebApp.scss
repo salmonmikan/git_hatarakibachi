@@ -20,6 +20,16 @@
 
 header {
   background: var(--color-header-bg);
+
+  &.is-nav-hidden {
+    .main-nav {
+      transform: translateY(-100%);
+    }
+
+    .sub-nav {
+      transform: translateY(calc(-100% - 90px));
+    }
+  }
 }
 
 main {
@@ -51,6 +61,7 @@ main {
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: transform 220ms ease;
 
   .nav-center {
     display: flex;
@@ -81,6 +92,7 @@ main {
   display: flex;
   justify-content: center;
   align-items: center;
+  transition: transform 220ms ease;
 }
 
 .nav-list {

@@ -51,6 +51,8 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
         ].filter((item) => present(item.value))
         : [];
 
+    const creditYears = Object.keys(member?.creditsByYear ?? {}).sort((a, b) => Number(b) - Number(a));
+
     const content = (
         <AnimatePresence>
             {open && (
@@ -79,39 +81,42 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                         transition={{ duration: 0.18, ease: "easeOut" }}
                     >
                         {member && (
-                            <div className="modal-content">
-                                {photoUrl ? (
-                                    <img
-                                        className="modal-photo upper"
-                                        loading="lazy"
-                                        src={returnPhotoUrl(photoUrl, 400, "top")}
-                                        alt={member.name}
-                                    />
-                                ) : (
-                                    <div className="member-photo-placeholder modal-photo" aria-hidden="true" />
-                                )}
+                            <div className="modal-content modal-layout">
+                                <div className="modal-main">
+                                    {photoUrl ? (
+                                        <img
+                                            className="modal-photo upper"
+                                            loading="lazy"
+                                            src={returnPhotoUrl(photoUrl, 400, "top")}
+                                            alt={member.name}
+                                        />
+                                    ) : (
+                                        <div className="member-photo-placeholder modal-photo" aria-hidden="true" />
+                                    )}
 
-                                <div className="modal-header">
-                                    <h2 className="modal-name">{member.name}</h2>
-                                    <span>{member.hurigana}</span>
+                                    <div className="modal-header">
+                                        <h2 className="modal-name">{member.name}</h2>
+                                        <span>{member.hurigana}</span>
+                                    </div>
+
+                                    <p className="modal-role">{member.role}</p>
+
+                                    {present(member.bio) && <p className="modal-bio">{member.bio}</p>}
+
+                                    {/* <h3>基本情報</h3> */}
+                                    <div className="modal-details">
+                                        {detailItems.map((item) => (
+                                            <p key={item.key} className="modal-detail">
+                                                <span className="label">{item.label}</span>
+                                                <span className="value">{item.value}</span>
+                                            </p>
+                                        ))}
+                                    </div>
                                 </div>
 
-                                <p className="modal-role">{member.role}</p>
-
-                                {present(member.bio) && <p className="modal-bio">{member.bio}</p>}
-
-                                {/* <h3>基本情報</h3> */}
-                                {detailItems.map((item) => (
-                                    <p key={item.key} className="modal-detail">
-                                        <span className="label">{item.label}</span>
-                                        <span className="value">{item.value}</span>
-                                    </p>
-                                ))}
-
-                                <h3>活動歴</h3>
-                                {Object.keys(member.creditsByYear ?? {})
-                                    .sort((a, b) => Number(b) - Number(a))
-                                    .map((year) => (
+                                <div className="modal-history">
+                                    <h3>活動歴</h3>
+                                    {creditYears.map((year) => (
                                         <section className="modal-credit_year" key={year}>
                                             <h4>{year}年</h4>
                                             {member.creditsByYear[year].map((credit) => (
@@ -122,6 +127,7 @@ export default function MemberModal({ open, member, onClose, photoUrl }) {
                                             ))}
                                         </section>
                                     ))}
+                                </div>
                             </div>
                         )}
                     </MotionDiv>

@@ -1,7 +1,7 @@
 /* modal */
 .modal {
 
-    /* モーダル本体：幅は 320px〜80vw の範囲で、理想は 40rem */
+    /* モーダル本体：幅は 320px～80vw の範囲で、理想は 40rem */
     &-panel {
         :where(p, h1, h2, h3, h4) {
             margin: 0;
@@ -12,12 +12,12 @@
         /* 最小幅（スマホ縦でも崩れない下限） */
         --pref: 25rem;
         /* 理想幅（デスクトップで見やすい幅） */
-        --max: 50vw;
+        --max: 90vw;
         /* 画面に対する上限割合 */
 
         inline-size: clamp(var(--min), var(--pref), var(--max));
-        max-block-size: 70vh;
         /* 高さの上限（縦スクロールは中身だけ） */
+        max-block-size: 70vh;
         overflow: auto;
 
         background: var(--color-modal-bg);
@@ -43,11 +43,32 @@
         align-content: center;
     }
 
+    &-content {
+        display: grid;
+        gap: 1.25rem;
+    }
+
     &-header {
         display: flex;
         gap: 0.5rem;
         flex-direction: row;
         align-items: baseline;
+    }
+
+    &-main {
+        display: grid;
+        gap: 1rem;
+    }
+
+    &-details {
+        display: grid;
+        gap: 0.2rem;
+    }
+
+    &-history {
+        display: grid;
+        gap: 0.4rem;
+        text-align: left;
     }
 
     &-close {
@@ -74,14 +95,7 @@
         // margin-top: 0.25rem;
     }
 
-    &-bio {
-        margin: 1rem 0;
-        color: var(--color-modal-text);
-        // line-height: 1.8;
-    }
-
-    &-detail {
-        margin: 0.25rem;
+    &-bio, &-detail {
         color: var(--color-modal-text);
     }
 
@@ -97,6 +111,33 @@
             max-width: 400px;
             margin: 0 auto;
             object-position: top;
+        }
+    }
+
+    @media (min-width: 992px) {
+        &-panel {
+            --pref: 56rem;
+            --max: 72rem;
+        }
+
+        &-layout {
+            grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+            align-items: start;
+        }
+
+        &-main {
+            text-align: left;
+        }
+
+        &-history {
+            border-left: 1px solid var(--color-border);
+            padding-left: 1.25rem;
+        }
+
+        &-photo.upper {
+            width: 100%;
+            max-width: 420px;
+            margin: 0;
         }
     }
 }
