@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'motion/react'
+import { AnimatePresence } from 'motion/react'
 import { getFeaturedArticles } from '../utils/sanityFetch'
 import SideBanner from './SideBanner'
 import './FeaturedArticles.scss'
@@ -25,6 +25,7 @@ export default function FeaturedArticles() {
   const posts = data?.posts ?? []
   const performances = data?.featuredPerformance ?? []
   const mode = data?.performanceDisplayMode ?? 'grid'
+  const gridItems = [...posts, ...performances]
 
   if (loading) return <div className="featured-articles-loading">Loading...</div>
   if (!data || (posts.length === 0 && performances.length === 0)) return null
@@ -120,8 +121,8 @@ export default function FeaturedArticles() {
             )}
           </div>
         ) : (
-          <div className="featured-grid">
-            {[...posts, ...performances].map((item) => {
+          <div className={`featured-grid ${gridItems.length === 1 ? 'is-single' : ''}`}>
+            {gridItems.map((item) => {
               const isPost = posts.some(p => p._id === item._id)
               return renderCard(item, isPost ? 'post' : 'performance')
             })}

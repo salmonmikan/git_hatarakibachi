@@ -2,14 +2,14 @@
   position: fixed;
   top: 0; // below header/nav
   bottom: 0;
-  width: 15vw;
-  max-width: 15vw;
+  width: 16vw;
+  max-width: 16vw;
   z-index: 50;
   display: none; // hide on mobile
   box-sizing: border-box;
   padding: 0;
 
-  @media (min-width: 1440px) {
+  @media (min-width: 1300px) {
     display: block;
   }
 

@@ -51,9 +51,10 @@ const commonPlugins = [
                 .documentId('featuredArticles')
             ),
           S.divider(),
-          ...S.documentTypeListItems().filter(
-            (listItem) => !['featuredArticles'].includes(listItem.getId())
-          ),
+          S.documentTypeListItem('performance'),
+          S.documentTypeListItem('post'),
+          S.documentTypeListItem('author'),
+          S.documentTypeListItem('category'),
         ]),
   }),
   visionTool(),

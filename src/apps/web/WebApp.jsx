@@ -20,12 +20,34 @@ import VisualEditing from '@src/components/VisualEditing.jsx';
 function WebApp() {
   const location = useLocation();
   const mainRef = useRef(null);
+  const lastScrollYRef = useRef(0);
+  const [navHidden, setNavHidden] = useState(false);
+
+  useEffect(() => {
+    function onScroll() {
+      const currentY = window.scrollY;
+      const isScrollingDown = currentY > lastScrollYRef.current;
+
+      if (currentY <= 24) {
+        setNavHidden(false);
+      } else if (isScrollingDown && currentY - lastScrollYRef.current > 8) {
+        setNavHidden(true);
+      } else if (!isScrollingDown && lastScrollYRef.current - currentY > 8) {
+        setNavHidden(false);
+      }
+
+      lastScrollYRef.current = currentY;
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <>
       <ScrollToTop />
       <VisualEditing />
-      <header>
+      <header className={navHidden ? "is-nav-hidden" : ""}>
         <nav className="main-nav">
           <div className="nav-left">
             <img

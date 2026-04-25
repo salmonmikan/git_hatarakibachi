@@ -33,7 +33,7 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        box-shadow: 0 6px 18px rgba(2, 6, 23, 0.25);
+        box-shadow: 0 6px 18px rgba(179, 134, 36, 0.25);
     }
 
     .floating-list {
@@ -116,16 +116,58 @@
         }
     }
 
-    /* show toggle on touch devices */
-    @media (hover: none) and (pointer: coarse) {
+    /* show toggle and keep list collapsed on touch / mobile */
+    @media (hover: none) and (pointer: coarse), (max-width: 720px) {
         .floating-toggle {
             display: inline-flex;
         }
-    }
 
-    @media (max-width: 720px) {
-        .floating-toggle {
-            display: inline-flex;
+        .floating-list {
+            width: 150px;
+            padding: 8px 12px;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(8px);
+            transition:
+                opacity 180ms ease,
+                transform 180ms ease,
+                visibility 0s linear 180ms;
+        }
+
+        .floating-label {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        &:hover,
+        &:focus-within {
+            .floating-list {
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transform: translateY(8px);
+            }
+        }
+
+        &:not(.is-open) {
+            .floating-list {
+                width: 150px;
+                padding: 8px 12px;
+            }
+        }
+
+        &.is-open {
+            .floating-list {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transform: translateY(0);
+                transition:
+                    opacity 180ms ease,
+                    transform 180ms ease,
+                    visibility 0s linear 0s;
+            }
         }
     }
 }
