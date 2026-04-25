@@ -21,12 +21,12 @@ export default function Home({ onEntered }) {
         >
             <section aria-labelledby="home-section">
                 <p>はたらきばち準備中...</p>
-                <p>最新の情報は各種SNSをご覧ください</p>
+                <p>最新の情報は各種SNSをご覧ください！</p>
                 {/* 注目情報の画面 */}
                 <FeaturedArticles />
                 {/* 公演情報について */}
-                <h2 className="home-title">公演情報</h2>
-                <p>現在、公演情報はありません</p>
+                {/* <h2 className="home-title">公演情報</h2>
+                <p>現在、公演情報はありません</p> */}
                 {/* ニュース一覧の画面 */}
                 <NewsList />
             </section>

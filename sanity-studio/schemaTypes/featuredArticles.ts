@@ -30,6 +30,7 @@ export default defineType({
   name: 'featuredArticles',
   title: 'トップページ情報',
   type: 'document',
+  // description:'サイトトップに表示する情報群を管理する場所です。注目情報や左右の広報画像など。',
   fields: [
     defineField({
       name: 'title',

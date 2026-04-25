@@ -97,15 +97,6 @@ export default function FloatingLinks({
                 open ? "is-open" : "",
             ].join(" ")}
         >
-            <button
-                className="floating-toggle"
-                aria-expanded={open}
-                aria-controls="floating-links-list"
-                onClick={() => setOpen(s => !s)}
-                title={open ? "閉じる" : "リンクを開く"}
-            >
-                ≡
-            </button>
 
             <ul id="floating-links-list" className="floating-list" role="menu" aria-hidden={!open && window.matchMedia?.("(hover: none) and (pointer: coarse)").matches}>
                 {links.map(l => {
@@ -128,6 +119,15 @@ export default function FloatingLinks({
                     );
                 })}
             </ul>
+                        <button
+                className="floating-toggle"
+                aria-expanded={open}
+                aria-controls="floating-links-list"
+                onClick={() => setOpen(s => !s)}
+                title={open ? "閉じる" : "リンクを開く"}
+            >
+                ≡
+            </button>
         </div>
     );
 }
