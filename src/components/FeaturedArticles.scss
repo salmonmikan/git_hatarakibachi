@@ -93,11 +93,19 @@
 
   .featured-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 2rem;
     width: 90%;
     max-width: 800px;
     margin: 1.5rem auto 0;
+
+    &.is-single {
+      justify-items: center;
+    }
+
+    &.is-single .featured-card-link {
+      max-width: 390px;
+    }
   }
 
   .featured-card-link {

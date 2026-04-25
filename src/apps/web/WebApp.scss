@@ -12,6 +12,9 @@
   #root {
     width: calc(70vw - 4rem);
     max-width: none;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
   }
 }
 
