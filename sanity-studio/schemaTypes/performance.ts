@@ -1,5 +1,32 @@
 import {defineField, defineType} from 'sanity'
 
+const IMAGE_MAX_SIZE = 2000
+
+function validateImageSize(image: any) {
+  const assetRef = image?.asset?._ref
+  if (!assetRef) return true
+
+  const dimensions = assetRef.split('-')[2]
+  const [width, height] = dimensions.split('x').map(Number)
+
+  if (width > IMAGE_MAX_SIZE || height > IMAGE_MAX_SIZE) {
+    return `画像サイズが大きすぎます（${width}x${height}px）。${IMAGE_MAX_SIZE}px 以下にしてください。`
+  }
+
+  return true
+}
+
+function validateImageArraySize(images: any[] | undefined) {
+  if (!Array.isArray(images)) return true
+
+  for (const image of images) {
+    const validationResult = validateImageSize(image)
+    if (validationResult !== true) return validationResult
+  }
+
+  return true
+}
+
 export default defineType({
   name: 'performance',
   title: '公演情報',
@@ -17,6 +44,13 @@ export default defineType({
       type: 'slug'
     }),
     defineField({
+      name: 'specialSiteEnabled',
+      title: '特設サイトフラグ',
+      description: 'オンの場合、URLパスを /special/{slug} に切り替えます。\n これにより、特設サイト用のデザインやコンテンツを用意できます。事前に開発者が特設サイト用のルーティングとテンプレートを実装しておく必要があります。',
+      type: 'boolean',
+      initialValue: false,
+    }),
+    defineField({
       name: 'performanceDate',
       title: '公演日時',
       type: 'text',
@@ -24,6 +58,7 @@ export default defineType({
     defineField({
       name: 'displayMode',
       title: '表示モード',
+      description: 'トップページなどでの表示スタイルを選択します。',
       type: 'string',
       options: {
         list: [
@@ -58,16 +93,22 @@ export default defineType({
       options: {
         hotspot: true,
       },
-      validation: (Rule) => Rule.custom((value) => {
-        if (!value?.asset?._ref) return true;
-        // アセットID（例: image-abc123-1200x800-jpg）からサイズを抽出
-        const dimensions = value.asset._ref.split('-')[2];
-        const [width, height] = dimensions.split('x').map(Number);
-        if (width > 2000 || height > 2000) {
-          return `画像サイズが大きすぎます（${width}x${height}px）。2000px 以下にしてください。`;
-        }
-        return true;
-      }),
+      validation: (Rule) => Rule.custom((value) => validateImageSize(value)),
+    }),
+    defineField({
+      name: 'additionalImages',
+      title: '公演画像2〜4',
+      description: '追加の公演画像を最大3枚まで設定できます。上限は縦横2000pxです。',
+      type: 'array',
+      of: [
+        {
+          type: 'image',
+          options: {
+            hotspot: true,
+          },
+        },
+      ],
+      validation: (Rule) => Rule.max(3).custom((images) => validateImageArraySize(images)),
     }),
   ],
   preview: {
@@ -75,6 +116,7 @@ export default defineType({
       title: 'title',
       date: 'performanceDate',
       media: 'mainImage',
+      specialSiteEnabled: 'specialSiteEnabled',
     },
     prepare(selection) {
       const {date} = selection

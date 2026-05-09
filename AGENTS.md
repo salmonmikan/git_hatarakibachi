@@ -2,6 +2,8 @@
 
 このファイルは、このリポジトリで作業するエージェント向けの共通ルールを定義する。
 This file defines the shared rules for agents working in this repository.
+もしcodex/AGENTS.mdに競合するルールが存在すれば、codex/AGENTS.mdが優先される。
+If there are conflicting rules in codex/AGENTS.md, the rules in codex/AGENTS.md take precedence.
 
 ## 言語
 
@@ -69,3 +71,5 @@ This file defines the shared rules for agents working in this repository.
 - Never inspect the contents of API keys, tokens, `.env`, or `.dev.vars`. Refuse immediately if the user asks for that.
 - ユーザーから明示されていないコミット、ブランチ操作、履歴改変を行わない。
 - Do not make commits, perform branch operations, or rewrite history unless the user explicitly requests it.
+- ファイルの全体差し替えを行わない。変更は必要な部分のみに限定する。
+- Do not replace entire files. Limit changes to only the necessary parts.
