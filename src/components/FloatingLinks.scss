@@ -34,6 +34,26 @@
         justify-content: center;
         cursor: pointer;
         box-shadow: 0 6px 18px rgba(179, 134, 36, 0.25);
+        transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .floating-toggle:hover,
+    .floating-toggle:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 22px rgba(179, 134, 36, 0.32);
+        outline: none;
+    }
+
+    .floating-toggle-icon {
+        font-size: 20px;
+        color: #f5b400;
+        transition: transform 180ms ease;
+    }
+
+    &.is-open {
+        .floating-toggle-icon {
+            transform: rotate(90deg);
+        }
     }
 
     .floating-list {

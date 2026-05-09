@@ -8,9 +8,9 @@
   text-align: center;
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1280px) {
   #root {
-    width: calc(70vw - 4rem);
+    // width: calc(70vw - 4rem);
     max-width: none;
     display: flex;
     justify-content: center;

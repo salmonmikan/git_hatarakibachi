@@ -24,8 +24,8 @@
     }
 
     &-no-photo, &-photo {
-        width: 250px;
-        height: 250px;
+        width: 200px;
+        height: 200px;
         object-fit: cover;
         background-color: var(--color-bg-secondary);
         display: flex;
@@ -68,4 +68,4 @@
         font-size: 1rem;
         font-weight: 500;
     }
-}
+}
