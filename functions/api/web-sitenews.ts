@@ -1,34 +1,59 @@
-// import type { PagesFunction } from "@cloudflare/workers-types"
-// import { Response } from "@cloudflare/workers-types"
+import { createClient } from "@sanity/client"
+import type { FunctionContext } from "../_types"
 
-type Env = {
-    SUPABASE_URL: string
-    SUPABASE_ANON_KEY: string
+interface SanityNews {
+    _id: string
+    id: string
+    title: string
+    publishedAt: string
+    slug: string
+    hasBody: boolean
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
-    const select = `*`
+interface NewsPayload {
+    id: string
+    title: string
+    publishedAt: string
+    url: string | null
+    hasBody: boolean
+}
 
-    const qs = new URLSearchParams({
-        select,
-        // "deleted_at": "is.null",
-        "news_status": "eq.1",
-        order: "id.asc",
+export const onRequestGet = async ({ request }: Pick<FunctionContext, "request">) => {
+    const url = new URL(request.url)
+    const limit = Number(url.searchParams.get("limit") ?? "100")
+    const dataset =
+        url.hostname === "staging.hatarakibachi.com" ||
+        url.hostname === "127.0.0.1" ||
+        url.hostname === "localhost"
+            ? "staging"
+            : "production"
+    const client = createClient({
+        projectId: "pz9uficf",
+        dataset,
+        useCdn: true,
+        apiVersion: "2023-05-03",
     })
 
-    const url = `${env.SUPABASE_URL}/rest/v1/site_news?${qs.toString()}`
+    const query = `*[_type == "news" && status == "published"] | order(coalesce(publishedAt, _updatedAt) desc)[0...$limit]{
+        "_id": _id,
+        "id": _id,
+        title,
+        publishedAt,
+        "slug": slug.current,
+        "hasBody": defined(body[0])
+    }`
 
-    const res = await fetch(url, {
-        headers: {
-            apikey: env.SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
-        },
-    })
+    const result = await client.fetch<SanityNews[]>(query, { limit })
+    const payload = (result ?? []).map((item) => ({
+        id: item.id,
+        title: item.title,
+        publishedAt: item.publishedAt,
+        url: item.hasBody ? `/news/${item.slug}` : null,
+        hasBody: item.hasBody,
+    }))
 
-    // Supabase側エラーをそのまま返す（デバッグしやすい）
-    const body = await res.text()
-    return new Response(body, {
-        status: res.status,
+    return new Response(JSON.stringify(payload), {
+        status: 200,
         headers: {
             "content-type": "application/json; charset=utf-8",
             "cache-control": "public, max-age=300",

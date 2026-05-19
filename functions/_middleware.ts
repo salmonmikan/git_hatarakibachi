@@ -1,6 +1,7 @@
 import { hasPreviewCookie, withPreviewHeaders } from './_preview'
+import type { MiddlewareContext } from './_types'
 
-export const onRequest: PagesFunction = async (context) => {
+export const onRequest = async (context: MiddlewareContext) => {
   const response = await context.next()
 
   if (!hasPreviewCookie(context.request)) {

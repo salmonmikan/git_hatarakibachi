@@ -1,12 +1,13 @@
 // import type { PagesFunction } from "@cloudflare/workers-types"
 // import { Response } from "@cloudflare/workers-types"
+import type { FunctionContext } from "../_types"
 
 type Env = {
     SUPABASE_URL: string
     SUPABASE_ANON_KEY: string
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+export const onRequestGet = async ({ env }: Pick<FunctionContext<Env>, "env">) => {
     const select = `
     *,
     credits:credits (

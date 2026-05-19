@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Component, use, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 // import supabase from '@src/utils/supabase.ts'
 import LogoutButton from "../components/LogoutButton.jsx";
 import { fetchNewsStats, fetchRecentNews, fetchUpdateInfo } from "../components/DashBoardApi.js";
@@ -10,19 +10,17 @@ import Panel, { PanelSection } from "../components/Panel";
 import ListShell from "../components/ListShell.jsx";
 
 const STATUS_LABEL = {
-    1: "公開中",
-    5: "下書き",
-    8: "非公開",
+    published: "公開中",
+    private: "非公開",
 };
 
 export default function DashBoard() {
     const { lists } = useAdminCtx(); // 返ってきたオブジェクトの中から lists だけ抜き出して、同名の変数 lists に入れる
-    const { data: members, loading: membersLoading, error: membersError } = lists.members;
-    const { data: news, loading: newsLoading, error: newsError } = lists.news;
-    const { data: credits, loading: creditsLoading, error: creditsError } = lists.credits;
+    const { data: members, loading: membersLoading } = lists.members;
+    const { data: credits, loading: creditsLoading } = lists.credits;
 
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ total: 0, draft: 0, public: 0, private: 0 });
+    const [stats, setStats] = useState({ total: 0, public: 0, private: 0 });
     const [recent, setRecent] = useState([]);
     const [error, setError] = useState(null);
     const [UpdateInfo, setUpdateInfo] = useState([]);
@@ -49,17 +47,17 @@ export default function DashBoard() {
             // 1) status一覧を取って集計（最小構成のためクライアント集計）
             if (r1.error) {
                 if (!alive) return;
-                setError(r1.error.message);
+                setError(r1.error);
                 setLoading(false);
                 return;
             }
             const rows = r1.data ?? [];
-            const next = { total: rows.total, draft: rows.draft, public: rows.public, private: rows.private };
+            const next = { total: rows.total, public: rows.public, private: rows.private };
 
             // 2) 最新5件
             // set処理
             if (r2.error) {
-                setError(r2.error.message);
+                setError(r2.error);
                 setLoading(false);
                 return;
             }
@@ -68,7 +66,7 @@ export default function DashBoard() {
 
             // 3) Update情報
             if (r3.error) {
-                setError(r3.error.message);
+                setError(r3.error);
                 setLoading(false);
                 return;
             }
@@ -112,13 +110,11 @@ export default function DashBoard() {
     const cards = useMemo(() => ([
         { title: "合計", value: stats.total },
         { title: "公開中", value: stats.public },
-        { title: "下書き", value: stats.draft },
         { title: "非公開", value: stats.private },
     ]), [stats]);
 
     const newsItems = cards.map((c) => ({
         key: c.title,
-        to: "news",
         label: c.title,
         value: c.value,
         loading, // 全体ロード
@@ -234,9 +230,9 @@ export default function DashBoard() {
                     <ListShell loading={loading} hasItems={recent?.length > 0}>
                         {recent.map((n) => (
                             <article key={n.id} className="adm-item" data-surface="soft" data-status={String(n.status)}>
-                                <div className="adm-item__title">{n.news_title}</div>
+                                <div className="adm-item__title">{n.title}</div>
                                 <div className="adm-item__meta" data-tone="muted">
-                                    {STATUS_LABEL[n.news_status] ?? `status=${n.news_status}`} / {n.published_at ?? "-"}
+                                    {STATUS_LABEL[n.status] ?? `status=${n.status}`} / {n.publishedAt ?? "-"}
                                 </div>
                             </article>
                         ))}

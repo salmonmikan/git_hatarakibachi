@@ -16,6 +16,8 @@ If there are conflicting rules in codex/AGENTS.md, the rules in codex/AGENTS.md 
 
 - 実装完了後は、計画と実装結果を `.local/agent_docs` に保管すること。
 - After implementation is complete, store both the plan and the implementation result in `.local/agent_docs`.
+- GitHub の Issue / PR / Repository 情報が必要な場合は、このセッションで利用可能な GitHub プラグインを優先して取得すること。
+- When GitHub issue, pull request, or repository information is needed, prefer retrieving it through the GitHub plugin available in this session.
 - 変更は依頼された範囲に限定する。関係のないリファクタや整形の巻き込みは避ける。
 - Limit changes to the requested scope. Avoid unrelated refactors or formatting-only churn.
 - 実装前に関連ファイルを確認し、既存の設計、命名、ディレクトリ構成に合わせる。

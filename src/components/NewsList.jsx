@@ -1,7 +1,6 @@
-import React from "react";
 import "./NewsList.scss";
 import { useState, useEffect } from "react";
-import supabase from '../utils/supabase.ts'
+import { Link } from "react-router-dom";
 
 let sitenewsPromise;
 function prefetchSitenews() {
@@ -17,13 +16,12 @@ function prefetchSitenews() {
 
 export default function NewsList({ items, limit, className = "" }) {
     // const reduce = useReducedMotion();
-    const [selected, setSelected] = useState(null);
     const [news, setNews] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
 
-    // supabaseから情報を取得、ページ読み込み時に一度だけ実行
+    // API からニュースを取得、ページ読み込み時に一度だけ実行
     useEffect(() => {
         // function groupByYear(credits = []) {
         //     const byYear = credits.reduce((acc, c) => {
@@ -71,10 +69,21 @@ const formatDate = (iso) => {
             // minute: "2-digit",
             // hour12: false,
         }).format(d);
-    } catch (e) {
+    } catch {
         return iso;
     }
 };
+
+const NewsCardInner = ({ item }) => (
+    <>
+        <h3 className="news-card__title">{item.title}</h3>
+
+        <div className="news-card__meta">
+            <time dateTime={item.publishedAt}>{formatDate(item.publishedAt)}</time>
+            {!item.hasBody ? <span className="news-card__note"></span> : null}
+        </div>
+    </>
+);
 
                         // {n.imageUrl ? (
                         //     <div className="news-card__image">
@@ -92,7 +101,16 @@ const formatDate = (iso) => {
                         // ) : null}
 
 // ---- コンポーネント本体 ----
-    const data = (news || NEWS).slice(0, limit || (news || NEWS).length);
+    const source = Array.isArray(items) && items.length > 0 ? items : news;
+    const data = source.slice(0, limit || source.length);
+
+    if (loading) {
+        return <div className={`news-list__empty ${className}`}>読み込み中...</div>;
+    }
+
+    if (error) {
+        return <div className={`news-list__empty ${className}`}>{error}</div>;
+    }
 
     if (data.length === 0) {
         return <div className={`news-list__empty ${className}`}>ニュースはまだありません。</div>;
@@ -103,34 +121,18 @@ const formatDate = (iso) => {
             <h2 className="home-title">News Release</h2>
             {data.map((n) => (
                 <article key={n.id} className="news-card">
-                    <a
-                        href={n.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="news-card__link"
-                    >
-
-                        <h3 className="news-card__title">{n.news_title}</h3>
-
-                        <div className="news-card__meta">
-                            <time dateTime={n.published_at}>{formatDate(n.published_at)}</time>
-                            <span className="news-card__dot" aria-hidden>
-                                •
-                            </span>
-                            <span className="news-card__source" title={n.news_category}>
-                                {n.news_category}
-                            </span>
-                            {/* {Array.isArray(n.tags) && n.tags.length > 0 ? (
-                                <span className="news-card__tags">
-                                    {n.tags.slice(0, 3).map((t) => (
-                                        <span key={t} className="news-tag">
-                                            {t}
-                                        </span>
-                                    ))}
-                                </span>
-                            ) : null} */}
+                    {n.url ? (
+                        <Link
+                            to={n.url}
+                            className="news-card__link"
+                        >
+                            <NewsCardInner item={n} />
+                        </Link>
+                    ) : (
+                        <div className="news-card__link news-card__link--disabled" aria-disabled="true">
+                            <NewsCardInner item={n} />
                         </div>
-                    </a>
+                    )}
                 </article>
             ))}
         </div>

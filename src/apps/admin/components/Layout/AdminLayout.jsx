@@ -6,7 +6,6 @@ import "../../admin_common.scss";
 
 const initialLists = {
     members: { data: [], loading: true, error: null },
-    news: { data: [], loading: true, error: null },
     credits: { data: [], loading: true, error: null },
     updates: { data: [], loading: true, error: null },
     members_affiliation: { data: [], loading: true, error: null },
@@ -44,114 +43,6 @@ export default function AdminLayout() {
             [key]: { ...prev[key], data },
         }));
     }, []);
-
-    const refreshNews = useCallback(async () => {
-        setListLoading("news", true);
-        setListError("news", null);
-
-        const res = await supabase
-            .from("site_news")
-            .select("id,news_title,news_status,published_at")
-            .order("published_at", { ascending: false })
-            .limit(200);
-
-        if (res.error) {
-            setListError("news", res.error.message);
-            setListData("news", []);
-            setListLoading("news", false);
-            return;
-        }
-
-        setListData("news", res.data ?? []);
-        setListLoading("news", false);
-    }, [setListLoading, setListError, setListData]);
-
-
-    const addNews = useCallback(
-        async (payload) => {
-            setListLoading("news", true);
-            setListError("news", null);
-
-            const res = await supabase
-                .from("site_news")
-                .insert(payload)
-                .select("*")
-                .single();
-
-            if (res.error) {
-                setListError("news", res.error.message);
-                setListLoading("news", false);
-                return { data: null, error: res.error };
-            }
-
-            setLists((prev) => {
-                const next = [...(prev.news.data ?? []), res.data].sort((a, b) => a.id - b.id);
-                return { ...prev, news: { ...prev.news, data: next } };
-            });
-
-            setListLoading("news", false);
-            return { data: res.data, error: null };
-        },
-        [setListLoading, setListError, setLists]
-    );
-
-    const updateNews = useCallback(
-        async (id, payload) => {
-            setListLoading("news", true);
-            setListError("news", null);
-
-            const res = await supabase
-                .from("site_news")
-                .update(payload)
-                .eq("id", id)
-                .select("*")
-                .single();
-
-            if (res.error) {
-                setListError("news", res.error.message);
-                setListLoading("news", false);
-                return { data: null, error: res.error };
-            }
-
-            setLists((prev) => {
-                const next = (prev.news.data ?? []).map((c) => (c.id === id ? res.data : c));
-                return { ...prev, news: { ...prev.news, data: next } };
-            });
-
-            setListLoading("news", false);
-            return { data: res.data, error: null };
-        },
-        [setListLoading, setListError, setLists]
-    );
-
-    const removeNews = useCallback(
-        async (id) => {
-            setListLoading("news", true);
-            setListError("news", null);
-
-            const res = await supabase
-                .from("site_news")
-                .update({ deleted_at: new Date().toISOString() })
-                .eq("id", id)
-                .select("id")
-                .single();
-
-            if (res.error) {
-                setListError("news", res.error.message);
-                setListLoading("news", false);
-                return { data: null, error: res.error };
-            }
-
-            setLists((prev) => {
-                const next = (prev.news.data ?? []).filter((c) => c.id !== id);
-                return { ...prev, news: { ...prev.news, data: next } };
-            });
-
-            setListLoading("news", false);
-            return { data: { id }, error: null };
-        },
-        [setListLoading, setListError, setLists]
-    );
 
     // UpdateInfoAPI
     const refreshUpdates = useCallback(async () => {
@@ -516,7 +407,6 @@ export default function AdminLayout() {
         (async () => {
             await Promise.all([
                 refreshMembers(),
-                refreshNews(), 
                 refreshCredits(),
                 refreshUpdates(),
                 loadMembers_affiliation()
@@ -529,7 +419,6 @@ export default function AdminLayout() {
         };
     }, [
         refreshMembers, 
-        refreshNews, 
         refreshCredits,
         refreshUpdates,
         loadMembers_affiliation
@@ -547,13 +436,6 @@ export default function AdminLayout() {
                     add: addMembers,
                     update: updateMembers,
                     remove: removeMembers,
-                },
-                news: {
-                    ...lists.news,
-                    refresh: refreshNews,
-                    add: addNews,
-                    update: updateNews,
-                    remove: removeNews,
                 },
                 credits: {
                     ...lists.credits,
