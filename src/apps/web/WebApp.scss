@@ -1,4 +1,4 @@
-#root {
+.web-shell {
   width: 80vw;
   max-width: 1280px;
   // display: flex;
@@ -9,7 +9,7 @@
 }
 
 @media (min-width: 1280px) {
-  #root {
+  .web-shell {
     // width: calc(70vw - 4rem);
     max-width: none;
     display: flex;

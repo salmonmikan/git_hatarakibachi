@@ -44,7 +44,7 @@ function WebApp() {
   }, []);
 
   return (
-    <>
+    <div className="web-shell">
       <ScrollToTop />
       <VisualEditing />
       <header className={navHidden ? "is-nav-hidden" : ""}>
@@ -100,7 +100,7 @@ function WebApp() {
         {`©2025-2026 hatarakibachi All rights reserved. \n Built with Cloudflare Pages.`}
       </p>
       <BackToTop />
-    </>
+    </div>
   )
 }
 
