@@ -12,7 +12,7 @@
         /* 最小幅（スマホ縦でも崩れない下限） */
         --pref: 25rem;
         /* 理想幅（デスクトップで見やすい幅） */
-        --max: 90vw;
+        --max: 80vw;
         /* 画面に対する上限割合 */
 
         inline-size: clamp(var(--min), var(--pref), var(--max));

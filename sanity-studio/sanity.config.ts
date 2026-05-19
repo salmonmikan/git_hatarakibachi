@@ -21,8 +21,13 @@ const createPresentationPlugin = (baseUrl: string) =>
           resolve: (doc) => ({ locations: [{ title: doc?.title || 'Home', href: '/' }] }),
         },
         performance: {
-          select: { title: 'title' },
-          resolve: (doc) => ({ locations: [{ title: doc?.title || 'Home', href: '/' }] }),
+          select: { title: 'title', specialSiteEnabled: 'specialSiteEnabled' },
+          resolve: (doc) => ({
+            locations: [{
+              title: doc?.title || 'Home',
+              href: doc?.specialSiteEnabled ? '/special' : '/',
+            }],
+          }),
         },
       },
     },

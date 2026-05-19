@@ -1,4 +1,4 @@
-#root {
+.web-shell {
   width: 80vw;
   max-width: 1280px;
   // display: flex;
@@ -8,9 +8,9 @@
   text-align: center;
 }
 
-@media (min-width: 1440px) {
-  #root {
-    width: calc(70vw - 4rem);
+@media (min-width: 1280px) {
+  .web-shell {
+    // width: calc(70vw - 4rem);
     max-width: none;
     display: flex;
     justify-content: center;

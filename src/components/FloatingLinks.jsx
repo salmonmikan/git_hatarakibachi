@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react";
 import "./FloatingLinks.scss";
 
+const OPEN_MENU_LABEL = "リンクメニューを開く";
+const CLOSE_MENU_LABEL = "リンクメニューを閉じる";
+const OPEN_MENU_TITLE = "リンクを開く";
+const CLOSE_MENU_TITLE = "リンクを閉じる";
+
 const Icon = ({ name }) => {
     if (name === "x") {
         return (
@@ -54,8 +59,7 @@ const Icon = ({ name }) => {
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
             >
-                {/* 四角 */}
-                <rect x="1" y="4" width="22" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" />
+                <rect x="1" y="4" width="22" height="18" rx="2" ry="2" fill="none" stroke="currentColor" strokeWidth="2" />
                 <path d="M8 10L8 17L15 13.5Z" />
             </svg>
         );
@@ -64,24 +68,26 @@ const Icon = ({ name }) => {
 };
 
 export default function FloatingLinks({
-    behavior = "fixed", // "fixed" or "sticky" (fixed is typical)
+    behavior = "fixed", // "fixed" または "sticky"（通常は fixed）
 }) {
     const [open, setOpen] = useState(false);
 
-    // close when clicking outside
+    // リンク一覧とトグルの外側をクリックしたときだけ閉じる
     useEffect(() => {
         if (!open) return;
+
         function onDoc(e) {
             const inLinks = e.target.closest?.(".floating-links");
             const inToggle = e.target.closest?.(".floating-toggle");
             // 外側クリックのときだけ閉じる（トグルはここで扱わない）
             if (!inLinks && !inToggle) setOpen(false);
         }
+
         document.addEventListener("pointerdown", onDoc);
         return () => document.removeEventListener("pointerdown", onDoc);
     }, [open]);
 
-    // change these URLs to your actual handles
+    // 必要に応じて実際のURLへ差し替える
     const links = [
         { key: "x", label: "X", to: "https://x.com/Hatarakibachi82", icon: "x" },
         { key: "ig", label: "Instagram", to: "https://www.instagram.com/hatarakibachi82", icon: "instagram" },
@@ -97,10 +103,10 @@ export default function FloatingLinks({
                 open ? "is-open" : "",
             ].join(" ")}
         >
-
             <ul id="floating-links-list" className="floating-list" role="menu" aria-hidden={!open && window.matchMedia?.("(hover: none) and (pointer: coarse)").matches}>
                 {links.map(l => {
                     const isExternal = /^https?:\/\//i.test(l.to) || /^mailto:/i.test(l.to);
+
                     return (
                         <li key={l.key} className="floating-item" role="none">
                             <a
@@ -119,14 +125,15 @@ export default function FloatingLinks({
                     );
                 })}
             </ul>
-                        <button
+            <button
                 className="floating-toggle"
                 aria-expanded={open}
                 aria-controls="floating-links-list"
+                aria-label={open ? CLOSE_MENU_LABEL : OPEN_MENU_LABEL}
                 onClick={() => setOpen(s => !s)}
-                title={open ? "閉じる" : "リンクを開く"}
+                title={open ? CLOSE_MENU_TITLE : OPEN_MENU_TITLE}
             >
-                ≡
+                <i className="fa-brands fa-forumbee floating-toggle-icon" aria-hidden="true" />
             </button>
         </div>
     );

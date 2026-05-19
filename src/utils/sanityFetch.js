@@ -66,7 +66,8 @@ export async function getFeaturedArticles() {
       venue,
       description,
       displayMode,
-      "mainImage": mainImage.asset->url
+      "mainImage": mainImage.asset->url,
+      "additionalImages": additionalImages[].asset->url
     },
     sideContentLeft {
       mediaType,
@@ -87,8 +88,10 @@ export async function getFeaturedArticles() {
 export async function getPerformanceBySlug(slug) {
   const query = `*[_type == "performance" && slug.current == $slug][0]{
     title,
+    specialSiteEnabled,
     "slug": slug.current,
     "mainImage": mainImage.asset->url,
+    "additionalImages": additionalImages[].asset->url,
     performanceDate,
     displayMode,
     cast,

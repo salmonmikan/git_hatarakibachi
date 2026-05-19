@@ -2,6 +2,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useCallback, useState } from "react";
 import supabase from '@src/utils/supabase.ts'
 import BackToTop from "../../../../components/BackToTop";
+import "../../admin_common.scss";
 
 const initialLists = {
     members: { data: [], loading: true, error: null },
