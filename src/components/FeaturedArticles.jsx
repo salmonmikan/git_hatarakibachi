@@ -5,21 +5,54 @@ import { getFeaturedArticles } from '../utils/sanityFetch'
 import SideBanner from './SideBanner'
 import './FeaturedArticles.scss'
 
+let featuredArticlesPromise
+
+function loadFeaturedArticles() {
+  if (!featuredArticlesPromise) {
+    featuredArticlesPromise = getFeaturedArticles()
+  }
+  return featuredArticlesPromise
+}
+
+function preloadImage(url) {
+  if (!url || typeof document === 'undefined') return
+  if (document.head.querySelector(`link[rel="preload"][href="${url}"]`)) return
+
+  const link = document.createElement('link')
+  link.rel = 'preload'
+  link.as = 'image'
+  link.href = url
+  document.head.appendChild(link)
+}
+
+function getPriorityImageUrl(result) {
+  if (!result) return null
+  if (result.performanceDisplayMode === 'carousel') {
+    return result.featuredPerformance?.[0]?.mainImage ?? result.posts?.[0]?.mainImage ?? null
+  }
+  return result.posts?.[0]?.mainImage ?? result.featuredPerformance?.[0]?.mainImage ?? null
+}
+
 export default function FeaturedArticles() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
 
   useEffect(() => {
-    async function fetchData() {
-      const result = await getFeaturedArticles()
+    let alive = true
+
+    loadFeaturedArticles().then((result) => {
+      if (!alive) return
       if (result) {
+        preloadImage(getPriorityImageUrl(result))
         setData(result)
       }
       setLoading(false)
-    }
+    })
 
-    fetchData()
+    return () => {
+      alive = false
+    }
   }, [])
 
   const posts = data?.posts ?? []
@@ -37,7 +70,7 @@ export default function FeaturedArticles() {
     setCurrentIndex((prev) => (prev === performances.length - 1 ? 0 : prev + 1))
   }
 
-  const renderCard = (m, type) => {
+  const renderCard = (m, type, priority = false) => {
     const isPost = type === 'post'
     const link = isPost ? `/post/${m.slug}` : `/performance/${m.slug}`
     const date = isPost ? m.publishedAt : m.performanceDate
@@ -48,7 +81,12 @@ export default function FeaturedArticles() {
         <article className={`featured-card ${!isPost && m.displayMode === 'imageOnly' ? 'is-image-only' : ''}`}>
           {m.mainImage && (
             <div className="featured-card__image">
-              <img src={m.mainImage} alt={m.title} />
+              <img
+                src={m.mainImage}
+                alt={m.title}
+                loading={priority ? 'eager' : 'lazy'}
+                fetchPriority={priority ? 'high' : 'auto'}
+              />
             </div>
           )}
           {showMeta && (
@@ -88,7 +126,7 @@ export default function FeaturedArticles() {
                   transition={{ duration: 0.4 }}
                   className="carousel-slide"
                 >
-                  {renderCard(performances[currentIndex], 'performance')}
+                  {renderCard(performances[currentIndex], 'performance', currentIndex === 0)}
                 </motion.div>
               </AnimatePresence>
               
@@ -122,9 +160,9 @@ export default function FeaturedArticles() {
           </div>
         ) : (
           <div className={`featured-grid ${gridItems.length === 1 ? 'is-single' : ''}`}>
-            {gridItems.map((item) => {
+            {gridItems.map((item, index) => {
               const isPost = posts.some(p => p._id === item._id)
-              return renderCard(item, isPost ? 'post' : 'performance')
+              return renderCard(item, isPost ? 'post' : 'performance', index === 0)
             })}
           </div>
         )}

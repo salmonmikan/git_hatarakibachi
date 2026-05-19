@@ -1,57 +1,21 @@
 import {defineField, defineType} from 'sanity'
 
-const NEWS_SLUG_API_VERSION = '2023-05-03'
+function createNewsSlug() {
+  const randomId =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID().replace(/-/g, '').slice(0, 12)
+      : Math.random().toString(36).slice(2, 14)
 
-function getDateSlug(publishedAt: unknown) {
-  if (typeof publishedAt === 'string' && publishedAt.length >= 10) {
-    return publishedAt.slice(0, 10)
-  }
-
-  return new Date().toISOString().slice(0, 10)
+  return `news-${randomId}`
 }
 
-async function buildNewsSlug(
-  document: {_id?: string; publishedAt?: string},
-  context: {getClient: (options: {apiVersion: string}) => {fetch: <T>(query: string, params?: Record<string, unknown>) => Promise<T>}},
-) {
-  const dateSlug = getDateSlug(document.publishedAt)
-  const baseId = document._id?.replace(/^drafts\./, '') ?? ''
-  const draftId = `drafts.${baseId}`
-  const publishedId = baseId
-  const existingSlugs = await context.getClient({apiVersion: NEWS_SLUG_API_VERSION}).fetch<string[]>(
-    `*[
-      _type == "news" &&
-      defined(slug.current) &&
-      slug.current match $pattern &&
-      !(_id in [$draftId, $publishedId])
-    ].slug.current`,
-    {
-      pattern: `${dateSlug}-*`,
-      draftId,
-      publishedId,
-    },
-  )
-
-  const maxSerial = existingSlugs.reduce((max, slug) => {
-    const match = slug.match(new RegExp(`^${dateSlug}-(\\d+)$`))
-    if (!match) {
-      return max
-    }
-
-    return Math.max(max, Number(match[1]))
-  }, 0)
-
-  return `${dateSlug}-${String(maxSerial + 1).padStart(2, '0')}`
-}
-
-async function createInitialNewsValue(_: undefined, context: {getClient: (options: {apiVersion: string}) => {fetch: <T>(query: string, params?: Record<string, unknown>) => Promise<T>}}) {
+function createInitialNewsValue() {
   const publishedAt = new Date().toISOString()
-  const slug = await buildNewsSlug({publishedAt}, context)
 
   return {
     publishedAt,
     status: 'private',
-    slug: {current: slug},
+    slug: {current: createNewsSlug()},
   }
 }
 
@@ -72,9 +36,8 @@ export default defineType({
       title: 'URLスラッグ',
       type: 'slug',
       readOnly: true,
-      description: '公開日を元に自動生成されます。例: 2023-05-01-01',
+      description: 'システムで自動生成されます。手動編集はできません。',
       options: {
-        source: (document, context) => buildNewsSlug(document, context),
         slugify: (value) => value,
         maxLength: 96,
       },

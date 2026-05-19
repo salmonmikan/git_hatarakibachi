@@ -1,0 +1,119 @@
+.app-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    isolation: isolate;
+    background: #fff8e8;
+    color: #5d3b00;
+    opacity: 1;
+    transition: opacity 0.25s ease;
+}
+
+.app-loading.is-fading-out {
+    opacity: 0;
+}
+
+.app-loading__backdrop,
+.app-loading__fill,
+.app-loading__content {
+    position: absolute;
+    inset: 0;
+}
+
+.app-loading__backdrop {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 42%);
+}
+
+.app-loading__fill {
+    top: auto;
+    height: 0;
+    background: linear-gradient(180deg, #f4c84f 0%, #e0a72c 100%);
+    box-shadow:
+        inset 0 8px 20px rgba(255, 245, 195, 0.28),
+        inset 0 -10px 18px rgba(122, 64, 0, 0.12);
+}
+
+.app-loading__surface {
+    position: absolute;
+    inset: 0;
+}
+
+.app-loading__wave-wrap {
+    position: absolute;
+    left: -10%;
+    width: 120%;
+    height: 5.5rem;
+    pointer-events: none;
+}
+
+.app-loading__wave-wrap--back {
+    top: -3.8rem;
+    opacity: 0.78;
+}
+
+.app-loading__wave-wrap--front {
+    top: -2.8rem;
+    opacity: 0.96;
+}
+
+.app-loading__wave {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.app-loading__wave-path--back {
+    fill: rgba(248, 207, 98, 0.72);
+}
+
+.app-loading__wave-path--front {
+    fill: #f6cd62;
+}
+
+.app-loading__glow {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 244, 188, 0.45) 0%, rgba(255, 244, 188, 0) 22%);
+    mix-blend-mode: screen;
+}
+
+.app-loading__content {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 0.6rem;
+    padding: 2rem;
+    text-align: center;
+    z-index: 1;
+}
+
+.app-loading__brand {
+    font-size: 0.78rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    opacity: 0.72;
+}
+
+.app-loading__label {
+    font-size: clamp(1.4rem, 1rem + 1vw, 2.1rem);
+    line-height: 1.1;
+    letter-spacing: 0.06em;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+@media (max-width: 640px) {
+    .app-loading__wave-wrap {
+        height: 4.3rem;
+    }
+
+    .app-loading__wave-wrap--back {
+        top: -3rem;
+    }
+
+    .app-loading__wave-wrap--front {
+        top: -2.2rem;
+    }
+}
