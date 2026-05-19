@@ -1,13 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import AdminLayout from "./components/Layout/AdminLayout.jsx";
 import Dashboard from "./pages/DashBoard.jsx";
 import AdminMembers from "./pages/AdminMembers.jsx";
 import MemberEditModal from "./components/Modal/MemberEditModal.jsx";
-import AdminNews from "./pages/AdminNews.jsx";
 import AdminCredits from "./pages/AdminCredits.jsx";
 import CreditEditModal from "./components/Modal/CreditEditModal.jsx";
-import NewsEditModal from "./components/Modal/NewsEditModal.jsx";
 import AdminUpdateInfo from "./pages/AdminUpdateInfo.jsx";
 import UpdateInfoEditModal from "./components/Modal/UpdateInfoEditModal.jsx";
 
@@ -30,9 +28,6 @@ export default function AdminApp() {
           <Route path="credits" element={<AdminCredits />}>
             <Route path=":id" element={<CreditEditModal />} />
             {/* <Route path="new" element={<CreditEditModal />} /> */}
-          </Route>
-          <Route path="news" element={<AdminNews />}>
-            <Route path=":id" element={<NewsEditModal />} />
           </Route>
           <Route path="update-info" element={<AdminUpdateInfo />}>
             <Route path=":id" element={<UpdateInfoEditModal />} />

@@ -118,3 +118,36 @@ export async function getPostBySlug(slug) {
   }`
   return sanityFetch(query, { slug })
 }
+
+export async function getNewsBySlug(slug) {
+  const query = `*[_type == "news" && slug.current == $slug][0]{
+    _id,
+    title,
+    status,
+    "slug": slug.current,
+    publishedAt,
+    body
+  }`
+  return sanityFetch(query, { slug })
+}
+
+export async function getRecentNews(limit = 5) {
+  const query = `*[_type == "news"] | order(coalesce(publishedAt, _updatedAt) desc)[0...$limit]{
+    "_id": _id,
+    "id": _id,
+    title,
+    status,
+    publishedAt,
+    "slug": slug.current
+  }`
+  return sanityFetch(query, { limit })
+}
+
+export async function getNewsStats() {
+  const query = `{
+    "total": count(*[_type == "news"]),
+    "public": count(*[_type == "news" && status == "published"]),
+    "private": count(*[_type == "news" && status == "private"])
+  }`
+  return sanityFetch(query)
+}

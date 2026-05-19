@@ -1,29 +1,17 @@
 import supabase from '@src/utils/supabase.ts'
+import { getNewsStats, getRecentNews } from '@src/utils/sanityFetch.js'
 
 
-export async function fetchNewsStats({ limit = 5000 } = {}) {
-    const res = await supabase.from("site_news").select("news_status").limit(limit);
-    if (res.error) return { ok: false, error: res.error.message };
-
-    const rows = res.data ?? [];
-    const stats = { total: rows.length, draft: 0, public: 0, private: 0 };
-    for (const r of rows) {
-        if (r.news_status === 5) stats.draft += 1;
-        else if (r.news_status === 1) stats.public += 1;
-        else if (r.news_status === 8) stats.private += 1;
-    }
-    return { ok: true, data: stats };
+export async function fetchNewsStats() {
+    const res = await getNewsStats();
+    if (!res) return { ok: false, error: "Sanity news stats fetch failed" };
+    return { ok: true, data: res };
 }
 
 export async function fetchRecentNews({ limit = 5 } = {}) {
-    const res = await supabase
-        .from("site_news")
-        .select("id, news_title, news_status, published_at")
-        .order("published_at", { ascending: false })
-        .limit(limit);
-
-    if (res.error) return { ok: false, error: res.error.message };
-    return { ok: true, data: res.data ?? [] };
+    const res = await getRecentNews(limit);
+    if (!res) return { ok: false, error: "Sanity recent news fetch failed" };
+    return { ok: true, data: res ?? [] };
 }
 
 // export async function fetchRecentCredits({ limit = 100 } = {}) {

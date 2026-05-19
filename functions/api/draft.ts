@@ -3,12 +3,13 @@ import {
   getSafeRedirect,
   withPreviewHeaders,
 } from '../_preview'
+import type { FunctionContext } from '../_types'
 
 type Env = {
   SANITY_PREVIEW_SECRET?: string
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestGet = async ({ request, env }: FunctionContext<Env>) => {
   const url = new URL(request.url)
   const secret = url.searchParams.get('secret')
 

@@ -45,6 +45,10 @@
     padding: 12px;
 }
 
+.news-card__link--disabled {
+    cursor: default;
+}
+
 /* 画像 */
 .news-card__image {
     position: relative;
@@ -87,17 +91,6 @@
     overflow: hidden;
 }
 
-.news-card__summary {
-    font-size: 0.9rem;
-    color: var(--nl-text-muted);
-    line-height: 1.5;
-    margin: 0 0 8px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
 /* メタ情報 */
 .news-card__meta {
     display: flex;
@@ -105,6 +98,10 @@
     gap: 8px;
     color: var(--nl-text-muted);
     font-size: 12px;
+}
+
+.news-card__note {
+    margin-left: auto;
 }
 
 .news-card__source {

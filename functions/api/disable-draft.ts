@@ -3,8 +3,9 @@ import {
   getSafeRedirect,
   withPreviewHeaders,
 } from '../_preview'
+import type { FunctionContext } from '../_types'
 
-export const onRequestGet: PagesFunction = async ({ request }) => {
+export const onRequestGet = async ({ request }: Pick<FunctionContext, 'request'>) => {
   const headers = withPreviewHeaders()
   headers.set('Set-Cookie', clearPreviewCookie(request))
   headers.set('Location', getSafeRedirect(request))

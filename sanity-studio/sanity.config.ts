@@ -29,6 +29,11 @@ const createPresentationPlugin = (baseUrl: string) =>
             }],
           }),
         },
+        news: {
+          select: { title: 'title', slug: 'slug.current' },
+          resolve: (doc) =>
+            doc?.slug ? { locations: [{ title: doc.title || 'News', href: `/news/${doc.slug}` }] } : null,
+        },
       },
     },
     previewUrl: {
@@ -57,6 +62,7 @@ const commonPlugins = [
             ),
           S.divider(),
           S.documentTypeListItem('performance'),
+          S.documentTypeListItem('news'),
           S.documentTypeListItem('post'),
           S.documentTypeListItem('author'),
           S.documentTypeListItem('category'),
