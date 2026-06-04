@@ -21,6 +21,14 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
             onOpen?.();
         }
     };
+    const analyticsProps = {
+        "data-gtm-category": "engagement",
+        "data-gtm-action": "open",
+        "data-gtm-label": "member_modal",
+        "data-gtm-location": "member",
+        "data-gtm-type": "member_card",
+        "data-gtm-value": name,
+    };
 
     return (
         <article
@@ -30,12 +38,7 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
             onClick={onOpen}
             onKeyDown={handleKeyDown}
             aria-label={`${name} の詳細を開く`}
-            data-gtm-category="engagement"
-            data-gtm-action="open"
-            data-gtm-label="member_modal"
-            data-gtm-location="member"
-            data-gtm-type="member_card"
-            data-gtm-value={name}
+            {...analyticsProps}
         >
             {hasPhoto ? (
                 <img
@@ -48,19 +51,21 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
                     height={400}
                     src={returnPhotoUrl(photoUrl, 400, "top")}
                     alt={name}
+                    {...analyticsProps}
                 />
             ) : (
                 <div
                     className="member-no-photo"
                     role="img"
                     aria-label="No photo available"
+                    {...analyticsProps}
                 >
                     No Image
                 </div>
             )}
-            <h2 className="member-name">{name}</h2>
-            <span className="member-hurigana">{hurigana}</span>
-            <p className="member-role">{role}</p>
+            <h2 className="member-name" {...analyticsProps}>{name}</h2>
+            <span className="member-hurigana" {...analyticsProps}>{hurigana}</span>
+            <p className="member-role" {...analyticsProps}>{role}</p>
             {/* {bio && <p className="member-bio">{bio}</p>} */}
         </article >
     );

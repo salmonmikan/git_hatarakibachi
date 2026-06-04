@@ -75,40 +75,44 @@ export default function FeaturedArticles() {
     const link = isPost ? `/post/${m.slug}` : `/performance/${m.slug}`
     const date = isPost ? m.publishedAt : m.performanceDate
     const showMeta = isPost || m.displayMode !== 'imageOnly'
+    const analyticsProps = {
+      'data-gtm-category': 'content',
+      'data-gtm-action': 'click',
+      'data-gtm-label': isPost ? 'featured_post' : 'featured_performance',
+      'data-gtm-location': 'home',
+      'data-gtm-type': isPost ? 'post_card' : 'performance_card',
+      'data-gtm-value': m.slug,
+    }
 
     return (
       <Link
         key={m._id}
         to={link}
         className="featured-card-link"
-        data-gtm-category="content"
-        data-gtm-action="click"
-        data-gtm-label={isPost ? 'featured_post' : 'featured_performance'}
-        data-gtm-location="home"
-        data-gtm-type={isPost ? 'post_card' : 'performance_card'}
-        data-gtm-value={m.slug}
+        {...analyticsProps}
       >
-        <article className={`featured-card ${!isPost && m.displayMode === 'imageOnly' ? 'is-image-only' : ''}`}>
+        <article className={`featured-card ${!isPost && m.displayMode === 'imageOnly' ? 'is-image-only' : ''}`} {...analyticsProps}>
           {m.mainImage && (
-            <div className="featured-card__image">
+            <div className="featured-card__image" {...analyticsProps}>
               <img
                 src={m.mainImage}
                 alt={m.title}
                 loading={priority ? 'eager' : 'lazy'}
                 fetchPriority={priority ? 'high' : 'auto'}
+                {...analyticsProps}
               />
             </div>
           )}
           {showMeta && (
-            <div className="featured-card__content">
-              <h3 className="featured-card__title">{m.title}</h3>
+            <div className="featured-card__content" {...analyticsProps}>
+              <h3 className="featured-card__title" {...analyticsProps}>{m.title}</h3>
               {date && (
-                <time className="featured-card__date" dateTime={date}>
+                <time className="featured-card__date" dateTime={date} {...analyticsProps}>
                   {new Date(date).toLocaleDateString('ja-JP')}
                 </time>
               )}
               {!isPost && m.venue && (
-                <p className="featured-card__meta">{m.venue}</p>
+                <p className="featured-card__meta" {...analyticsProps}>{m.venue}</p>
               )}
             </div>
           )}

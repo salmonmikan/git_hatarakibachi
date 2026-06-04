@@ -74,13 +74,13 @@ const formatDate = (iso) => {
     }
 };
 
-const NewsCardInner = ({ item }) => (
+const NewsCardInner = ({ item, analyticsProps }) => (
     <>
-        <h3 className="news-card__title">{item.title}</h3>
+        <h3 className="news-card__title" {...analyticsProps}>{item.title}</h3>
 
-        <div className="news-card__meta">
-            <time dateTime={item.publishedAt}>{formatDate(item.publishedAt)}</time>
-            {!item.hasBody ? <span className="news-card__note"></span> : null}
+        <div className="news-card__meta" {...analyticsProps}>
+            <time dateTime={item.publishedAt} {...analyticsProps}>{formatDate(item.publishedAt)}</time>
+            {!item.hasBody ? <span className="news-card__note" {...analyticsProps}></span> : null}
         </div>
     </>
 );
@@ -121,20 +121,26 @@ const NewsCardInner = ({ item }) => (
             <h2 className="home-title">News Release</h2>
             {data.map((n) => (
                 <article key={n.id} className="news-card">
-                    {n.url ? (
-                        <Link
-                            to={n.url}
-                            className="news-card__link"
-                            data-gtm-category="content"
-                            data-gtm-action="click"
-                            data-gtm-label="news"
-                            data-gtm-location="home"
-                            data-gtm-type="news_card"
-                            data-gtm-value={n.url}
-                        >
-                            <NewsCardInner item={n} />
-                        </Link>
-                    ) : (
+                    {n.url ? (() => {
+                        const analyticsProps = {
+                            "data-gtm-category": "content",
+                            "data-gtm-action": "click",
+                            "data-gtm-label": "news",
+                            "data-gtm-location": "home",
+                            "data-gtm-type": "news_card",
+                            "data-gtm-value": n.url,
+                        };
+
+                        return (
+                            <Link
+                                to={n.url}
+                                className="news-card__link"
+                                {...analyticsProps}
+                            >
+                                <NewsCardInner item={n} analyticsProps={analyticsProps} />
+                            </Link>
+                        );
+                    })() : (
                         <div className="news-card__link news-card__link--disabled" aria-disabled="true">
                             <NewsCardInner item={n} />
                         </div>
