@@ -77,7 +77,17 @@ export default function FeaturedArticles() {
     const showMeta = isPost || m.displayMode !== 'imageOnly'
 
     return (
-      <Link key={m._id} to={link} className="featured-card-link">
+      <Link
+        key={m._id}
+        to={link}
+        className="featured-card-link"
+        data-gtm-category="content"
+        data-gtm-action="click"
+        data-gtm-label={isPost ? 'featured_post' : 'featured_performance'}
+        data-gtm-location="home"
+        data-gtm-type={isPost ? 'post_card' : 'performance_card'}
+        data-gtm-value={m.slug}
+      >
         <article className={`featured-card ${!isPost && m.displayMode === 'imageOnly' ? 'is-image-only' : ''}`}>
           {m.mainImage && (
             <div className="featured-card__image">
@@ -144,6 +154,12 @@ export default function FeaturedArticles() {
                         key={idx}
                         className={`carousel-dot ${idx === currentIndex ? 'active' : ''}`}
                         onClick={() => setCurrentIndex(idx)}
+                        data-gtm-category="engagement"
+                        data-gtm-action="select"
+                        data-gtm-label="carousel"
+                        data-gtm-location="home"
+                        data-gtm-type="featured_performance"
+                        data-gtm-value={String(idx + 1)}
                         aria-label={`${idx + 1}枚目のスライドへ`}
                       />
                     ))}

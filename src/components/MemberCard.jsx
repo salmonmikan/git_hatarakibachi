@@ -30,6 +30,12 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
             onClick={onOpen}
             onKeyDown={handleKeyDown}
             aria-label={`${name} の詳細を開く`}
+            data-gtm-category="engagement"
+            data-gtm-action="open"
+            data-gtm-label="member_modal"
+            data-gtm-location="member"
+            data-gtm-type="member_card"
+            data-gtm-value={name}
         >
             {hasPhoto ? (
                 <img

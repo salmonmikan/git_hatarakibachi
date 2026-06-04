@@ -43,6 +43,11 @@ const BackToTop = ({ threshold = 200, label = "TOP", className = "" }) => {
             title="ページの先頭へ戻る"
             className={`back-to-top ${visible ? "is-visible" : ""} ${className}`}
             onClick={scrollTop}
+            data-gtm-category="engagement"
+            data-gtm-action="click"
+            data-gtm-label="back_to_top"
+            data-gtm-location="global"
+            data-gtm-type="utility_button"
         >
             {label}
         </button>
