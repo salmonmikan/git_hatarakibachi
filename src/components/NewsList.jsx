@@ -125,6 +125,12 @@ const NewsCardInner = ({ item }) => (
                         <Link
                             to={n.url}
                             className="news-card__link"
+                            data-gtm-category="content"
+                            data-gtm-action="click"
+                            data-gtm-label="news"
+                            data-gtm-location="home"
+                            data-gtm-type="news_card"
+                            data-gtm-value={n.url}
                         >
                             <NewsCardInner item={n} />
                         </Link>

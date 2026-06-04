@@ -19,6 +19,19 @@ export default function Contact() {
                 <h2 id="about-title">Contact</h2>
                 <p>ご連絡はこちらまでお願いいたします</p>
                 <p>hatarakibachi88act★gmail.com</p>
+                <p>
+                    <a
+                        href="mailto:hatarakibachi88act@gmail.com"
+                        data-gtm-category="social"
+                        data-gtm-action="click"
+                        data-gtm-label="email"
+                        data-gtm-location="contact"
+                        data-gtm-type="mailto_link"
+                        data-gtm-value="hatarakibachi88act@gmail.com"
+                    >
+                        Mail
+                    </a>
+                </p>
             </section>
             {/* <section aria-labelledby="sns-links">
                 <h2 id="about-title">SNS LINK</h2>

@@ -117,6 +117,12 @@ export default function FloatingLinks({
                                 rel={isExternal && !l.to.startsWith("mailto:") ? "noopener noreferrer" : undefined}
                                 onClick={() => setOpen(false)}
                                 aria-label={l.label}
+                                data-gtm-category="social"
+                                data-gtm-action="click"
+                                data-gtm-label={l.key}
+                                data-gtm-location="floating_links"
+                                data-gtm-type={l.to.startsWith("mailto:") ? "mailto_link" : "external_link"}
+                                data-gtm-value={l.to}
                             >
                                 <Icon name={l.icon} />
                                 <span className="floating-label">{l.label}</span>

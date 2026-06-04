@@ -35,7 +35,15 @@ export default function Archive() {
                 {archives?.length ?
                     archives.map((archive) => (
                         <div key={archive.id}>
-                            <a href={archive.url}>
+                            <a
+                                href={archive.url}
+                                data-gtm-category="content"
+                                data-gtm-action="click"
+                                data-gtm-label="archive_link"
+                                data-gtm-location="archive"
+                                data-gtm-type="external_archive"
+                                data-gtm-value={archive.title}
+                            >
                                 {archive.title}
                             </a>
                         </div>

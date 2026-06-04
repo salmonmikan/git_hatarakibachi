@@ -16,6 +16,7 @@ import './WebApp.scss'
 import BackToTop from '@src/components/BackToTop.jsx';
 import NotFound from '@src/components/NotFound.jsx';
 import VisualEditing from '@src/components/VisualEditing.jsx';
+import { trackPageView } from '@src/utils/analytics.js';
 // import supabase from './utils/supabase.ts'
 
 function WebApp() {
@@ -44,6 +45,13 @@ function WebApp() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    trackPageView({
+      pathname: location.pathname,
+      title: document.title,
+    });
+  }, [location.pathname]);
+
   return (
     <div className="web-shell">
       <ScrollToTop />
@@ -71,11 +79,11 @@ function WebApp() {
         <nav className="sub-nav">
           <ul className="nav-list">
             {/* <li><NavLink to="/" end className={({isActive}) => isActive ? "active" : ""}>Home</NavLink></li> */}
-            <li><NavLink to="/about" className={({ isActive }) => isActive ? "active" : ""}>About</NavLink></li>
-            <li><NavLink to="/member" className={({ isActive }) => isActive ? "active" : ""}>Member</NavLink></li>
-            <li><NavLink to="/archive" className={({ isActive }) => isActive ? "active" : ""}>Archive</NavLink></li>
-            <li><NavLink to="/scenario" className={({ isActive }) => isActive ? "active" : ""}>Scenario</NavLink></li>
-            <li><NavLink to="/contact" className={({ isActive }) => isActive ? "active" : ""}>Contact</NavLink></li>
+            <li><NavLink to="/about" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="about" data-gtm-location="global_nav" data-gtm-type="internal_link">About</NavLink></li>
+            <li><NavLink to="/member" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="member" data-gtm-location="global_nav" data-gtm-type="internal_link">Member</NavLink></li>
+            <li><NavLink to="/archive" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="archive" data-gtm-location="global_nav" data-gtm-type="internal_link">Archive</NavLink></li>
+            <li><NavLink to="/scenario" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="scenario" data-gtm-location="global_nav" data-gtm-type="internal_link">Scenario</NavLink></li>
+            <li><NavLink to="/contact" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="contact" data-gtm-location="global_nav" data-gtm-type="internal_link">Contact</NavLink></li>
           </ul>
         </nav>
       </header>
