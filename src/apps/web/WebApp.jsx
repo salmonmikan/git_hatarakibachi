@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Routes, Route, NavLink, useLocation } from "react-router-dom";
 import About from "./pages/Aboutus.jsx";
-import Archive from "./pages/Archive.jsx";
+import Stage from "./pages/Stage.jsx";
 import Contact from "./pages/Contact.jsx";
 import Home from "./pages/Home.jsx";
 import Member from "./pages/Member.jsx";
@@ -81,7 +81,7 @@ function WebApp() {
             {/* <li><NavLink to="/" end className={({isActive}) => isActive ? "active" : ""}>Home</NavLink></li> */}
             <li><NavLink to="/about" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="about" data-gtm-location="global_nav" data-gtm-type="internal_link">About</NavLink></li>
             <li><NavLink to="/member" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="member" data-gtm-location="global_nav" data-gtm-type="internal_link">Member</NavLink></li>
-            <li><NavLink to="/archive" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="archive" data-gtm-location="global_nav" data-gtm-type="internal_link">Archive</NavLink></li>
+            <li><NavLink to="/stage" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="stage" data-gtm-location="global_nav" data-gtm-type="internal_link">Stage</NavLink></li>
             <li><NavLink to="/scenario" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="scenario" data-gtm-location="global_nav" data-gtm-type="internal_link">Scenario</NavLink></li>
             <li><NavLink to="/contact" className={({ isActive }) => isActive ? "active" : ""} data-gtm-category="navigation" data-gtm-action="click" data-gtm-label="contact" data-gtm-location="global_nav" data-gtm-type="internal_link">Contact</NavLink></li>
           </ul>
@@ -94,7 +94,7 @@ function WebApp() {
             <Route path="/" element={<Home onEntered={() => mainRef.current?.focus()} />} />
             <Route path="about" element={<About onEntered={() => mainRef.current?.focus()} />} />
             <Route path="member" element={<Member onEntered={() => mainRef.current?.focus()} />} />
-            <Route path="archive" element={<Archive onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="stage" element={<Stage onEntered={() => mainRef.current?.focus()} />} />
             <Route path="scenario" element={<Scenario onEntered={() => mainRef.current?.focus()} />} />
             <Route path="contact" element={<Contact onEntered={() => mainRef.current?.focus()} />} />
             <Route path="post/:slug" element={<PostDetail onEntered={() => mainRef.current?.focus()} />} />

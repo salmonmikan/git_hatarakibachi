@@ -119,6 +119,7 @@ const NewsCardInner = ({ item, analyticsProps }) => (
     return (
         <div className={`news-list ${className}`}>
             <h2 className="home-title">News Release</h2>
+            {/* <p>最新の情報は各種SNSをご覧ください！</p> */}
             {data.map((n) => (
                 <article key={n.id} className="news-card">
                     {n.url ? (() => {

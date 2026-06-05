@@ -1,4 +1,5 @@
 import {defineType, defineArrayMember} from 'sanity'
+import {validateAssetMaxSize} from './assetValidation'
 
 /**
  * This is the schema definition for the rich text fields used for
@@ -63,6 +64,7 @@ export default defineType({
       title: '画像',
       type: 'image',
       options: {hotspot: true},
+      validation: (Rule) => Rule.custom((value, context) => validateAssetMaxSize(value, context, '本文画像')),
     }),
   ],
 })

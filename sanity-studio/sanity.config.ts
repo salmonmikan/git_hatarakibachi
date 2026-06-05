@@ -21,13 +21,11 @@ const createPresentationPlugin = (baseUrl: string) =>
           resolve: (doc) => ({ locations: [{ title: doc?.title || 'Home', href: '/' }] }),
         },
         performance: {
-          select: { title: 'title', specialSiteEnabled: 'specialSiteEnabled' },
-          resolve: (doc) => ({
-            locations: [{
-              title: doc?.title || 'Home',
-              href: doc?.specialSiteEnabled ? '/special' : '/',
-            }],
-          }),
+          select: { title: 'title', slug: 'slug.current' },
+          resolve: (doc) =>
+            doc?.slug
+              ? { locations: [{ title: doc.title || 'Performance', href: `/performance/${doc.slug}` }] }
+              : null,
         },
         news: {
           select: { title: 'title', slug: 'slug.current' },

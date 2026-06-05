@@ -88,15 +88,20 @@ export async function getFeaturedArticles() {
 export async function getPerformanceBySlug(slug) {
   const query = `*[_type == "performance" && slug.current == $slug][0]{
     title,
-    specialSiteEnabled,
     "slug": slug.current,
     "mainImage": mainImage.asset->url,
     "additionalImages": additionalImages[].asset->url,
     performanceDate,
     displayMode,
-    cast,
+    cast[]{
+      roleName,
+      actorName,
+      "photo": photo.asset->url
+    },
+    staff,
     venue,
-    description
+    description,
+    specialGoogleMapEmbedUrl
   }`
   return sanityFetch(query, { slug })
 }

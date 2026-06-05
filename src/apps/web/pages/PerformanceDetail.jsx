@@ -4,12 +4,37 @@ import { getPerformanceBySlug } from '@src/utils/sanityFetch';
 import { PortableText } from '@portabletext/react';
 import { motion, useReducedMotion } from "motion/react";
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
+import {
+  getPerformanceCastPhotoUrl,
+  getPerformanceDetailImageUrl,
+  getPerformanceGalleryImageUrl,
+  getPerformanceLightboxImageUrl,
+} from '@src/utils/sanityImage.js';
 import './PostDetail.scss'; // Reuse post detail styles
+
+function formatPerformanceDate(value) {
+  if (!value) return null;
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return parsedDate.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
 
 export default function PerformanceDetail({ onEntered }) {
   const { slug } = useParams();
   const [performance, setPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const reduce = useReducedMotion();
 
   useEffect(() => {
@@ -21,8 +46,26 @@ export default function PerformanceDetail({ onEntered }) {
     fetchPerformance();
   }, [slug]);
 
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setLightboxImage(null);
+      }
+    }
+
+    if (!lightboxImage) return undefined;
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxImage]);
+
   if (loading) return <div className="post-detail-loading">読み込み中...</div>;
   if (!performance) return <div className="post-detail-error">公演情報が見つかりませんでした。</div>;
+
+  const formattedDate = formatPerformanceDate(performance.performanceDate);
+  const castMembers = Array.isArray(performance.cast) ? performance.cast : [];
+  const additionalImages = Array.isArray(performance.additionalImages) ? performance.additionalImages : [];
+  const mainImageUrl = getPerformanceDetailImageUrl(performance.mainImage);
 
   return (
     <motion.section
@@ -36,21 +79,35 @@ export default function PerformanceDetail({ onEntered }) {
           if (typeof onEntered === "function") onEntered();
       }}
     >
+      {lightboxImage && (
+        <div
+          className="performance-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="公演画像の全体表示"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            type="button"
+            className="performance-lightbox__close"
+            onClick={() => setLightboxImage(null)}
+            aria-label="画像を閉じる"
+          >
+            ×
+          </button>
+          <div className="performance-lightbox__content" onClick={(event) => event.stopPropagation()}>
+            <img src={lightboxImage.src} alt={lightboxImage.alt} />
+          </div>
+        </div>
+      )}
       <article className="post-detail performance-detail">
         <header className="post-detail__header">
           <Link to="/" className="post-detail__back">← 戻る</Link>
           <h1 className="post-detail__title">{performance.title}</h1>
           <div className="post-detail__meta">
-            {performance.performanceDate && (
+            {formattedDate && (
               <time className="performance-date" dateTime={performance.performanceDate}>
-                開催日：{new Date(performance.performanceDate).toLocaleDateString('ja-JP', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  weekday: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                開催日：{formattedDate}
               </time>
             )}
             {performance.venue && (
@@ -59,20 +116,96 @@ export default function PerformanceDetail({ onEntered }) {
           </div>
         </header>
 
-        {performance.mainImage && (
-          <div className="post-detail__image">
-            <img src={performance.mainImage} alt={performance.title} />
-          </div>
+        {mainImageUrl && (
+          <button
+            type="button"
+            className="post-detail__image performance-image-button"
+            onClick={() =>
+              setLightboxImage({
+                src: getPerformanceLightboxImageUrl(performance.mainImage),
+                alt: performance.title,
+              })
+            }
+            aria-label="公演画像を拡大表示"
+          >
+            <img src={mainImageUrl} alt={performance.title} />
+          </button>
         )}
 
         <div className="post-detail__content">
-          {performance.cast && (
-            <div className="performance-cast" style={{ marginBottom: '2rem' }}>
+          {castMembers.length > 0 && (
+            <section className="performance-cast">
               <h3>キャスト</h3>
-              <p style={{ whiteSpace: 'pre-wrap' }}>{performance.cast}</p>
-            </div>
+              <div className="performance-cast-list">
+                {castMembers.map((member, index) => (
+                  <article
+                    key={`${member.actorName ?? 'actor'}-${member.roleName ?? 'role'}-${index}`}
+                    className={`performance-cast-card ${member.photo ? '' : 'is-text-only'}`}
+                  >
+                    {member.photo ? (
+                      <div className="performance-cast-card__image">
+                        <img src={getPerformanceCastPhotoUrl(member.photo)} alt={member.actorName || member.roleName || performance.title} />
+                      </div>
+                    ) : null}
+                    <div className="performance-cast-card__body">
+                      {member.roleName && <p className="performance-cast-card__role">{member.roleName}</p>}
+                      {member.actorName && <p className="performance-cast-card__name">{member.actorName}</p>}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
           )}
-          <h3>公演詳細</h3>
+
+          {performance.staff && (
+            <section className="performance-staff">
+              <h3>スタッフ</h3>
+              <div className="performance-staff__text">
+                <PortableText value={performance.staff} />
+              </div>
+            </section>
+          )}
+
+          {additionalImages.length > 0 && (
+            <section className="performance-gallery">
+              <h3>ギャラリー</h3>
+              <div className="performance-gallery__grid">
+                {additionalImages.map((imageUrl, index) => (
+                  <button
+                    type="button"
+                    key={`${imageUrl}-${index}`}
+                    className="performance-gallery__item"
+                    onClick={() =>
+                      setLightboxImage({
+                        src: getPerformanceLightboxImageUrl(imageUrl),
+                        alt: `${performance.title} 追加画像 ${index + 1}`,
+                      })
+                    }
+                    aria-label={`追加画像 ${index + 1} を拡大表示`}
+                  >
+                    <img src={getPerformanceGalleryImageUrl(imageUrl)} alt={`${performance.title} 追加画像 ${index + 1}`} />
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {performance.specialGoogleMapEmbedUrl && (
+            <section className="performance-access">
+              <h3>会場アクセス</h3>
+              <div className="performance-access__map">
+                <iframe
+                  src={performance.specialGoogleMapEmbedUrl}
+                  title={`${performance.title} 会場アクセス`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
+            </section>
+          )}
+
+          {/* <h3>公演詳細</h3> */}
           <PortableText value={performance.description} />
         </div>
       </article>

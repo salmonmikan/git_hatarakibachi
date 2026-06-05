@@ -1,4 +1,5 @@
 import {defineField, defineType} from 'sanity'
+import {validateAssetMaxSize} from './assetValidation'
 
 export default defineType({
   name: 'author',
@@ -23,10 +24,12 @@ export default defineType({
     defineField({
       name: 'image',
       title: '画像',
+      description: '5MB以下の画像を設定してください。',
       type: 'image',
       options: {
         hotspot: true,
       },
+      validation: (Rule) => Rule.custom((value, context) => validateAssetMaxSize(value, context, '画像')),
     }),
     defineField({
       name: 'bio',
