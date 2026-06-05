@@ -114,3 +114,138 @@
   font-size: 1.2rem;
   color: var(--color-text-muted);
 }
+
+.performance-cast,
+.performance-staff,
+.performance-gallery,
+.performance-access {
+  margin-bottom: 2rem;
+}
+
+.performance-cast-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+
+.performance-cast-card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+
+  &.is-text-only {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+  }
+
+  &__image {
+    aspect-ratio: 4 / 5;
+    background: var(--color-bg-secondary);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      margin: 0;
+      border-radius: 0;
+    }
+  }
+
+  &__body {
+    padding: 0.9rem 1rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  &__body p {
+    margin-bottom: 0;
+  }
+
+  &.is-text-only &__body {
+    padding: 0;
+    align-items: center;
+  }
+
+  &__role,
+  &__name {
+    margin: 0;
+    line-height: 1.35;
+  }
+
+  &__role {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  &__name {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    text-align: right;
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .performance-cast-card__body {
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .performance-cast-card__name {
+    text-align: left;
+    margin-left: 0;
+  }
+}
+
+.performance-staff__text {
+  p:last-child,
+  ul:last-child,
+  ol:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.performance-gallery__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.performance-gallery__item {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--color-bg-secondary);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    margin: 0;
+    border-radius: 0;
+  }
+}
+
+.performance-access__map {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+  aspect-ratio: 16 / 9;
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+}

@@ -1,4 +1,5 @@
 import {defineField, defineType} from 'sanity'
+import {validateAssetMaxSize} from './assetValidation'
 
 // サイドコンテンツ用の共通フィールド定義を生成する関数
 const createSideContentFields = () => [
@@ -15,8 +16,22 @@ const createSideContentFields = () => [
     }, 
     initialValue: 'image'
   },
-  {name: 'image', title: '画像', type: 'image', hidden: ({parent}: any) => parent?.mediaType !== 'image'},
-  {name: 'video', title: '動画ファイル', type: 'file', hidden: ({parent}: any) => parent?.mediaType !== 'video'},
+  defineField({
+    name: 'image',
+    title: '画像',
+    description: '5MB以下の画像を設定してください。',
+    type: 'image',
+    hidden: ({parent}: any) => parent?.mediaType !== 'image',
+    validation: (Rule) => Rule.custom((value, context) => validateAssetMaxSize(value, context, '画像')),
+  }),
+  defineField({
+    name: 'video',
+    title: '動画ファイル',
+    description: '5MB以下の動画ファイルを設定してください。',
+    type: 'file',
+    hidden: ({parent}: any) => parent?.mediaType !== 'video',
+    validation: (Rule) => Rule.custom((value, context) => validateAssetMaxSize(value, context, '動画ファイル')),
+  }),
   {
     name: 'externalUrl', 
     title: '外部メディアURL', 
