@@ -17,7 +17,7 @@ export default function Contact() {
         >
             <section aria-labelledby="about-title">
                 <h2 id="about-title">Contact</h2>
-                <p>ご連絡はこちらまでお願いいたします</p>
+                <p>ご連絡はこちらまでお願い致します。</p>
                 <p>hatarakibachi88act★gmail.com</p>
                 <p>
                     <a

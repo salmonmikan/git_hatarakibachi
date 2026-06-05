@@ -4,7 +4,7 @@ export function resolvePageType(pathname = "/") {
     if (pathname === "/") return "home";
     if (pathname === "/about") return "about";
     if (pathname === "/member") return "member";
-    if (pathname === "/archive") return "archive";
+    if (pathname === "/stage") return "stage";
     if (pathname === "/scenario") return "scenario";
     if (pathname === "/contact") return "contact";
     if (pathname.startsWith("/post/")) return "post_detail";

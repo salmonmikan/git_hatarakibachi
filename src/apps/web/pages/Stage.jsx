@@ -4,18 +4,18 @@ import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 
 import supabase from '@src/utils/supabase.ts'
 
-export default function Archive() {
+export default function Stage({ onEntered }) {
     const reduce = useReducedMotion();
-    const [archives, setArchives] = useState([]);
+    const [stages, setStages] = useState([]);
 
     useEffect(() => {
-        async function getArchiveURLs() {
+        async function getStageEntries() {
             const { data, error } = await supabase.from('archive_urls').select('*').order('id', { ascending: true });
             // console.log('supabase select ->', { data, error });
-            setArchives(data);
+            setStages(data);
         }
 
-        getArchiveURLs()
+        getStageEntries()
     }, [])
 
     return (
@@ -31,24 +31,24 @@ export default function Archive() {
             }}
         >
             <section aria-labelledby="about-title">
-                <h2 id="about-title">Archive</h2>
-                {archives?.length ?
-                    archives.map((archive) => (
-                        <div key={archive.id}>
+                <h2 id="about-title">Stage</h2>
+                {stages?.length ?
+                    stages.map((stage) => (
+                        <div key={stage.id}>
                             <a
-                                href={archive.url}
+                                href={stage.url}
                                 data-gtm-category="content"
                                 data-gtm-action="click"
-                                data-gtm-label="archive_link"
-                                data-gtm-location="archive"
-                                data-gtm-type="external_archive"
-                                data-gtm-value={archive.title}
+                                data-gtm-label="stage_link"
+                                data-gtm-location="stage"
+                                data-gtm-type="external_stage"
+                                data-gtm-value={stage.title}
                             >
-                                {archive.title}
+                                {stage.title}
                             </a>
                         </div>
                     )) :
-                    <p>アーカイブはありません</p>
+                    <p>公演情報はありません</p>
                 }
             </section>
         </motion.section>
