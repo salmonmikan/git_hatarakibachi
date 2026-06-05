@@ -4,6 +4,12 @@ import { getPerformanceBySlug } from '@src/utils/sanityFetch';
 import { PortableText } from '@portabletext/react';
 import { motion, useReducedMotion } from "motion/react";
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
+import {
+  getPerformanceCastPhotoUrl,
+  getPerformanceDetailImageUrl,
+  getPerformanceGalleryImageUrl,
+  getPerformanceLightboxImageUrl,
+} from '@src/utils/sanityImage.js';
 import './PostDetail.scss'; // Reuse post detail styles
 
 function formatPerformanceDate(value) {
@@ -28,6 +34,7 @@ export default function PerformanceDetail({ onEntered }) {
   const { slug } = useParams();
   const [performance, setPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const reduce = useReducedMotion();
 
   useEffect(() => {
@@ -39,12 +46,26 @@ export default function PerformanceDetail({ onEntered }) {
     fetchPerformance();
   }, [slug]);
 
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setLightboxImage(null);
+      }
+    }
+
+    if (!lightboxImage) return undefined;
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxImage]);
+
   if (loading) return <div className="post-detail-loading">読み込み中...</div>;
   if (!performance) return <div className="post-detail-error">公演情報が見つかりませんでした。</div>;
 
   const formattedDate = formatPerformanceDate(performance.performanceDate);
   const castMembers = Array.isArray(performance.cast) ? performance.cast : [];
   const additionalImages = Array.isArray(performance.additionalImages) ? performance.additionalImages : [];
+  const mainImageUrl = getPerformanceDetailImageUrl(performance.mainImage);
 
   return (
     <motion.section
@@ -58,6 +79,27 @@ export default function PerformanceDetail({ onEntered }) {
           if (typeof onEntered === "function") onEntered();
       }}
     >
+      {lightboxImage && (
+        <div
+          className="performance-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="公演画像の全体表示"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            type="button"
+            className="performance-lightbox__close"
+            onClick={() => setLightboxImage(null)}
+            aria-label="画像を閉じる"
+          >
+            ×
+          </button>
+          <div className="performance-lightbox__content" onClick={(event) => event.stopPropagation()}>
+            <img src={lightboxImage.src} alt={lightboxImage.alt} />
+          </div>
+        </div>
+      )}
       <article className="post-detail performance-detail">
         <header className="post-detail__header">
           <Link to="/" className="post-detail__back">← 戻る</Link>
@@ -74,10 +116,20 @@ export default function PerformanceDetail({ onEntered }) {
           </div>
         </header>
 
-        {performance.mainImage && (
-          <div className="post-detail__image">
-            <img src={performance.mainImage} alt={performance.title} />
-          </div>
+        {mainImageUrl && (
+          <button
+            type="button"
+            className="post-detail__image performance-image-button"
+            onClick={() =>
+              setLightboxImage({
+                src: getPerformanceLightboxImageUrl(performance.mainImage),
+                alt: performance.title,
+              })
+            }
+            aria-label="公演画像を拡大表示"
+          >
+            <img src={mainImageUrl} alt={performance.title} />
+          </button>
         )}
 
         <div className="post-detail__content">
@@ -92,7 +144,7 @@ export default function PerformanceDetail({ onEntered }) {
                   >
                     {member.photo ? (
                       <div className="performance-cast-card__image">
-                        <img src={member.photo} alt={member.actorName || member.roleName || performance.title} />
+                        <img src={getPerformanceCastPhotoUrl(member.photo)} alt={member.actorName || member.roleName || performance.title} />
                       </div>
                     ) : null}
                     <div className="performance-cast-card__body">
@@ -119,9 +171,20 @@ export default function PerformanceDetail({ onEntered }) {
               <h3>ギャラリー</h3>
               <div className="performance-gallery__grid">
                 {additionalImages.map((imageUrl, index) => (
-                  <div key={`${imageUrl}-${index}`} className="performance-gallery__item">
-                    <img src={imageUrl} alt={`${performance.title} 追加画像 ${index + 1}`} />
-                  </div>
+                  <button
+                    type="button"
+                    key={`${imageUrl}-${index}`}
+                    className="performance-gallery__item"
+                    onClick={() =>
+                      setLightboxImage({
+                        src: getPerformanceLightboxImageUrl(imageUrl),
+                        alt: `${performance.title} 追加画像 ${index + 1}`,
+                      })
+                    }
+                    aria-label={`追加画像 ${index + 1} を拡大表示`}
+                  >
+                    <img src={getPerformanceGalleryImageUrl(imageUrl)} alt={`${performance.title} 追加画像 ${index + 1}`} />
+                  </button>
                 ))}
               </div>
             </section>

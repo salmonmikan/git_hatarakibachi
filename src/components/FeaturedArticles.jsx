@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
 import { getFeaturedArticles } from '../utils/sanityFetch'
+import { getPerformanceCardImageUrl } from '@src/utils/sanityImage.js'
 import SideBanner from './SideBanner'
 import './FeaturedArticles.scss'
 
@@ -74,6 +75,7 @@ export default function FeaturedArticles() {
     const isPost = type === 'post'
     const link = isPost ? `/post/${m.slug}` : `/performance/${m.slug}`
     const date = isPost ? m.publishedAt : m.performanceDate
+    const imageUrl = isPost ? m.mainImage : getPerformanceCardImageUrl(m.mainImage)
     const showMeta = isPost || m.displayMode !== 'imageOnly'
     const analyticsProps = {
       'data-gtm-category': 'content',
@@ -92,10 +94,10 @@ export default function FeaturedArticles() {
         {...analyticsProps}
       >
         <article className={`featured-card ${!isPost && m.displayMode === 'imageOnly' ? 'is-image-only' : ''}`} {...analyticsProps}>
-          {m.mainImage && (
+          {imageUrl && (
             <div className="featured-card__image" {...analyticsProps}>
               <img
-                src={m.mainImage}
+                src={imageUrl}
                 alt={m.title}
                 loading={priority ? 'eager' : 'lazy'}
                 fetchPriority={priority ? 'high' : 'auto'}

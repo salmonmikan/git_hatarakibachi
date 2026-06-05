@@ -23,10 +23,11 @@
   }
 
   &__title {
-    font-size: 2.5rem;
+    font-size: clamp(1.45rem, 4.2vw, 2.5rem);
     line-height: 1.2;
     margin-bottom: 1rem;
     color: var(--color-text);
+    white-space: nowrap;
   }
 
   &__meta {
@@ -38,7 +39,7 @@
 
   &__image {
     width: 100%;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 5 / 4;
     border-radius: 12px;
     overflow: hidden;
     margin-bottom: 2rem;
@@ -97,6 +98,13 @@
     display: flex;
     gap: 0.5rem;
   }
+}
+
+.performance-image-button {
+  display: block;
+  border: 0;
+  padding: 0;
+  cursor: zoom-in;
 }
 
 .post-tag {
@@ -224,6 +232,9 @@
   overflow: hidden;
   border-radius: 12px;
   background: var(--color-bg-secondary);
+  border: 0;
+  padding: 0;
+  cursor: zoom-in;
 
   img {
     width: 100%;
@@ -232,6 +243,50 @@
     display: block;
     margin: 0;
     border-radius: 0;
+  }
+}
+
+.performance-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: rgba(0, 0, 0, 0.86);
+
+  &__close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.4);
+    color: #fff;
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  &__content {
+    max-width: min(92vw, 1400px);
+    max-height: 88vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__content img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 88vh;
+    object-fit: contain;
+    border-radius: 12px;
+    margin: 0;
   }
 }
 
