@@ -1,0 +1,98 @@
+.ticket-page {
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.ticket-page__back {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.ticket-page__header,
+.ticket-page__panel {
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+  background: var(--color-bg);
+}
+
+.ticket-page__eyebrow,
+.ticket-page__venue,
+.ticket-page__description,
+.ticket-window-card small {
+  color: var(--color-text-muted);
+}
+
+.ticket-window-list,
+.ticket-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.ticket-window-card,
+.ticket-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ticket-window-card {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 0.8rem;
+}
+
+.ticket-window-card small {
+  display: block;
+  margin-top: 0.2rem;
+}
+
+.ticket-form input,
+.ticket-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  font: inherit;
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+}
+
+.ticket-form button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: var(--color-accent, #111);
+}
+
+.ticket-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ticket-page__success,
+.ticket-page__error,
+.ticket-page__notice,
+.ticket-page__message {
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.ticket-page__success {
+  background: #e9f8ef;
+  color: #116329;
+}
+
+.ticket-page__error,
+.ticket-page__notice {
+  background: #fff4e5;
+  color: #8a4b00;
+}

@@ -61,3 +61,46 @@
 }
 
 
+
+.admin-ticket-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr);
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.admin-ticket-panel {
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 16px;
+    background: var(--color-bg);
+}
+
+.admin-ticket-form {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.admin-ticket-form label {
+    display: grid;
+    gap: 4px;
+    font-weight: 700;
+}
+
+.admin-ticket-form input,
+.admin-ticket-form textarea,
+.admin-ticket-form select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 10px;
+    font: inherit;
+}
+
+@media (max-width: 760px) {
+    .admin-ticket-grid {
+        grid-template-columns: 1fr;
+    }
+}
