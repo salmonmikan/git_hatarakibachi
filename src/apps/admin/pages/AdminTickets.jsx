@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import supabase from '@src/utils/supabase.ts';
-import { formatTicketDate, TICKET_STATUS_LABEL } from '@src/utils/tickets.js';
+import { fromDatetimeLocal, toDatetimeLocal } from '@src/utils/datetimeLocal.js';
+import { cancelTicketReservation, formatTicketDate, TICKET_STATUS_LABEL } from '@src/utils/tickets.js';
 import './admin_view.scss';
 
 const eventDefaults = {
@@ -12,17 +13,6 @@ const eventDefaults = {
   closes_at: '',
   status: 'draft',
 };
-
-function toDatetimeLocal(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toISOString().slice(0, 16);
-}
-
-function fromDatetimeLocal(value) {
-  return value ? new Date(value).toISOString() : null;
-}
 
 export default function AdminTickets() {
   const [events, setEvents] = useState([]);
@@ -96,8 +86,8 @@ export default function AdminTickets() {
     e.preventDefault();
     const payload = {
       ...form,
-      opens_at: fromDatetimeLocal(form.opens_at),
-      closes_at: fromDatetimeLocal(form.closes_at),
+      opens_at: fromDatetimeLocal(form.opens_at, selectedEvent?.opens_at),
+      closes_at: fromDatetimeLocal(form.closes_at, selectedEvent?.closes_at),
     };
     const res = selectedEvent
       ? await supabase.from('ticket_events').update(payload).eq('id', selectedEvent.id).select('id').single()
@@ -128,10 +118,7 @@ export default function AdminTickets() {
   };
 
   const onCancelReservation = async (id) => {
-    const res = await supabase
-      .from('ticket_reservations')
-      .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
-      .eq('id', id);
+    const res = await cancelTicketReservation(id);
     if (res.error) setError(res.error.message);
     else await load();
   };

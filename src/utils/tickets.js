@@ -25,13 +25,27 @@ export async function fetchPublishedTicketEvent(slug) {
 
 export async function createTicketReservation(payload) {
   const res = await supabase
-    .from('ticket_reservations')
-    .insert(payload)
-    .select('reservation_code')
+    .rpc('create_ticket_reservation', {
+      p_event_id: payload.event_id,
+      p_window_id: payload.window_id,
+      p_customer_name: payload.customer_name,
+      p_customer_email: payload.customer_email,
+      p_quantity: payload.quantity,
+      p_note: payload.note,
+    })
     .single();
 
   if (res.error) return { data: null, error: res.error };
   return { data: res.data, error: null };
+}
+
+export async function cancelTicketReservation(reservationId) {
+  const res = await supabase.rpc('cancel_ticket_reservation', {
+    p_reservation_id: reservationId,
+  });
+
+  if (res.error) return { error: res.error };
+  return { error: null };
 }
 
 export function isTicketEventAccepting(event) {
