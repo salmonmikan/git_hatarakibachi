@@ -148,6 +148,18 @@ export async function getRecentNews(limit = 5) {
   return sanityFetch(query, { limit })
 }
 
+export async function getRecentPerformances(limit = 5) {
+  const query = `*[_type == "performance"] | order(coalesce(performanceDate, _updatedAt) desc)[0...$limit]{
+    "_id": _id,
+    "id": _id,
+    title,
+    performanceDate,
+    displayMode,
+    "slug": slug.current
+  }`
+  return sanityFetch(query, { limit })
+}
+
 export async function getNewsStats() {
   const query = `{
     "total": count(*[_type == "news"]),

@@ -30,6 +30,7 @@
     display: block;
     border: 1px solid #eee;
     // width: 100%;
+    min-width: 200px;
     border-radius: 12px;
     padding: 10px;
     text-decoration: none;
@@ -45,6 +46,8 @@
 .admin-view__list-inner .admin-view__link {
     display: block;
     width: 100%;
+    max-width: 400px;
+
 }
 
 .admin-view__name {

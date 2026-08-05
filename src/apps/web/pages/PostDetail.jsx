@@ -38,7 +38,16 @@ export default function PostDetail({ onEntered }) {
     >
       <article className="post-detail">
         <header className="post-detail__header">
-          <Link to="/" className="post-detail__back">← 戻る</Link>
+          <Link
+            to="/"
+            className="post-detail__back"
+            data-gtm-category="navigation"
+            data-gtm-action="click"
+            data-gtm-label="back_to_home"
+            data-gtm-location="post_detail"
+            data-gtm-type="internal_link"
+            data-gtm-value={slug}
+          >← 戻る</Link>
           <h1 className="post-detail__title">{post.title}</h1>
           <div className="post-detail__meta">
             {post.publishedAt && (

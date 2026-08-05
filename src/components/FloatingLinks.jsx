@@ -137,6 +137,12 @@ export default function FloatingLinks({
                 aria-controls="floating-links-list"
                 aria-label={open ? CLOSE_MENU_LABEL : OPEN_MENU_LABEL}
                 onClick={() => setOpen(s => !s)}
+                data-gtm-category="engagement"
+                data-gtm-action="toggle"
+                data-gtm-label="social_menu"
+                data-gtm-location="global"
+                data-gtm-type="utility_menu"
+                data-gtm-value={open ? "close" : "open"}
                 title={open ? CLOSE_MENU_TITLE : OPEN_MENU_TITLE}
             >
                 <i className="fa-brands fa-forumbee floating-toggle-icon" aria-hidden="true" />

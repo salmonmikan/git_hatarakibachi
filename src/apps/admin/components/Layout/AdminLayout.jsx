@@ -1,7 +1,9 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useCallback, useState } from "react";
 import supabase from '@src/utils/supabase.ts'
 import BackToTop from "../../../../components/BackToTop";
+import ScrollToTop from "../../../../components/ScrollToTop";
+import LogoutButton from "../LogoutButton.jsx";
 import "../../admin_common.scss";
 
 const initialLists = {
@@ -16,8 +18,9 @@ export default function AdminLayout() {
     const [lists, setLists] = useState(initialLists);
 
     const nav = useNavigate();
+    const { pathname } = useLocation();
     const back = () => nav("/", { replace: true });
-    const dashboard = window.location.pathname === "/";
+    const dashboard = pathname === "/";
 
     // 1,prev（今のlists）を受け取る.全体は ...prev でコピー（members/news/credits を全取得）
     // 2,そのうち key（例 "members"）だけを...prev[key] で中身（data/errorなど）を保ったままloading だけ上書き
@@ -464,14 +467,18 @@ export default function AdminLayout() {
 
     return (
         <div className="admin-shell" data-surface="app">
+            <ScrollToTop />
+            <div className="admin-shell__actions">
+                {!dashboard && (
+                    <button className="admin-view__button" type="button" onClick={back}>
+                        back
+                    </button>
+                )}
+                {dashboard && <LogoutButton className="admin-view__button" />}
+            </div>
             {!dashboard && `hatarakibachi Admin`}
             {/* ここに管理画面の共通ヘッダー/サイドバーを置く */}
             <Outlet context={ctx} />
-            {!dashboard &&
-                <button className="admin-view__button" type="button" onClick={back}>
-                    back
-                </button>
-            }
             <BackToTop />
         </div>
     );

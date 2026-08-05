@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 // import supabase from '@src/utils/supabase.ts'
-import LogoutButton from "../components/LogoutButton.jsx";
-import { fetchNewsStats, fetchRecentNews, fetchUpdateInfo } from "../components/DashBoardApi.js";
+import { fetchRecentNews, fetchRecentPerformances, fetchUpdateInfo } from "../components/DashBoardApi.js";
 // import '@src/index.scss'
 import { useAdminCtx } from "../hooks/useAdminCtx";
 import MetricGrid from "../components/MetricGrid.jsx";
 import Panel, { PanelSection } from "../components/Panel";
 import ListShell from "../components/ListShell.jsx";
+import { buildSanityStudioEditUrl, getAdminSanityDataset } from "../components/sanityStudioLink.js";
 
 const STATUS_LABEL = {
     published: "公開中",
@@ -20,10 +20,11 @@ export default function DashBoard() {
     const { data: credits, loading: creditsLoading } = lists.credits;
 
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ total: 0, public: 0, private: 0 });
     const [recent, setRecent] = useState([]);
+    const [stageInfo, setStageInfo] = useState([]);
     const [error, setError] = useState(null);
     const [UpdateInfo, setUpdateInfo] = useState([]);
+    const studioDataset = getAdminSanityDataset();
 
     // infoのトグル用
     const [openId, setOpenId] = useState(null);
@@ -39,8 +40,8 @@ export default function DashBoard() {
             setError(null);
 
             const [r1, r2, r3] = await Promise.all([
-                fetchNewsStats(),
                 fetchRecentNews(),
+                fetchRecentPerformances(),
                 fetchUpdateInfo(),
             ]);
 
@@ -51,8 +52,7 @@ export default function DashBoard() {
                 setLoading(false);
                 return;
             }
-            const rows = r1.data ?? [];
-            const next = { total: rows.total, public: rows.public, private: rows.private };
+            setRecent(r1.data ?? []);
 
             // 2) 最新5件
             // set処理
@@ -61,16 +61,17 @@ export default function DashBoard() {
                 setLoading(false);
                 return;
             }
-            setStats(next);
-            setRecent(r2.data ?? []);
+            setStageInfo(r2.data ?? []);
 
-            // 3) Update情報
+            // 3) Update諠・ｱ
             if (r3.error) {
                 setError(r3.error);
                 setLoading(false);
                 return;
             }
             setUpdateInfo(r3.data ?? []);
+
+            // 4) Update情報
 
             // 処理終了
             setLoading(false);
@@ -107,19 +108,6 @@ export default function DashBoard() {
         },
     ];
 
-    const cards = useMemo(() => ([
-        { title: "合計", value: stats.total },
-        { title: "公開中", value: stats.public },
-        { title: "非公開", value: stats.private },
-    ]), [stats]);
-
-    const newsItems = cards.map((c) => ({
-        key: c.title,
-        label: c.title,
-        value: c.value,
-        loading, // 全体ロード
-    }));
-
     const truncateText = (s, max = 40) =>
         (s?.length ?? 0) > max ? s.slice(0, max) + "…" : s;
 
@@ -150,9 +138,9 @@ export default function DashBoard() {
                     <MetricGrid items={memberItems} />
                 </PanelSection>
 
-                <PanelSection title="News登録情報管理">
+                {/* <PanelSection title="News登録情報管理">
                     <MetricGrid items={newsItems} />
-                </PanelSection>
+                </PanelSection> */}
             </Panel>
 
             <div className="adm-dash__column-group">
@@ -192,7 +180,7 @@ export default function DashBoard() {
                 <Panel
                     kind="CMS"
                     title="Sanity Studio"
-                    meta="トップページ等のコンテンツ管理はこちら"
+                    meta="webサイト管理（公演情報等）はこちら"
                 >
                     <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
                         <Link
@@ -223,18 +211,50 @@ export default function DashBoard() {
                 </Panel>
 
                 <Panel
+                    kind="stage-info"
+                    title="Stage Info"
+                    meta="latest 5"
+                >
+                    <ListShell loading={loading} hasItems={stageInfo?.length > 0}>
+                        {stageInfo.map((item) => (
+                            <a
+                                key={item.id}
+                                className="adm-item adm-item--link"
+                                data-surface="soft"
+                                href={buildSanityStudioEditUrl(item.id, "performance", studioDataset)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <div className="adm-item__title">{item.title}</div>
+                                <div className="adm-item__meta" data-tone="muted">
+                                    {item.performanceDate ?? "-"} / {item.slug ?? "-"}
+                                </div>
+                            </a>
+                        ))}
+                    </ListShell>
+                </Panel>
+
+                <Panel
                     kind="recent-news"
                     title="Recent News"
                     meta="latest 5"
                 >
                     <ListShell loading={loading} hasItems={recent?.length > 0}>
                         {recent.map((n) => (
-                            <article key={n.id} className="adm-item" data-surface="soft" data-status={String(n.status)}>
+                            <a
+                                key={n.id}
+                                className="adm-item adm-item--link"
+                                data-surface="soft"
+                                data-status={String(n.status)}
+                                href={buildSanityStudioEditUrl(n.id, "news", studioDataset)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
                                 <div className="adm-item__title">{n.title}</div>
                                 <div className="adm-item__meta" data-tone="muted">
                                     {STATUS_LABEL[n.status] ?? `status=${n.status}`} / {n.publishedAt ?? "-"}
                                 </div>
-                            </article>
+                            </a>
                         ))}
                     </ListShell>
                 </Panel>
@@ -274,7 +294,7 @@ export default function DashBoard() {
                                             aria-expanded={isOpen}
                                         >
                                             {truncateText(m.update_title, 25)}
-                                            <span className="adm-update__more">　詳細…</span>
+                                            <span className="adm-update__more"> 詳細...</span>
                                         </button>
                                     ) : (
                                         <span className="adm-update__title">
@@ -333,10 +353,6 @@ export default function DashBoard() {
                         </Link>
                     </div>
                 </Panel>
-            </div>
-
-            <div className="adm-dash__foot">
-                <LogoutButton />
             </div>
         </div>
     );
