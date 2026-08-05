@@ -1,5 +1,5 @@
 import supabase from '@src/utils/supabase.ts'
-import { getNewsStats, getRecentNews } from '@src/utils/sanityFetch.js'
+import { getNewsStats, getRecentNews, getRecentPerformances } from '@src/utils/sanityFetch.js'
 
 
 export async function fetchNewsStats() {
@@ -11,6 +11,12 @@ export async function fetchNewsStats() {
 export async function fetchRecentNews({ limit = 5 } = {}) {
     const res = await getRecentNews(limit);
     if (!res) return { ok: false, error: "Sanity recent news fetch failed" };
+    return { ok: true, data: res ?? [] };
+}
+
+export async function fetchRecentPerformances({ limit = 5 } = {}) {
+    const res = await getRecentPerformances(limit);
+    if (!res) return { ok: false, error: "Sanity recent performances fetch failed" };
     return { ok: true, data: res ?? [] };
 }
 

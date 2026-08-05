@@ -6,6 +6,7 @@ export default function LogoutButton() {
 
     return (
         <button
+            className={arguments[0]?.className}
             onClick={async () => {
                 await supabase.auth.signOut();
                 nav("/login", { replace: true });
