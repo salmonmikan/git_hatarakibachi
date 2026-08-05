@@ -185,6 +185,9 @@ export default function PerformanceDetail({ onEntered }) {
             </section>
           )}
 
+          {/* <h3>公演詳細</h3> */}
+          <PortableText value={performance.description} />
+
           {additionalImages.length > 0 && (
             <section className="performance-gallery">
               <h3>ギャラリー</h3>
@@ -239,9 +242,6 @@ export default function PerformanceDetail({ onEntered }) {
               </div>
             </section>
           )}
-
-          {/* <h3>公演詳細</h3> */}
-          <PortableText value={performance.description} />
         </div>
       </article>
     </motion.section>
