@@ -66,6 +66,15 @@ export default function PerformanceDetail({ onEntered }) {
   const castMembers = Array.isArray(performance.cast) ? performance.cast : [];
   const additionalImages = Array.isArray(performance.additionalImages) ? performance.additionalImages : [];
   const mainImageUrl = getPerformanceDetailImageUrl(performance.mainImage);
+  const performanceId = performance.slug || slug || performance._id || performance.title;
+  const mainImageAnalyticsProps = {
+    'data-gtm-category': 'engagement',
+    'data-gtm-action': 'open',
+    'data-gtm-label': 'image_open',
+    'data-gtm-location': 'performance_detail',
+    'data-gtm-type': 'performance_main_image',
+    'data-gtm-value': performanceId,
+  };
 
   return (
     <motion.section
@@ -102,7 +111,16 @@ export default function PerformanceDetail({ onEntered }) {
       )}
       <article className="post-detail performance-detail">
         <header className="post-detail__header">
-          <Link to="/" className="post-detail__back">← 戻る</Link>
+          <Link
+            to="/"
+            className="post-detail__back"
+            data-gtm-category="navigation"
+            data-gtm-action="click"
+            data-gtm-label="back_to_home"
+            data-gtm-location="performance_detail"
+            data-gtm-type="internal_link"
+            data-gtm-value={slug}
+          >← 戻る</Link>
           <h1 className="post-detail__title">{performance.title}</h1>
           <div className="post-detail__meta">
             {formattedDate && (
@@ -127,8 +145,9 @@ export default function PerformanceDetail({ onEntered }) {
               })
             }
             aria-label="公演画像を拡大表示"
+            {...mainImageAnalyticsProps}
           >
-            <img src={mainImageUrl} alt={performance.title} />
+            <img src={mainImageUrl} alt={performance.title} {...mainImageAnalyticsProps} />
           </button>
         )}
 
@@ -170,22 +189,38 @@ export default function PerformanceDetail({ onEntered }) {
             <section className="performance-gallery">
               <h3>ギャラリー</h3>
               <div className="performance-gallery__grid">
-                {additionalImages.map((imageUrl, index) => (
-                  <button
-                    type="button"
-                    key={`${imageUrl}-${index}`}
-                    className="performance-gallery__item"
-                    onClick={() =>
-                      setLightboxImage({
-                        src: getPerformanceLightboxImageUrl(imageUrl),
-                        alt: `${performance.title} 追加画像 ${index + 1}`,
-                      })
-                    }
-                    aria-label={`追加画像 ${index + 1} を拡大表示`}
-                  >
-                    <img src={getPerformanceGalleryImageUrl(imageUrl)} alt={`${performance.title} 追加画像 ${index + 1}`} />
-                  </button>
-                ))}
+                {additionalImages.map((imageUrl, index) => {
+                  const galleryImageAnalyticsProps = {
+                    'data-gtm-category': 'engagement',
+                    'data-gtm-action': 'open',
+                    'data-gtm-label': 'image_open',
+                    'data-gtm-location': 'performance_detail',
+                    'data-gtm-type': 'performance_gallery_image',
+                    'data-gtm-value': `${performanceId}:${index + 1}`,
+                  };
+
+                  return (
+                    <button
+                      type="button"
+                      key={`${imageUrl}-${index}`}
+                      className="performance-gallery__item"
+                      onClick={() =>
+                        setLightboxImage({
+                          src: getPerformanceLightboxImageUrl(imageUrl),
+                          alt: `${performance.title} 追加画像 ${index + 1}`,
+                        })
+                      }
+                      aria-label={`追加画像 ${index + 1} を拡大表示`}
+                      {...galleryImageAnalyticsProps}
+                    >
+                      <img
+                        src={getPerformanceGalleryImageUrl(imageUrl)}
+                        alt={`${performance.title} 追加画像 ${index + 1}`}
+                        {...galleryImageAnalyticsProps}
+                      />
+                    </button>
+                  );
+                })}
               </div>
             </section>
           )}

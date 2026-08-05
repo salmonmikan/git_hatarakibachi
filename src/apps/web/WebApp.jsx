@@ -69,7 +69,17 @@ function WebApp() {
             />
           </div>
           <div className="nav-center">
-            <NavLink to="/" end className="site-title" aria-label="ホームに戻る">
+            <NavLink
+              to="/"
+              end
+              className="site-title"
+              aria-label="ホームに戻る"
+              data-gtm-category="navigation"
+              data-gtm-action="click"
+              data-gtm-label="home"
+              data-gtm-location="global_nav"
+              data-gtm-type="internal_link"
+            >
               劇団 はたらきばち
             </NavLink>
           </div>

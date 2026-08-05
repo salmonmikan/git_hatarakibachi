@@ -148,10 +148,30 @@ export default function FeaturedArticles() {
               
               {performances.length > 1 && (
                 <>
-                  <button className="carousel-nav-btn prev" onClick={handlePrev} aria-label="前の公演へ">
+                  <button
+                    className="carousel-nav-btn prev"
+                    onClick={handlePrev}
+                    aria-label="前の公演へ"
+                    data-gtm-category="engagement"
+                    data-gtm-action="navigate"
+                    data-gtm-label="carousel"
+                    data-gtm-location="home"
+                    data-gtm-type="featured_performance"
+                    data-gtm-value="previous"
+                  >
                     &lt;
                   </button>
-                  <button className="carousel-nav-btn next" onClick={handleNext} aria-label="次の公演へ">
+                  <button
+                    className="carousel-nav-btn next"
+                    onClick={handleNext}
+                    aria-label="次の公演へ"
+                    data-gtm-category="engagement"
+                    data-gtm-action="navigate"
+                    data-gtm-label="carousel"
+                    data-gtm-location="home"
+                    data-gtm-type="featured_performance"
+                    data-gtm-value="next"
+                  >
                     &gt;
                   </button>
                   <div className="carousel-dots">
