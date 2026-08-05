@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
 import { getFeaturedArticles } from '../utils/sanityFetch'
 import { getPerformanceCardImageUrl } from '@src/utils/sanityImage.js'
+import { trackDataLayerEvent } from '@src/utils/analytics.js'
 import SideBanner from './SideBanner'
 import './FeaturedArticles.scss'
 
@@ -91,6 +92,11 @@ export default function FeaturedArticles() {
         key={m._id}
         to={link}
         className="featured-card-link"
+        onClick={() => trackDataLayerEvent("content_select", {
+          content_type: isPost ? "post" : "performance",
+          content_id: m.slug,
+          placement: "home",
+        })}
         {...analyticsProps}
       >
         <article className={`featured-card ${!isPost && m.displayMode === 'imageOnly' ? 'is-image-only' : ''}`} {...analyticsProps}>

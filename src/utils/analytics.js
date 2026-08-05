@@ -27,3 +27,22 @@ export function trackPageView({ pathname, title }) {
 
     lastTrackedPagePath = pathname;
 }
+
+export function trackDataLayerEvent(event, parameters = {}) {
+    if (typeof window === "undefined" || !event) return;
+
+    const pathname = window.location.pathname || "/";
+    const payload = Object.fromEntries(
+        Object.entries({
+            page_path: pathname,
+            page_type: resolvePageType(pathname),
+            ...parameters,
+        }).filter(([, value]) => value !== undefined && value !== null),
+    );
+
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+        ...payload,
+        event,
+    });
+}

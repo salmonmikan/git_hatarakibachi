@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from "motion/react"
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
+import { trackDataLayerEvent } from "@src/utils/analytics.js";
 
 export default function Contact() {
     const reduce = useReducedMotion();
@@ -22,12 +23,15 @@ export default function Contact() {
                 <p>
                     <a
                         href="mailto:hatarakibachi88act@gmail.com"
+                        onClick={() => trackDataLayerEvent("contact_email_click", {
+                            contact_channel: "email",
+                            source_location: "contact",
+                        })}
                         data-gtm-category="social"
                         data-gtm-action="click"
                         data-gtm-label="email"
                         data-gtm-location="contact"
                         data-gtm-type="mailto_link"
-                        data-gtm-value="hatarakibachi88act@gmail.com"
                     >
                         Mail
                     </a>

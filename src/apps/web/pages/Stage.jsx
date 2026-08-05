@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react"
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
+import { trackDataLayerEvent } from "@src/utils/analytics.js";
 
 import supabase from '@src/utils/supabase.ts'
 
@@ -37,12 +38,16 @@ export default function Stage({ onEntered }) {
                         <div key={stage.id}>
                             <a
                                 href={stage.url}
+                                onClick={() => trackDataLayerEvent("stage_external_click", {
+                                    stage_id: stage.id != null ? String(stage.id) : undefined,
+                                    source_location: "stage",
+                                    destination_type: "external_stage",
+                                })}
                                 data-gtm-category="content"
                                 data-gtm-action="click"
                                 data-gtm-label="stage_link"
                                 data-gtm-location="stage"
                                 data-gtm-type="external_stage"
-                                data-gtm-value={stage.title}
                             >
                                 {stage.title}
                             </a>

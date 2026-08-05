@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./FloatingLinks.scss";
+import { trackDataLayerEvent } from "@src/utils/analytics.js";
 
 const OPEN_MENU_LABEL = "リンクメニューを開く";
 const CLOSE_MENU_LABEL = "リンクメニューを閉じる";
@@ -115,14 +116,33 @@ export default function FloatingLinks({
                                 href={l.to}
                                 target={isExternal && !l.to.startsWith("mailto:") ? "_blank" : "_self"}
                                 rel={isExternal && !l.to.startsWith("mailto:") ? "noopener noreferrer" : undefined}
-                                onClick={() => setOpen(false)}
+                                onClick={() => {
+                                    setOpen(false);
+
+                                    if (l.key === "mail") {
+                                        trackDataLayerEvent("contact_email_click", {
+                                            contact_channel: "email",
+                                            source_location: "floating_links",
+                                        });
+                                        return;
+                                    }
+
+                                    trackDataLayerEvent("social_link_click", {
+                                        network: {
+                                            x: "x",
+                                            ig: "instagram",
+                                            yt: "youtube",
+                                        }[l.key] || l.key,
+                                        placement: "floating_links",
+                                        destination_type: "external_link",
+                                    });
+                                }}
                                 aria-label={l.label}
                                 data-gtm-category="social"
                                 data-gtm-action="click"
                                 data-gtm-label={l.key}
                                 data-gtm-location="floating_links"
                                 data-gtm-type={l.to.startsWith("mailto:") ? "mailto_link" : "external_link"}
-                                data-gtm-value={l.to}
                             >
                                 <Icon name={l.icon} />
                                 <span className="floating-label">{l.label}</span>
