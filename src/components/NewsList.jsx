@@ -1,6 +1,7 @@
 import "./NewsList.scss";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { trackDataLayerEvent } from "@src/utils/analytics.js";
 
 let sitenewsPromise;
 function prefetchSitenews() {
@@ -136,6 +137,11 @@ const NewsCardInner = ({ item, analyticsProps }) => (
                             <Link
                                 to={n.url}
                                 className="news-card__link"
+                                onClick={() => trackDataLayerEvent("content_select", {
+                                    content_type: "news",
+                                    content_id: n.id != null ? String(n.id) : undefined,
+                                    placement: "home",
+                                })}
                                 {...analyticsProps}
                             >
                                 <NewsCardInner item={n} analyticsProps={analyticsProps} />

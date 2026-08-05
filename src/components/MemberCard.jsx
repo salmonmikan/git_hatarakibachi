@@ -1,10 +1,11 @@
 ﻿import PropTypes from 'prop-types';
 // import MemberPhoto from '../assets/MemberPhoto';
 import { returnPhotoUrl } from '../assets/_returnPhotoUrl';
+import { trackDataLayerEvent } from '@src/utils/analytics.js';
 
 
 
-export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt, onOpen }) {
+export default function MemberCard({ m, id, hurigana, name, role, photoUrl, photoAlt, onOpen }) {
     async function fetchImg(path, el) {
         const res = await fetch(`/api/img-url?path=${encodeURIComponent(path)}`);
         if (!res.ok) throw new Error("failed to get img url");
@@ -15,10 +16,18 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
     const hasPhoto = Boolean(photoUrl);
     const imageAlt = photoAlt || (name ? `${name} photo` : 'Member photo');
 
+    const handleOpen = () => {
+        trackDataLayerEvent("member_detail_open", {
+            member_id: id != null ? String(id) : undefined,
+            placement: "member",
+        });
+        onOpen?.();
+    };
+
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            onOpen?.();
+            handleOpen();
         }
     };
     const analyticsProps = {
@@ -27,7 +36,6 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
         "data-gtm-label": "member_modal",
         "data-gtm-location": "member",
         "data-gtm-type": "member_card",
-        "data-gtm-value": name,
     };
 
     return (
@@ -35,7 +43,7 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
             className="member-card"
             role="button"
             tabIndex={0}
-            onClick={onOpen}
+            onClick={handleOpen}
             onKeyDown={handleKeyDown}
             aria-label={`${name} の詳細を開く`}
             {...analyticsProps}
@@ -73,6 +81,7 @@ export default function MemberCard({ m, hurigana, name, role, photoUrl, photoAlt
 
 MemberCard.propTypes = {
     name: PropTypes.string.isRequired,
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     role: PropTypes.string.isRequired,
     bio: PropTypes.string,
     photoUrl: PropTypes.string,

@@ -10,6 +10,7 @@ import {
   getPerformanceGalleryImageUrl,
   getPerformanceLightboxImageUrl,
 } from '@src/utils/sanityImage.js';
+import { trackDataLayerEvent } from '@src/utils/analytics.js';
 import './PostDetail.scss'; // Reuse post detail styles
 
 function formatPerformanceDate(value) {
@@ -67,6 +68,7 @@ export default function PerformanceDetail({ onEntered }) {
   const additionalImages = Array.isArray(performance.additionalImages) ? performance.additionalImages : [];
   const mainImageUrl = getPerformanceDetailImageUrl(performance.mainImage);
   const performanceId = performance.slug || slug || performance._id || performance.title;
+  const performanceTrackingId = performance.slug || performance._id || slug;
   const mainImageAnalyticsProps = {
     'data-gtm-category': 'engagement',
     'data-gtm-action': 'open',
@@ -138,12 +140,17 @@ export default function PerformanceDetail({ onEntered }) {
           <button
             type="button"
             className="post-detail__image performance-image-button"
-            onClick={() =>
+            onClick={() => {
+              trackDataLayerEvent("performance_image_open", {
+                performance_id: performanceTrackingId,
+                image_scope: "main",
+                image_index: 0,
+              });
               setLightboxImage({
                 src: getPerformanceLightboxImageUrl(performance.mainImage),
                 alt: performance.title,
-              })
-            }
+              });
+            }}
             aria-label="公演画像を拡大表示"
             {...mainImageAnalyticsProps}
           >
@@ -207,12 +214,17 @@ export default function PerformanceDetail({ onEntered }) {
                       type="button"
                       key={`${imageUrl}-${index}`}
                       className="performance-gallery__item"
-                      onClick={() =>
+                      onClick={() => {
+                        trackDataLayerEvent("performance_image_open", {
+                          performance_id: performanceTrackingId,
+                          image_scope: "gallery",
+                          image_index: index + 1,
+                        });
                         setLightboxImage({
                           src: getPerformanceLightboxImageUrl(imageUrl),
                           alt: `${performance.title} 追加画像 ${index + 1}`,
-                        })
-                      }
+                        });
+                      }}
                       aria-label={`追加画像 ${index + 1} を拡大表示`}
                       {...galleryImageAnalyticsProps}
                     >
