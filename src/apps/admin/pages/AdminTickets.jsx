@@ -160,6 +160,11 @@ export default function AdminTickets() {
   const onAddWindow = async (e) => {
     e.preventDefault();
     if (!selectedEvent) return;
+    const label = windowForm.label.trim();
+    if (!label) {
+      setError('枠名を入力してください。');
+      return;
+    }
     const capacity = Number(windowForm.capacity);
     if (!Number.isInteger(capacity) || capacity < 0) {
       setError('定員は0以上の整数で入力してください。');
@@ -167,7 +172,7 @@ export default function AdminTickets() {
     }
     const res = await supabase.from('ticket_windows').insert({
       event_id: selectedEvent.id,
-      label: windowForm.label.trim(),
+      label,
       starts_at: fromDatetimeLocal(windowForm.starts_at),
       capacity,
       sort_order: selectedEvent.windows?.length ?? 0,
@@ -191,6 +196,11 @@ export default function AdminTickets() {
     const values = windowForms[windowId];
     const currentWindow = selectedEvent?.windows?.find((item) => item.id === windowId);
     if (!values || !currentWindow) return;
+    const label = values.label.trim();
+    if (!label) {
+      setError('枠名を入力してください。');
+      return;
+    }
     const capacity = Number(values.capacity);
     const reservedQuantity = Number(currentWindow.reserved_quantity ?? 0);
     if (!Number.isInteger(capacity) || capacity < 0) {
@@ -204,7 +214,7 @@ export default function AdminTickets() {
     const res = await supabase
       .from('ticket_windows')
       .update({
-        label: values.label.trim(),
+        label,
         starts_at: fromDatetimeLocal(values.starts_at, currentWindow.starts_at),
         capacity,
       })
@@ -230,8 +240,10 @@ export default function AdminTickets() {
     else await load(reservationPage);
   };
 
-  const onCancelReservation = async (id) => {
-    const res = await cancelTicketReservation(id);
+  const onCancelReservation = async (reservation) => {
+    const warning = `予約番号 ${reservation.reservation_code} をキャンセルします。この操作は元に戻せません。続行しますか？`;
+    if (typeof window !== 'undefined' && !window.confirm(warning)) return;
+    const res = await cancelTicketReservation(reservation.id);
     if (res.error) setError(res.error.message);
     else await load(reservationPage);
   };
@@ -362,7 +374,8 @@ export default function AdminTickets() {
             <article key={reservation.id} className="admin-view__link">
               <div className="admin-view__name">{reservation.customer_name} / {reservation.quantity}枚 / {TICKET_STATUS_LABEL[reservation.status]}</div>
               <small>{reservation.event?.title} - {reservation.window?.label ?? '自由席'} / {reservation.customer_email} / {reservation.reservation_code}</small>
-              {reservation.status !== 'cancelled' && <button type="button" className="admin-view__button" onClick={() => onCancelReservation(reservation.id)}>キャンセル</button>}
+              {reservation.note && <small>備考：{reservation.note}</small>}
+              {reservation.status !== 'cancelled' && <button type="button" className="admin-view__button" onClick={() => onCancelReservation(reservation)}>キャンセル</button>}
             </article>
           ))}
         </div>

@@ -27,3 +27,10 @@
 - 予約集計上限: 管理画面の全予約行REST取得を廃止し、admin限定 `get_ticket_window_reservation_totals()` で `window_id` ごとの `sum(quantity)` をDB側で集計する。REST `max_rows = 1000` による残数誤りを避ける。
 - 予約枚数上限: `getTicketReservationMaxQuantity()` で有限枠の残数と10枚上限の小さい方を計算し、公開フォームの `max`、入力妥当性、送信ボタンへ反映。Nodeテストを追加。
 - 追加検証: pgTAP 63件PASS、Nodeテスト6件PASS、対象JS ESLint PASS、build PASS（既存のchunk size warningのみ）、git diff --check PASS。全体lintは既存ファイル由来の31 errors/4 warningsで失敗し、変更対象ファイルにはエラーなし。
+
+## PR #39 最新レビュー5件への追加対応結果
+- 予約一覧に `reservation.note` を備考として表示し、キャンセル前に予約番号を含む確認ダイアログを表示するよう変更。
+- 公開予約ページはイベント取得/残席RPCのエラーを保持して読み込みエラーとして表示し、404表示で隠さないよう変更。
+- 予約枠の新規作成・編集でtrim後の空白名をUIで拒否し、DBにも `ticket_windows_label_check` を追加（既存データ互換のためNOT VALID、新規/更新行には適用）。
+- 公開予約ページに受付開始・終了境界のタイマー更新を追加し、ページ再読み込みなしで受付状態を再評価する。
+- 追加検証: pgTAP 65件PASS、Nodeテスト7件PASS、対象JS ESLint PASS、build PASS（既存chunk size warningのみ）、git diff --check PASS。全体lintは既存31 errors/4 warningsで、今回変更ファイルにはエラーなし。

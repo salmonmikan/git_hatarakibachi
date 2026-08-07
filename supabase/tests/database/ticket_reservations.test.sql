@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(63);
+select plan(65);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
@@ -421,6 +421,20 @@ select throws_ok(
   'P0001',
   'Ticket window capacity cannot be lower than active reservations',
   'ticket window capacity cannot be reduced below active reservations'
+);
+
+select throws_ok(
+  $$insert into public.ticket_windows (event_id, label, capacity) values (910001, '   ', 1)$$,
+  '23514',
+  'new row for relation "ticket_windows" violates check constraint "ticket_windows_label_check"',
+  'blank ticket window labels are rejected'
+);
+
+select throws_ok(
+  $$update public.ticket_windows set label = '   ' where id = 920001$$,
+  '23514',
+  'new row for relation "ticket_windows" violates check constraint "ticket_windows_label_check"',
+  'blank ticket window label updates are rejected'
 );
 
 select lives_ok(

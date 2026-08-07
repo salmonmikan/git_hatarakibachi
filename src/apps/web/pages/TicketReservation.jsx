@@ -9,7 +9,10 @@ import {
   formatTicketDate,
   isTicketEventAccepting,
 } from '@src/utils/tickets.js';
-import { getTicketReservationMaxQuantity } from '@src/utils/ticketReservationRules.js';
+import {
+  getNextTicketEventBoundary,
+  getTicketReservationMaxQuantity,
+} from '@src/utils/ticketReservationRules.js';
 import './TicketReservation.scss';
 
 const initialForm = {
@@ -40,6 +43,7 @@ export default function TicketReservation({ onEntered }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [reservationCode, setReservationCode] = useState(null);
+  const [clockTick, setClockTick] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -48,9 +52,14 @@ export default function TicketReservation({ onEntered }) {
       setError(null);
       const res = await fetchPublishedTicketEvent(slug);
       if (!alive) return;
-      if (res.error) setError(res.error.message);
-      setEvent(res.data);
-      setSelectedWindowId(findSelectableWindowId(res.data?.windows ?? []));
+      if (res.error) {
+        setError(res.error.message);
+        setEvent(null);
+        setSelectedWindowId('');
+      } else {
+        setEvent(res.data);
+        setSelectedWindowId(findSelectableWindowId(res.data?.windows ?? []));
+      }
       setLoading(false);
     }
     load();
@@ -58,6 +67,14 @@ export default function TicketReservation({ onEntered }) {
       alive = false;
     };
   }, [slug]);
+
+  useEffect(() => {
+    const nextBoundary = getNextTicketEventBoundary(event);
+    if (nextBoundary === null) return undefined;
+    const delay = Math.min(Math.max(nextBoundary - Date.now() + 50, 0), 2147483647);
+    const timer = setTimeout(() => setClockTick((tick) => tick + 1), delay);
+    return () => clearTimeout(timer);
+  }, [event, clockTick]);
 
   const windows = useMemo(() => event?.windows?.filter((item) => !item.deleted_at) ?? [], [event]);
   const accepting = isTicketEventAccepting(event);
@@ -127,6 +144,7 @@ export default function TicketReservation({ onEntered }) {
   };
 
   if (loading) return <div className="ticket-page__message">読み込み中...</div>;
+  if (error) return <div className="ticket-page__message" role="alert">予約ページの読み込みに失敗しました：{error}</div>;
   if (!event) return <div className="ticket-page__message">予約ページが見つかりませんでした。</div>;
 
   return (

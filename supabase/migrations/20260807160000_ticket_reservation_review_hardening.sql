@@ -61,6 +61,14 @@ before insert or update of event_id, window_id on public.ticket_reservations
 for each row
 execute function private.validate_ticket_reservation_request();
 
+alter table public.ticket_windows
+  drop constraint if exists ticket_windows_label_check;
+
+alter table public.ticket_windows
+  add constraint ticket_windows_label_check
+  check (nullif(btrim(label), '') is not null)
+  not valid;
+
 create or replace function private.create_ticket_reservation(
   p_event_id bigint,
   p_window_id bigint,
