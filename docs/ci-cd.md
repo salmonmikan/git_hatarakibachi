@@ -12,7 +12,7 @@ Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要
   - `main` / `develop` のCI成功を受けた `workflow_run` と `workflow_dispatch` で実行。自動DeployはCI失敗時には起動しない。
   - `database` → `cms` → `frontend` のジョブ依存で順序を固定する。各ジョブが失敗した場合、後続ジョブは実行しない。
   - `main` は `production`、`develop` は `staging` に割り当てる。手動実行ではEnvironmentを選択できる。
-  - `ref` にコミットSHAを指定すると、同じSHAの再実行ができる。適用済みのSupabase migrationは履歴により再適用されない。
+  - 最初に指定`ref`を実SHAへ解決し、database・cms・frontendの全ジョブは同じSHAをcheckoutする。`ref` にコミットSHAを指定すると、同じSHAの再実行ができる。適用済みのSupabase migrationは履歴により再適用されない。
   - 同じEnvironmentのDeployはConcurrencyで直列化し、実行中のDeployをキャンセルしない。
 
 ## GitHub Environment設定
@@ -46,16 +46,16 @@ GraphQLは既存の `sanity-studio/package.json` にある `deploy-graphql` scri
 
 Frontendジョブはルートの `dist/` をWranglerでPagesへ直接uploadします。preview時のSanity read tokenはVite buildへ渡さず、`/api/sanity-preview` Pages Functionのruntime secret `SANITY_PREVIEW_READ_TOKEN` だけで保持します。checkout後に解決した実SHAを `--commit-hash` へ渡し、production/stagingともEnvironmentの `CLOUDFLARE_PAGES_BRANCH` を `--branch` へ明示します。リポジトリ直下の `functions/` はPages Functionsの規約に従う配置なので、同じPages deployの対象になります。
 
-Preview用の `SANITY_PREVIEW_SECRET` と `SANITY_PREVIEW_READ_TOKEN` はCloudflare Pages Functionsのruntime secretとして設定し、GitHub Actionsやfrontend bundleへ値を渡しません。Sanity Presentation Toolが認証済みStudioセッションから生成したPreview URL Secretを `/api/draft` がSanity APIでサーバー側検証し、検証成功時だけ署名付きpreview cookieを1時間発行します。`/api/sanity-preview` はそのcookieを検証してdraft queryをSanityへproxyします。再利用可能なPreview SecretをStudioの設定やclient bundleへ埋め込まないでください。
+Preview用の `SANITY_PREVIEW_SECRET` と `SANITY_PREVIEW_READ_TOKEN` はCloudflare Pages Functionsのruntime secretとして設定し、GitHub Actionsやfrontend bundleへ値を渡しません。各Cloudflare Pages Environmentには、対象datasetを表すruntime Variable `SANITY_DATASET`（`staging` または `production`）を設定します。未知のPages hostnameではこのVariableなしにproductionへfallbackせず、previewを503で停止します。Sanity Presentation Toolが認証済みStudioセッションから生成したPreview URL Secretを `/api/draft` がSanity APIでサーバー側検証し、検証成功時だけ署名付き・期限付きpreview cookieを1時間発行します。`/api/sanity-preview` はそのcookieを検証してdraft queryをSanityへproxyします。再利用可能なPreview SecretをStudioの設定やclient bundleへ埋め込まないでください。
 
 ## Supabase migrationの安全策
 
 Databaseジョブは次の順で実行します。
 
 1. Environmentの認証情報で対象プロジェクトへlinkする。
-2. `supabase migration list` でリモートmigration履歴を表示する。
-3. `supabase db push --dry-run --linked` で適用候補を確認する。
-4. `supabase db push --linked` でmigrationを適用する。
+2. `supabase migration list --password` でリモートmigration履歴を表示する。
+3. `supabase db push --dry-run --linked --password` で適用候補を確認する。
+4. `supabase db push --linked --password --yes` で、成功済みdry-runの後にmigrationを非対話で適用する。
 
 Migration historyのrepairや自動rollbackはworkflowに組み込みません。失敗時はSQLと履歴を確認し、必要なら承認済みSupabase backup/recovery pointから復旧したうえで、履歴を壊さないforward-fix migrationを追加します。復旧判断後、`workflow_dispatch` の同じ `ref`（SHA）を指定して再実行します。migration適用前のバックアップ取得・保持期間・復旧操作はSupabase側の運用設定で別途確定してください。
 

@@ -14,7 +14,11 @@ function toBase64Url(value: ArrayBuffer) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-async function createPreviewToken(secret: string) {
+function getCurrentTimestamp() {
+  return Math.floor(Date.now() / 1000)
+}
+
+async function createPreviewToken(secret: string, expiresAt: number) {
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
@@ -25,10 +29,24 @@ async function createPreviewToken(secret: string) {
   const signature = await crypto.subtle.sign(
     'HMAC',
     key,
-    new TextEncoder().encode(PREVIEW_TOKEN_VERSION),
+    new TextEncoder().encode(`${PREVIEW_TOKEN_VERSION}.${expiresAt}`),
   )
 
-  return `${PREVIEW_TOKEN_VERSION}.${toBase64Url(signature)}`
+  return `${PREVIEW_TOKEN_VERSION}.${expiresAt}.${toBase64Url(signature)}`
+}
+
+function getPreviewTokenExpiry(token: string) {
+  const [version, expiry, signature, extra] = token.split('.')
+  if (version !== PREVIEW_TOKEN_VERSION || !expiry || !signature || extra || !/^\d+$/.test(expiry)) {
+    return undefined
+  }
+
+  const expiresAt = Number(expiry)
+  if (!Number.isSafeInteger(expiresAt) || expiresAt <= getCurrentTimestamp()) {
+    return undefined
+  }
+
+  return expiresAt
 }
 
 function isSecureRequest(request: Request) {
@@ -44,7 +62,7 @@ function secureAttribute(request: Request) {
 }
 
 export async function createPreviewCookie(request: Request, secret: string) {
-  const token = await createPreviewToken(secret)
+  const token = await createPreviewToken(secret, getCurrentTimestamp() + PREVIEW_SESSION_SECONDS)
   return `${PREVIEW_COOKIE_NAME}=${token}; Path=/; Max-Age=${PREVIEW_SESSION_SECONDS}; SameSite=${sameSiteValue(request)}${secureAttribute(request)}`
 }
 
@@ -64,7 +82,11 @@ export async function hasPreviewCookie(request: Request, secret?: string) {
     ?.slice(prefix.length)
 
   if (!token) return false
-  return token === (await createPreviewToken(secret))
+
+  const expiresAt = getPreviewTokenExpiry(token)
+  if (!expiresAt) return false
+
+  return token === (await createPreviewToken(secret, expiresAt))
 }
 
 export function getSafeRedirect(request: Request, fallback = '/') {

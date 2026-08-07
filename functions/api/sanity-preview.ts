@@ -1,8 +1,9 @@
 import { createClient } from '@sanity/client'
 import { hasPreviewCookie, withPreviewHeaders } from '../_preview'
+import { getSanityDataset, type SanityDatasetEnv } from '../_sanity'
 import type { FunctionContext } from '../_types'
 
-type Env = {
+type Env = SanityDatasetEnv & {
   SANITY_PREVIEW_SECRET?: string
   SANITY_PREVIEW_READ_TOKEN?: string
 }
@@ -14,14 +15,6 @@ type PreviewRequest = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function getDataset(hostname: string) {
-  return hostname === 'staging.hatarakibachi.com' ||
-    hostname === '127.0.0.1' ||
-    hostname === 'localhost'
-    ? 'staging'
-    : 'production'
 }
 
 export const onRequestPost = async ({ request, env }: FunctionContext<Env>) => {
@@ -39,6 +32,14 @@ export const onRequestPost = async ({ request, env }: FunctionContext<Env>) => {
     })
   }
 
+  const dataset = getSanityDataset(env, new URL(request.url).hostname)
+  if (!dataset) {
+    return new Response('Preview service is not configured', {
+      status: 503,
+      headers: withPreviewHeaders(),
+    })
+  }
+
   const body = (await request.json().catch(() => null)) as PreviewRequest | null
   if (typeof body?.query !== 'string' || !isRecord(body.params)) {
     return new Response('Invalid preview request', {
@@ -49,7 +50,7 @@ export const onRequestPost = async ({ request, env }: FunctionContext<Env>) => {
 
   const client = createClient({
     projectId: 'pz9uficf',
-    dataset: getDataset(new URL(request.url).hostname),
+    dataset,
     useCdn: false,
     apiVersion: '2023-05-03',
     token: env.SANITY_PREVIEW_READ_TOKEN,

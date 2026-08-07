@@ -3,11 +3,17 @@ import { canUsePreviewMode } from '@src/utils/previewMode.js'
 
 const PROJECT_ID = 'pz9uficf'
 const isStaging =
+  import.meta.env.VITE_SANITY_DATASET === 'staging' ||
   import.meta.env.DEV ||
   (typeof window !== 'undefined' &&
     (window.location.hostname === 'staging.hatarakibachi.com' ||
       window.location.hostname === '127.0.0.1'))
-const DATASET = isStaging ? 'staging' : 'production'
+const DATASET =
+  import.meta.env.VITE_SANITY_DATASET === 'production'
+    ? 'production'
+    : isStaging
+      ? 'staging'
+      : 'production'
 const API_VERSION = '2023-05-03'
 const client = createClient({
   projectId: PROJECT_ID,
