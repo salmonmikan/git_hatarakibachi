@@ -163,6 +163,10 @@ begin
       raise exception 'Ticket window is unavailable' using errcode = 'P0001';
     end if;
 
+    if v_window.starts_at is not null and v_window.starts_at <= v_now then
+      raise exception 'Ticket window has already started' using errcode = 'P0001';
+    end if;
+
     if v_window.capacity > 0 then
       select coalesce(sum(r.quantity), 0)
       into v_reserved_quantity

@@ -13,7 +13,7 @@ export async function fetchPublishedTicketEvent(slug) {
     .from('ticket_events')
     .select('*, windows:ticket_windows(*)')
     .eq('slug', slug)
-    .eq('status', 'published')
+    .in('status', ['published', 'closed'])
     .is('deleted_at', null)
     .is('windows.deleted_at', null)
     .order('sort_order', { foreignTable: 'ticket_windows', ascending: true })

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useReducedMotion } from 'motion/react';
 import { motion as Motion } from 'framer-motion';
@@ -22,7 +22,14 @@ const initialForm = {
   note: '',
 };
 
+function isWindowStarted(windowItem, now = Date.now()) {
+  if (!windowItem.starts_at) return false;
+  const startsAt = new Date(windowItem.starts_at).getTime();
+  return Number.isFinite(startsAt) && startsAt <= now;
+}
+
 function isWindowAvailable(windowItem) {
+  if (isWindowStarted(windowItem)) return false;
   return windowItem.capacity <= 0 || windowItem.remaining_quantity > 0;
 }
 
@@ -48,6 +55,15 @@ export default function TicketReservation({ onEntered }) {
   const [clockTick, setClockTick] = useState(0);
 
   useEffect(() => {
+    setEvent(null);
+    setSelectedWindowId('');
+    setForm(initialForm);
+    setSaving(false);
+    setLoadError(null);
+    setError(null);
+    setReservationCode(null);
+    setReservationRequestId(null);
+    setClockTick(0);
     let alive = true;
     async function load() {
       setLoading(true);
@@ -72,6 +88,17 @@ export default function TicketReservation({ onEntered }) {
   }, [slug]);
 
   useEffect(() => {
+    const nextWindowStart = (event?.windows ?? [])
+      .map((windowItem) => windowItem.starts_at ? new Date(windowItem.starts_at).getTime() : null)
+      .filter((value) => Number.isFinite(value) && value > Date.now())
+      .sort((left, right) => left - right)[0];
+    if (!nextWindowStart) return undefined;
+    const delay = Math.min(Math.max(nextWindowStart - Date.now() + 50, 0), 2147483647);
+    const timer = setTimeout(() => setClockTick((tick) => tick + 1), delay);
+    return () => clearTimeout(timer);
+  }, [event, clockTick]);
+
+  useEffect(() => {
     const nextBoundary = getNextTicketEventBoundary(event);
     if (nextBoundary === null) return undefined;
     const delay = Math.min(Math.max(nextBoundary - Date.now() + 50, 0), 2147483647);
@@ -79,7 +106,7 @@ export default function TicketReservation({ onEntered }) {
     return () => clearTimeout(timer);
   }, [event, clockTick]);
 
-  const windows = useMemo(() => event?.windows?.filter((item) => !item.deleted_at) ?? [], [event]);
+  const windows = event?.windows?.filter((item) => !item.deleted_at) ?? [];
   const accepting = isTicketEventAccepting(event);
   const isWindowedEvent = windows.length > 0 || Boolean(event?.has_window_history);
   const hasAvailableWindow = windows.some(isWindowAvailable);
@@ -189,6 +216,7 @@ export default function TicketReservation({ onEntered }) {
                 key={windowItem.id}
                 className="ticket-window-card"
                 data-sold-out={windowItem.capacity > 0 && windowItem.remaining_quantity <= 0 ? 'true' : undefined}
+                data-started={isWindowStarted(windowItem) ? 'true' : undefined}
               >
                 <input
                   type="radio"
@@ -199,7 +227,7 @@ export default function TicketReservation({ onEntered }) {
                     setSelectedWindowId(e.target.value);
                     setReservationRequestId(null);
                   }}
-                  disabled={windowItem.capacity > 0 && windowItem.remaining_quantity <= 0}
+                  disabled={!isWindowAvailable(windowItem)}
                 />
                 <span>
                   <strong>{windowItem.label}</strong>
@@ -208,7 +236,9 @@ export default function TicketReservation({ onEntered }) {
                     {windowItem.capacity > 0 && ` / 残り ${windowItem.remaining_quantity}`}
                   </small>
                 </span>
-                {windowItem.capacity > 0 && windowItem.remaining_quantity <= 0 && <em>満席</em>}
+                {isWindowStarted(windowItem)
+                  ? <em>受付終了</em>
+                  : windowItem.capacity > 0 && windowItem.remaining_quantity <= 0 && <em>満席</em>}
               </label>
             ))}
           </div>

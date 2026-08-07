@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(73);
+select plan(76);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
@@ -17,13 +17,19 @@ insert into public.ticket_events (
   (910005, 'ticket-test-future', 'Future', now() + interval '1 hour', null, 'published', null, 'sanity-performance-future'),
   (910006, 'ticket-test-past', 'Past', null, now() - interval '1 hour', 'published', null, 'sanity-performance-past'),
   (910007, 'ticket-test-other', 'Other', null, null, 'published', null, 'sanity-performance-other'),
-  (910008, 'ticket-test-free', 'Free seating', null, null, 'published', null, 'sanity-performance-free');
+  (910008, 'ticket-test-free', 'Free seating', null, null, 'published', null, 'sanity-performance-free'),
+  (910009, 'ticket-test-started-window', 'Started window', null, null, 'published', null, 'sanity-performance-started-window');
 
 insert into public.ticket_windows (id, event_id, label, capacity, deleted_at)
 values
   (920001, 910001, 'Capacity two', 2, null),
   (920002, 910007, 'Other event window', 10, null),
-  (920003, 910001, 'Deleted window', 10, now());
+  (920003, 910001, 'Deleted window', 10, now()),
+  (920004, 910009, 'Started window', 10, null);
+
+update public.ticket_windows
+set starts_at = now() - interval '1 hour'
+where id = 920004;
 
 insert into public.ticket_reservations (
   id, event_id, customer_name, customer_email, quantity
@@ -256,6 +262,13 @@ select throws_ok(
 );
 
 select throws_ok(
+  $$select * from public.create_ticket_reservation(910009, 920004, 'Test', 'test@example.com', 1, null)$$,
+  'P0001',
+  'Ticket window has already started',
+  'a reservation cannot target a window that has already started'
+);
+
+select throws_ok(
   $$select * from public.create_ticket_reservation(910008, null, 'Test', 'test@example.com', 0, null)$$,
   'P0001',
   'Ticket quantity must be between 1 and 10',
@@ -315,6 +328,12 @@ select results_eq(
   $$select count(*) from public.ticket_events where id = 910001$$,
   array[1::bigint],
   'a non-admin authenticated user can read published event information'
+);
+
+select results_eq(
+  $$select count(*) from public.ticket_events where id = 910003$$,
+  array[1::bigint],
+  'a non-admin authenticated user can read a manually closed ticket page'
 );
 
 select results_eq(
@@ -446,6 +465,13 @@ select results_eq(
   $$select reserved_quantity from public.get_ticket_window_reservation_totals() where window_id = 920001$$,
   array[2::bigint],
   'an admin receives database-aggregated reservation totals'
+);
+
+select throws_ok(
+  $$insert into public.ticket_windows (event_id, label, capacity) values (910008, 'Late window', 10)$$,
+  'P0001',
+  'Cannot add ticket windows after free-seating reservations',
+  'free-seating events with reservations cannot add ticket windows'
 );
 
 select throws_ok(
