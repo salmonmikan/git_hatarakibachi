@@ -1,7 +1,7 @@
 export const PREVIEW_COOKIE_NAME = 'sanity-preview'
 
 const ROBOTS_HEADER = 'noindex, nofollow'
-const ONE_DAY_SECONDS = 60 * 60 * 24
+const PREVIEW_SESSION_SECONDS = 60 * 60
 const SANITY_PREVIEW_PATHNAME_PARAM = 'sanity-preview-pathname'
 const PREVIEW_TOKEN_VERSION = '1'
 
@@ -45,7 +45,7 @@ function secureAttribute(request: Request) {
 
 export async function createPreviewCookie(request: Request, secret: string) {
   const token = await createPreviewToken(secret)
-  return `${PREVIEW_COOKIE_NAME}=${token}; Path=/; Max-Age=${ONE_DAY_SECONDS}; SameSite=${sameSiteValue(request)}${secureAttribute(request)}`
+  return `${PREVIEW_COOKIE_NAME}=${token}; Path=/; Max-Age=${PREVIEW_SESSION_SECONDS}; SameSite=${sameSiteValue(request)}${secureAttribute(request)}`
 }
 
 export function clearPreviewCookie(request: Request) {

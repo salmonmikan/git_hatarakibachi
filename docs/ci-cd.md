@@ -26,7 +26,6 @@ Deployの3ジョブはすべて対象Environmentに紐づくため、production�
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 - `SANITY_AUTH_TOKEN`
-- `SANITY_STUDIO_PREVIEW_SECRET`
 - `SUPABASE_ACCESS_TOKEN`
 - `SUPABASE_DB_PASSWORD`
 
@@ -41,13 +40,13 @@ CloudflareのアカウントIDとAPI token、Sanity token、Supabase token/passw
 
 ## CMSとGraphQL
 
-CMSジョブはSanity Studioの依存関係を `sanity-studio/package-lock.json` から `npm ci` し、Environmentの `SANITY_STUDIO_PREVIEW_SECRET` をBuildへ渡して `npm run build` 後にworkflowから `sanity deploy --no-build --schema-required` を実行します。schema公開失敗を警告で通過させないため、workflow側で `--schema-required` を明示しています。
+CMSジョブはSanity Studioの依存関係を `sanity-studio/package-lock.json` から `npm ci` し、Preview用SecretをBuildへ渡さずに `npm run build` 後、workflowから `sanity deploy --no-build --schema-required` を実行します。schema公開失敗を警告で通過させないため、workflow側で `--schema-required` を明示しています。
 
 GraphQLは既存の `sanity-studio/package.json` にある `deploy-graphql` scriptを利用できますが、現行のCLI設定にはGraphQL API定義がなく、フロントエンドもSanity client/GROQ経由で取得しています。そのため通常は実行せず、手動実行の `deploy_graphql` またはEnvironment Variable `SANITY_DEPLOY_GRAPHQL=true` の明示指定時だけ実行します。GraphQL APIを利用する場合は、API定義・schema差分・互換性をレビューしてから有効化します。
 
 Frontendジョブはルートの `dist/` をWranglerでPagesへ直接uploadします。preview時のSanity read tokenはVite buildへ渡さず、`/api/sanity-preview` Pages Functionのruntime secret `SANITY_PREVIEW_READ_TOKEN` だけで保持します。checkout後に解決した実SHAを `--commit-hash` へ渡し、production/stagingともEnvironmentの `CLOUDFLARE_PAGES_BRANCH` を `--branch` へ明示します。リポジトリ直下の `functions/` はPages Functionsの規約に従う配置なので、同じPages deployの対象になります。
 
-Preview用の `SANITY_PREVIEW_SECRET` と `SANITY_PREVIEW_READ_TOKEN` はCloudflare Pages Functionsのruntime secretとして設定し、GitHub Actionsやfrontend bundleへ値を渡しません。`/api/draft` が署名付きpreview cookieを発行し、`/api/sanity-preview` がそのcookieを検証してdraft queryをSanityへproxyします。
+Preview用の `SANITY_PREVIEW_SECRET` と `SANITY_PREVIEW_READ_TOKEN` はCloudflare Pages Functionsのruntime secretとして設定し、GitHub Actionsやfrontend bundleへ値を渡しません。Sanity Presentation Toolが認証済みStudioセッションから生成したPreview URL Secretを `/api/draft` がSanity APIでサーバー側検証し、検証成功時だけ署名付きpreview cookieを1時間発行します。`/api/sanity-preview` はそのcookieを検証してdraft queryをSanityへproxyします。再利用可能なPreview SecretをStudioの設定やclient bundleへ埋め込まないでください。
 
 ## Supabase migrationの安全策
 
