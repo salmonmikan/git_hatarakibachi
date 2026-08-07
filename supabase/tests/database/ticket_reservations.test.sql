@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(76);
+select plan(77);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
@@ -12,7 +12,7 @@ insert into public.ticket_events (
 ) values
   (910001, 'ticket-test-active', 'Active', now() - interval '1 hour', now() + interval '1 hour', 'published', null, 'sanity-performance-active'),
   (910002, 'ticket-test-draft', 'Draft', null, null, 'draft', null, null),
-  (910003, 'ticket-test-closed', 'Closed', null, null, 'closed', null, null),
+  (910003, 'ticket-test-closed', 'Closed', null, null, 'closed', null, 'sanity-performance-closed'),
   (910004, 'ticket-test-deleted', 'Deleted', null, null, 'published', now(), 'sanity-performance-deleted'),
   (910005, 'ticket-test-future', 'Future', now() + interval '1 hour', null, 'published', null, 'sanity-performance-future'),
   (910006, 'ticket-test-past', 'Past', null, now() - interval '1 hour', 'published', null, 'sanity-performance-past'),
@@ -486,6 +486,13 @@ select throws_ok(
   '23514',
   'new row for relation "ticket_events" violates check constraint "ticket_events_published_sanity_check"',
   'published ticket events require a Sanity performance link'
+);
+
+select throws_ok(
+  $$insert into public.ticket_events (slug, title, status) values ('ticket-test-unlinked-closed', 'Unlinked closed', 'closed')$$,
+  '23514',
+  'new row for relation "ticket_events" violates check constraint "ticket_events_published_sanity_check"',
+  'closed ticket events require a Sanity performance link'
 );
 
 select throws_ok(

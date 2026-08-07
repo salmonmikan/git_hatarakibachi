@@ -175,7 +175,7 @@ export default function AdminTickets() {
       setError('受付終了日時は受付開始日時以降に設定してください。');
       return;
     }
-    if (form.status === 'published' && !payload.sanity_performance_id) {
+    if (['published', 'closed'].includes(form.status) && !payload.sanity_performance_id) {
       setError('公開する販売ページにはSanity公演情報を連携してください。');
       return;
     }
@@ -326,7 +326,7 @@ export default function AdminTickets() {
             <label>
               Sanity公演情報
               {sanityPerformanceLoadError && <small className="admin-ticket-sanity-warning">Sanity公演情報を取得できません。連携先を確認してから公開してください。</small>}
-              <select name="sanity_performance_id" value={form.sanity_performance_id} onChange={onFormChange} required={form.status === 'published'}>
+              <select name="sanity_performance_id" value={form.sanity_performance_id} onChange={onFormChange} required={['published', 'closed'].includes(form.status)}>
                 <option value="">未連携（下書きのみ）</option>
                 {sanityPerformances.map((performance) => (
                   <option key={performance._id} value={performance._id}>
