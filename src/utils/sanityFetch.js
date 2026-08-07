@@ -13,6 +13,10 @@ const STUDIO_URL =
   typeof window !== 'undefined' && window.location.hostname === 'localhost'
     ? 'http://localhost:3333'
     : 'https://hatarakibachi.sanity.studio'
+const PUBLIC_SITE_URL = isStaging
+  ? (import.meta.env.DEV ? 'http://localhost:8788' : 'https://staging.hatarakibachi.com')
+  : 'https://hatarakibachi.com'
+const SANITY_STUDIO_WORKSPACE_URL = `${STUDIO_URL}/${isStaging ? 'staging' : 'production'}`
 
 const client = createClient({
   projectId: PROJECT_ID,
@@ -83,6 +87,25 @@ export async function getFeaturedArticles() {
     }
   }`
   return sanityFetch(query)
+}
+
+export async function getTicketPerformanceOptions() {
+  const query = `*[_type == "performance"] | order(_updatedAt desc){
+    _id,
+    title,
+    "slug": slug.current,
+    performanceDate,
+    venue
+  }`
+  return sanityFetch(query)
+}
+
+export function getSanityPerformancePublicUrl(slug) {
+  return slug ? `${PUBLIC_SITE_URL}/performance/${encodeURIComponent(slug)}` : null
+}
+
+export function getSanityStudioWorkspaceUrl() {
+  return SANITY_STUDIO_WORKSPACE_URL
 }
 
 export async function getPerformanceBySlug(slug) {

@@ -14,3 +14,10 @@ corich/TIGET のような外部サービスに依存せず、劇団内で運用�
 - `ticket_events` を販売ページ単位、`ticket_windows` を日時/窓口/枠単位、`ticket_reservations` を予約単位として分離する。
 - Web 側は `/tickets/:slug` を公開 URL とし、公開中かつ受付期間内の販売ページだけ予約可能にする。
 - Admin 側は既存管理画面のルーティングに `tickets` を追加し、既存 UI の `.admin-view` 系スタイルに合わせる。
+
+## PR #39 追加改修計画
+- Sanity `performance` の `_id` を `ticket_events.sanity_performance_id` に保存し、管理画面で連携先を選択・参照できるようにする。
+- Sanity 公演の表示リンクと既存 Studio workspace 導線を残し、未連携の販売ページは管理画面で明示する。公開状態へ変更する場合は連携を必須にする。
+- 予約枠を編集できるようにし、削除は予約履歴を保持するソフト削除RPCへ限定する。残数を管理画面に表示する。
+- 定員を既存予約数未満へ変更できないDB trigger、受付日時順序のDB/UI検証を追加する。
+- 公開予約成功後に残数を再取得し、今回のレビュー指摘と既存の容量検証を維持する。

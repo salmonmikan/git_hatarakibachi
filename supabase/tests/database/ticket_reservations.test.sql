@@ -2,22 +2,22 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(50);
+select plan(58);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
 
 insert into public.ticket_events (
-  id, slug, title, opens_at, closes_at, status, deleted_at
+  id, slug, title, opens_at, closes_at, status, deleted_at, sanity_performance_id
 ) values
-  (910001, 'ticket-test-active', 'Active', now() - interval '1 hour', now() + interval '1 hour', 'published', null),
-  (910002, 'ticket-test-draft', 'Draft', null, null, 'draft', null),
-  (910003, 'ticket-test-closed', 'Closed', null, null, 'closed', null),
-  (910004, 'ticket-test-deleted', 'Deleted', null, null, 'published', now()),
-  (910005, 'ticket-test-future', 'Future', now() + interval '1 hour', null, 'published', null),
-  (910006, 'ticket-test-past', 'Past', null, now() - interval '1 hour', 'published', null),
-  (910007, 'ticket-test-other', 'Other', null, null, 'published', null),
-  (910008, 'ticket-test-free', 'Free seating', null, null, 'published', null);
+  (910001, 'ticket-test-active', 'Active', now() - interval '1 hour', now() + interval '1 hour', 'published', null, 'sanity-performance-active'),
+  (910002, 'ticket-test-draft', 'Draft', null, null, 'draft', null, null),
+  (910003, 'ticket-test-closed', 'Closed', null, null, 'closed', null, null),
+  (910004, 'ticket-test-deleted', 'Deleted', null, null, 'published', now(), 'sanity-performance-deleted'),
+  (910005, 'ticket-test-future', 'Future', now() + interval '1 hour', null, 'published', null, 'sanity-performance-future'),
+  (910006, 'ticket-test-past', 'Past', null, now() - interval '1 hour', 'published', null, 'sanity-performance-past'),
+  (910007, 'ticket-test-other', 'Other', null, null, 'published', null, 'sanity-performance-other'),
+  (910008, 'ticket-test-free', 'Free seating', null, null, 'published', null, 'sanity-performance-free');
 
 insert into public.ticket_windows (id, event_id, label, capacity, deleted_at)
 values
@@ -82,6 +82,11 @@ select ok(
 select ok(
   not has_table_privilege('authenticated', 'public.ticket_reservations', 'DELETE'),
   'authenticated users have no direct reservation DELETE privilege'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'public.ticket_windows', 'DELETE'),
+  'authenticated users cannot physically delete ticket windows'
 );
 
 select ok(
@@ -306,9 +311,18 @@ select is_empty(
   'a non-admin authenticated user cannot update ticket windows'
 );
 
-select is_empty(
+select throws_ok(
   $$delete from public.ticket_windows where id = 920001 returning id$$,
-  'a non-admin authenticated user cannot delete ticket windows'
+  '42501',
+  'permission denied for table ticket_windows',
+  'a non-admin authenticated user cannot physically delete ticket windows'
+);
+
+select throws_ok(
+  $$select public.delete_ticket_window(920001)$$,
+  '42501',
+  'Ticket window deletion requires an administrator',
+  'a non-admin authenticated user cannot soft-delete ticket windows'
 );
 
 select throws_ok(
@@ -355,6 +369,44 @@ select results_eq(
   $$select count(*) from public.ticket_reservations where event_id between 910001 and 910008$$,
   array[4::bigint],
   'an admin can read reservations and personal information'
+);
+
+select throws_ok(
+  $$insert into public.ticket_events (slug, title, status) values ('ticket-test-unlinked-published', 'Unlinked published', 'published')$$,
+  '23514',
+  'new row for relation "ticket_events" violates check constraint "ticket_events_published_sanity_check"',
+  'published ticket events require a Sanity performance link'
+);
+
+select throws_ok(
+  $$insert into public.ticket_events (slug, title, opens_at, closes_at) values ('ticket-test-invalid-time', 'Invalid time', now(), now() - interval '1 minute')$$,
+  '23514',
+  'new row for relation "ticket_events" violates check constraint "ticket_events_time_order_check"',
+  'ticket event受付日時 cannot end before it starts'
+);
+
+select throws_ok(
+  $$update public.ticket_windows set capacity = 1 where id = 920001$$,
+  'P0001',
+  'Ticket window capacity cannot be lower than active reservations',
+  'ticket window capacity cannot be reduced below active reservations'
+);
+
+select lives_ok(
+  $$select public.delete_ticket_window(920001)$$,
+  'an admin can soft-delete a ticket window'
+);
+
+select results_eq(
+  $$select (deleted_at is not null)::integer from public.ticket_windows where id = 920001$$,
+  array[1::integer],
+  'soft-deleting a ticket window marks it deleted'
+);
+
+select results_eq(
+  $$select count(*) from public.ticket_reservations where window_id = 920001$$,
+  array[1::bigint],
+  'soft-deleting a ticket window preserves reservation history'
 );
 
 select throws_ok(

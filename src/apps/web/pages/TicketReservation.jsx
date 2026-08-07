@@ -18,6 +18,17 @@ const initialForm = {
   note: '',
 };
 
+function isWindowAvailable(windowItem) {
+  return windowItem.capacity <= 0 || windowItem.remaining_quantity > 0;
+}
+
+function findSelectableWindowId(windowItems, preferredId = '') {
+  const availableWindows = windowItems.filter((item) => !item.deleted_at && isWindowAvailable(item));
+  const preferredWindow = availableWindows.find((item) => String(item.id) === String(preferredId));
+  const nextWindow = preferredWindow ?? availableWindows[0];
+  return nextWindow ? String(nextWindow.id) : '';
+}
+
 export default function TicketReservation({ onEntered }) {
   const { slug } = useParams();
   const reduce = useReducedMotion();
@@ -38,10 +49,7 @@ export default function TicketReservation({ onEntered }) {
       if (!alive) return;
       if (res.error) setError(res.error.message);
       setEvent(res.data);
-      const firstWindow = res.data?.windows?.find(
-        (item) => !item.deleted_at && (item.capacity <= 0 || item.remaining_quantity > 0)
-      );
-      setSelectedWindowId(firstWindow ? String(firstWindow.id) : '');
+      setSelectedWindowId(findSelectableWindowId(res.data?.windows ?? []));
       setLoading(false);
     }
     load();
@@ -52,12 +60,11 @@ export default function TicketReservation({ onEntered }) {
 
   const windows = useMemo(() => event?.windows?.filter((item) => !item.deleted_at) ?? [], [event]);
   const accepting = isTicketEventAccepting(event);
-  const hasAvailableWindow = windows.some(
-    (item) => item.capacity <= 0 || item.remaining_quantity > 0
-  );
-  const canReserve = accepting && (!windows.length || hasAvailableWindow) && (
-    !windows.length || Boolean(selectedWindowId)
-  );
+  const hasAvailableWindow = windows.some(isWindowAvailable);
+  const selectedWindow = windows.find((item) => String(item.id) === String(selectedWindowId));
+  const canReserve = accepting && (!windows.length || (
+    hasAvailableWindow && Boolean(selectedWindowId) && Boolean(selectedWindow) && isWindowAvailable(selectedWindow)
+  ));
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -88,6 +95,13 @@ export default function TicketReservation({ onEntered }) {
 
     setReservationCode(res.data.reservation_code);
     setForm(initialForm);
+    const refreshed = await fetchPublishedTicketEvent(slug);
+    if (refreshed.error) {
+      setError(`予約は完了しましたが、残数の更新に失敗しました: ${refreshed.error.message}`);
+    } else {
+      setEvent(refreshed.data);
+      setSelectedWindowId(findSelectableWindowId(refreshed.data?.windows ?? [], selectedWindowId));
+    }
     setSaving(false);
   };
 
