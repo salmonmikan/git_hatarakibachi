@@ -1,8 +1,4 @@
-import {
-  createPreviewCookie,
-  getSafeRedirect,
-  withPreviewHeaders,
-} from '../_preview'
+import { createPreviewCookie, getSafeRedirect, withPreviewHeaders } from '../_preview'
 import type { FunctionContext } from '../_types'
 
 type Env = {
@@ -21,7 +17,7 @@ export const onRequestGet = async ({ request, env }: FunctionContext<Env>) => {
   }
 
   const headers = withPreviewHeaders()
-  headers.set('Set-Cookie', createPreviewCookie(request))
+  headers.set('Set-Cookie', await createPreviewCookie(request, env.SANITY_PREVIEW_SECRET))
   headers.set('Location', getSafeRedirect(request))
 
   return new Response(null, {

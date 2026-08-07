@@ -21,5 +21,5 @@ export function hasPreviewCookie() {
 }
 
 export function canUsePreviewMode() {
-  return hasPreviewCookie() && Boolean(import.meta.env.VITE_SANITY_READ_TOKEN)
+  return hasPreviewCookie()
 }

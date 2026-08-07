@@ -31,7 +31,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            sanity-studio/package-lock.json
 
       - name: Pin npm
         run: npm install --global npm@10.9.2
@@ -48,4 +50,12 @@ jobs:
         run: npm run lint
 
       - name: Build
+        run: npm run build
+
+      - name: Install Studio dependencies
+        working-directory: sanity-studio
+        run: npm ci
+
+      - name: Build Studio
+        working-directory: sanity-studio
         run: npm run build

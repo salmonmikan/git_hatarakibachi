@@ -33,7 +33,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch || github.ref_name }}
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
   cancel-in-progress: false
 
 env:
@@ -167,8 +167,6 @@ jobs:
         run: npm ci
 
       - name: Build frontend
-        env:
-          VITE_SANITY_READ_TOKEN: ${{ secrets.VITE_SANITY_READ_TOKEN }}
         run: npm run build
 
       - name: Resolve checked out SHA

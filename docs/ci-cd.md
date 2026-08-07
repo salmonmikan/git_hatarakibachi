@@ -6,7 +6,7 @@ Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要
 
 - `.github/workflows/ci.yml`
   - `pull_request` と `main` / `develop` への `push` で実行。
-  - `.nvmrc` の Node.js 22.17.0 と npm 10.9.2 を使用し、`npm ci`、`npm run lint`、`npm run build` を実行。
+  - `.nvmrc` の Node.js 22.17.0 と npm 10.9.2 を使用し、rootと`sanity-studio`の`npm ci`、lint、buildを実行。
   - PRの古い実行は同じConcurrency group内でキャンセルする。
 - `.github/workflows/deploy.yml`
   - `main` / `develop` のCI成功を受けた `workflow_run` と `workflow_dispatch` で実行。自動DeployはCI失敗時には起動しない。
@@ -27,7 +27,6 @@ Deployの3ジョブはすべて対象Environmentに紐づくため、production�
 - `CLOUDFLARE_ACCOUNT_ID`
 - `SANITY_AUTH_TOKEN`
 - `SANITY_STUDIO_PREVIEW_SECRET`
-- `VITE_SANITY_READ_TOKEN`
 - `SUPABASE_ACCESS_TOKEN`
 - `SUPABASE_DB_PASSWORD`
 
@@ -46,7 +45,9 @@ CMSジョブはSanity Studioの依存関係を `sanity-studio/package-lock.json`
 
 GraphQLは既存の `sanity-studio/package.json` にある `deploy-graphql` scriptを利用できますが、現行のCLI設定にはGraphQL API定義がなく、フロントエンドもSanity client/GROQ経由で取得しています。そのため通常は実行せず、手動実行の `deploy_graphql` またはEnvironment Variable `SANITY_DEPLOY_GRAPHQL=true` の明示指定時だけ実行します。GraphQL APIを利用する場合は、API定義・schema差分・互換性をレビューしてから有効化します。
 
-FrontendジョブはEnvironmentの `VITE_SANITY_READ_TOKEN` をBuildへ渡し、ルートの `dist/` をWranglerでPagesへ直接uploadします。checkout後に解決した実SHAを `--commit-hash` へ渡し、production/stagingともEnvironmentの `CLOUDFLARE_PAGES_BRANCH` を `--branch` へ明示します。リポジトリ直下の `functions/` はPages Functionsの規約に従う配置なので、同じPages deployの対象になります。
+Frontendジョブはルートの `dist/` をWranglerでPagesへ直接uploadします。preview時のSanity read tokenはVite buildへ渡さず、`/api/sanity-preview` Pages Functionのruntime secret `SANITY_PREVIEW_READ_TOKEN` だけで保持します。checkout後に解決した実SHAを `--commit-hash` へ渡し、production/stagingともEnvironmentの `CLOUDFLARE_PAGES_BRANCH` を `--branch` へ明示します。リポジトリ直下の `functions/` はPages Functionsの規約に従う配置なので、同じPages deployの対象になります。
+
+Preview用の `SANITY_PREVIEW_SECRET` と `SANITY_PREVIEW_READ_TOKEN` はCloudflare Pages Functionsのruntime secretとして設定し、GitHub Actionsやfrontend bundleへ値を渡しません。`/api/draft` が署名付きpreview cookieを発行し、`/api/sanity-preview` がそのcookieを検証してdraft queryをSanityへproxyします。
 
 ## Supabase migrationの安全策
 
