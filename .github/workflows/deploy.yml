@@ -1,7 +1,11 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
     branches:
       - main
       - develop
@@ -29,24 +33,25 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.ref_name }}
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch || github.ref_name }}
   cancel-in-progress: false
 
 env:
-  DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.ref_name == 'main' && 'production' || 'staging' }}
-  TARGET_REF: ${{ inputs.ref || github.sha }}
+  DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+  TARGET_REF: ${{ github.event_name == 'workflow_dispatch' && (inputs.ref || github.sha) || github.event.workflow_run.head_sha }}
 
 jobs:
   database:
     name: Database migrations
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.ref_name == 'main' && 'production' || 'staging' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
     steps:
       - name: Checkout target SHA
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ env.TARGET_REF }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -93,9 +98,10 @@ jobs:
   cms:
     name: Sanity Studio
     needs: database
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.ref_name == 'main' && 'production' || 'staging' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
     defaults:
       run:
         working-directory: sanity-studio
@@ -103,7 +109,7 @@ jobs:
       - name: Checkout target SHA
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ env.TARGET_REF }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -119,6 +125,8 @@ jobs:
         run: npm ci
 
       - name: Build Studio
+        env:
+          SANITY_STUDIO_PREVIEW_SECRET: ${{ secrets.SANITY_STUDIO_PREVIEW_SECRET }}
         run: npm run build
 
       - name: Deploy Studio
@@ -135,14 +143,15 @@ jobs:
   frontend:
     name: Cloudflare Pages and Functions
     needs: cms
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.ref_name == 'main' && 'production' || 'staging' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
     steps:
       - name: Checkout target SHA
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ env.TARGET_REF }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -158,7 +167,13 @@ jobs:
         run: npm ci
 
       - name: Build frontend
+        env:
+          VITE_SANITY_READ_TOKEN: ${{ secrets.VITE_SANITY_READ_TOKEN }}
         run: npm run build
+
+      - name: Resolve checked out SHA
+        id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Deploy Pages and Functions
         env:
@@ -167,24 +182,25 @@ jobs:
           CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
           CLOUDFLARE_PAGES_BRANCH: ${{ vars.CLOUDFLARE_PAGES_BRANCH }}
           DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
-          TARGET_REF: ${{ env.TARGET_REF }}
+          TARGET_SHA: ${{ steps.revision.outputs.sha }}
         run: |
           set -eu
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_PAGES_PROJECT" ]; then
             echo "::error::Cloudflare deployment variables are not configured for this GitHub Environment."
             exit 1
           fi
+          if [ -z "$CLOUDFLARE_PAGES_BRANCH" ]; then
+            echo "::error::CLOUDFLARE_PAGES_BRANCH is required for Pages deployments."
+            exit 1
+          fi
           if [ "$DEPLOY_ENV" = "production" ]; then
             npx --no-install wrangler pages deploy dist \
               --project-name "$CLOUDFLARE_PAGES_PROJECT" \
-              --commit-hash "$TARGET_REF"
+              --branch "$CLOUDFLARE_PAGES_BRANCH" \
+              --commit-hash "$TARGET_SHA"
           else
-            if [ -z "$CLOUDFLARE_PAGES_BRANCH" ]; then
-              echo "::error::CLOUDFLARE_PAGES_BRANCH is required for staging deployments."
-              exit 1
-            fi
             npx --no-install wrangler pages deploy dist \
               --project-name "$CLOUDFLARE_PAGES_PROJECT" \
               --branch "$CLOUDFLARE_PAGES_BRANCH" \
-              --commit-hash "$TARGET_REF"
+              --commit-hash "$TARGET_SHA"
           fi
