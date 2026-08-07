@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(65);
+select plan(66);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
@@ -414,6 +414,13 @@ select throws_ok(
   '23514',
   'new row for relation "ticket_events" violates check constraint "ticket_events_time_order_check"',
   'ticket event受付日時 cannot end before it starts'
+);
+
+select throws_ok(
+  $$insert into public.ticket_events (slug, title) values ('ticket-test-blank-title', '   ')$$,
+  '23514',
+  'new row for relation "ticket_events" violates check constraint "ticket_events_title_check"',
+  'blank ticket event titles are rejected'
 );
 
 select throws_ok(

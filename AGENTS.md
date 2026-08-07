@@ -20,6 +20,8 @@ If there are conflicting rules in codex/AGENTS.md, the rules in codex/AGENTS.md 
 - When GitHub issue, pull request, or repository information is needed, prefer retrieving it through the GitHub plugin available in this session.
 - 変更は依頼された範囲に限定する。関係のないリファクタや整形の巻き込みは避ける。
 - Limit changes to the requested scope. Avoid unrelated refactors or formatting-only churn.
+- 実装は堅牢にしつつ最小実装を厳とし、オーバーエンジニアリングや要件外の実装は深く慎む。
+- Keep implementations robust but minimal; avoid over-engineering and any work outside the stated requirements.
 - 実装前に関連ファイルを確認し、既存の設計、命名、ディレクトリ構成に合わせる。
 - Review the related files before implementing, and follow the existing design, naming, and directory structure.
 - 既存の未コミット変更はユーザーの作業として扱い、勝手に戻さない。

@@ -35,6 +35,8 @@ export default function AdminTickets() {
   const [error, setError] = useState(null);
   const [reservationPage, setReservationPage] = useState(0);
   const [reservationTotal, setReservationTotal] = useState(0);
+  const [reservationLoading, setReservationLoading] = useState(false);
+  const [addingWindow, setAddingWindow] = useState(false);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedId) ?? null,
@@ -95,6 +97,28 @@ export default function AdminTickets() {
     setLoading(false);
   };
 
+  const loadReservations = async (page) => {
+    setReservationLoading(true);
+    setError(null);
+    const reservationFrom = page * RESERVATIONS_PAGE_SIZE;
+    const reservationTo = reservationFrom + RESERVATIONS_PAGE_SIZE - 1;
+    const reservationRes = await supabase
+      .from('ticket_reservations')
+      .select('*, event:ticket_events(title), window:ticket_windows(label)', { count: 'exact' })
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .range(reservationFrom, reservationTo);
+
+    if (reservationRes.error) {
+      setError(reservationRes.error.message);
+    } else {
+      setReservations(reservationRes.data ?? []);
+      setReservationPage(page);
+      setReservationTotal(reservationRes.count ?? 0);
+    }
+    setReservationLoading(false);
+  };
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,8 +156,14 @@ export default function AdminTickets() {
 
   const onSaveEvent = async (e) => {
     e.preventDefault();
+    const title = form.title.trim();
+    if (!title) {
+      setError('タイトルを入力してください。');
+      return;
+    }
     const payload = {
       ...form,
+      title,
       sanity_performance_id: form.sanity_performance_id.trim() || null,
       opens_at: fromDatetimeLocal(form.opens_at, selectedEvent?.opens_at),
       closes_at: fromDatetimeLocal(form.closes_at, selectedEvent?.closes_at),
@@ -159,7 +189,7 @@ export default function AdminTickets() {
 
   const onAddWindow = async (e) => {
     e.preventDefault();
-    if (!selectedEvent) return;
+    if (!selectedEvent || addingWindow) return;
     const label = windowForm.label.trim();
     if (!label) {
       setError('枠名を入力してください。');
@@ -170,17 +200,22 @@ export default function AdminTickets() {
       setError('定員は0以上の整数で入力してください。');
       return;
     }
-    const res = await supabase.from('ticket_windows').insert({
-      event_id: selectedEvent.id,
-      label,
-      starts_at: fromDatetimeLocal(windowForm.starts_at),
-      capacity,
-      sort_order: selectedEvent.windows?.length ?? 0,
-    });
-    if (res.error) setError(res.error.message);
-    else {
-      setWindowForm({ label: '', starts_at: '', capacity: '0' });
-      await load(reservationPage);
+    setAddingWindow(true);
+    try {
+      const res = await supabase.from('ticket_windows').insert({
+        event_id: selectedEvent.id,
+        label,
+        starts_at: fromDatetimeLocal(windowForm.starts_at),
+        capacity,
+        sort_order: selectedEvent.windows?.length ?? 0,
+      });
+      if (res.error) setError(res.error.message);
+      else {
+        setWindowForm({ label: '', starts_at: '', capacity: '0' });
+        await load(reservationPage);
+      }
+    } finally {
+      setAddingWindow(false);
     }
   };
 
@@ -322,10 +357,10 @@ export default function AdminTickets() {
             <>
               <form className="admin-ticket-form" onSubmit={onAddWindow}>
                 <h3>予約枠追加</h3>
-                <label>枠名<input value={windowForm.label} onChange={(e) => setWindowForm((prev) => ({ ...prev, label: e.target.value }))} required /></label>
-                <label>日時<input type="datetime-local" value={windowForm.starts_at} onChange={(e) => setWindowForm((prev) => ({ ...prev, starts_at: e.target.value }))} /></label>
-                <label>定員<input type="number" min="0" value={windowForm.capacity} onChange={(e) => setWindowForm((prev) => ({ ...prev, capacity: e.target.value }))} /></label>
-                <button className="admin-view__button" type="submit">予約枠を追加</button>
+                <label>枠名<input value={windowForm.label} onChange={(e) => setWindowForm((prev) => ({ ...prev, label: e.target.value }))} required disabled={addingWindow} /></label>
+                <label>日時<input type="datetime-local" value={windowForm.starts_at} onChange={(e) => setWindowForm((prev) => ({ ...prev, starts_at: e.target.value }))} disabled={addingWindow} /></label>
+                <label>定員<input type="number" min="0" value={windowForm.capacity} onChange={(e) => setWindowForm((prev) => ({ ...prev, capacity: e.target.value }))} disabled={addingWindow} /></label>
+                <button className="admin-view__button" type="submit" disabled={addingWindow}>{addingWindow ? '追加中...' : '予約枠を追加'}</button>
               </form>
               <div className="admin-ticket-window-list">
                 <h3>予約枠一覧</h3>
@@ -384,8 +419,8 @@ export default function AdminTickets() {
             <button
               type="button"
               className="admin-view__button"
-              disabled={reservationPage === 0}
-              onClick={() => load(reservationPage - 1)}
+              disabled={reservationLoading || reservationPage === 0}
+              onClick={() => loadReservations(reservationPage - 1)}
             >
               前の200件
             </button>
@@ -395,8 +430,8 @@ export default function AdminTickets() {
             <button
               type="button"
               className="admin-view__button"
-              disabled={(reservationPage + 1) * RESERVATIONS_PAGE_SIZE >= reservationTotal}
-              onClick={() => load(reservationPage + 1)}
+              disabled={reservationLoading || (reservationPage + 1) * RESERVATIONS_PAGE_SIZE >= reservationTotal}
+              onClick={() => loadReservations(reservationPage + 1)}
             >
               次の200件
             </button>

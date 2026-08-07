@@ -41,6 +41,7 @@ export default function TicketReservation({ onEntered }) {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [error, setError] = useState(null);
   const [reservationCode, setReservationCode] = useState(null);
   const [clockTick, setClockTick] = useState(0);
@@ -49,11 +50,12 @@ export default function TicketReservation({ onEntered }) {
     let alive = true;
     async function load() {
       setLoading(true);
+      setLoadError(null);
       setError(null);
       const res = await fetchPublishedTicketEvent(slug);
       if (!alive) return;
       if (res.error) {
-        setError(res.error.message);
+        setLoadError(res.error.message);
         setEvent(null);
         setSelectedWindowId('');
       } else {
@@ -144,7 +146,7 @@ export default function TicketReservation({ onEntered }) {
   };
 
   if (loading) return <div className="ticket-page__message">読み込み中...</div>;
-  if (error) return <div className="ticket-page__message" role="alert">予約ページの読み込みに失敗しました：{error}</div>;
+  if (loadError) return <div className="ticket-page__message" role="alert">予約ページの読み込みに失敗しました：{loadError}</div>;
   if (!event) return <div className="ticket-page__message">予約ページが見つかりませんでした。</div>;
 
   return (
