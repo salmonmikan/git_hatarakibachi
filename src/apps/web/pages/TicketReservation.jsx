@@ -264,11 +264,11 @@ export default function TicketReservation({ onEntered }) {
         <form className="ticket-form" onSubmit={onSubmit}>
           <label>
             お名前
-            <input name="customer_name" value={form.customer_name} onChange={onChange} required disabled={saving || !canReserve} />
+            <input name="customer_name" value={form.customer_name} onChange={onChange} maxLength="200" required disabled={saving || !canReserve} />
           </label>
           <label>
             メールアドレス
-            <input type="email" name="customer_email" value={form.customer_email} onChange={onChange} required disabled={saving || !canReserve} />
+            <input type="email" name="customer_email" value={form.customer_email} onChange={onChange} maxLength="320" required disabled={saving || !canReserve} />
           </label>
           <label>
             枚数
@@ -276,7 +276,7 @@ export default function TicketReservation({ onEntered }) {
           </label>
           <label>
             備考
-            <textarea name="note" value={form.note} onChange={onChange} rows="4" disabled={saving || !canReserve} />
+            <textarea name="note" value={form.note} onChange={onChange} maxLength="2000" rows="4" disabled={saving || !canReserve} />
           </label>
           <button type="submit" disabled={saving || !canReserve || !hasValidQuantity}>{saving ? '送信中...' : '予約する'}</button>
         </form>

@@ -21,6 +21,7 @@ const eventDefaults = {
 };
 
 const RESERVATIONS_PAGE_SIZE = 200;
+const EVENTS_PAGE_SIZE = 200;
 
 export default function AdminTickets() {
   const [events, setEvents] = useState([]);
@@ -35,6 +36,8 @@ export default function AdminTickets() {
   const [error, setError] = useState(null);
   const [reservationPage, setReservationPage] = useState(0);
   const [reservationTotal, setReservationTotal] = useState(0);
+  const [eventPage, setEventPage] = useState(0);
+  const [eventTotal, setEventTotal] = useState(0);
   const [reservationLoading, setReservationLoading] = useState(false);
   const [addingWindow, setAddingWindow] = useState(false);
 
@@ -43,18 +46,21 @@ export default function AdminTickets() {
     [events, selectedId]
   );
 
-  const load = async (page = reservationPage) => {
+  const load = async (page = reservationPage, eventPageToLoad = eventPage) => {
     setLoading(true);
     setError(null);
     const reservationFrom = page * RESERVATIONS_PAGE_SIZE;
     const reservationTo = reservationFrom + RESERVATIONS_PAGE_SIZE - 1;
+    const eventFrom = eventPageToLoad * EVENTS_PAGE_SIZE;
+    const eventTo = eventFrom + EVENTS_PAGE_SIZE - 1;
     const [eventRes, reservationRes, reservationTotalsRes] = await Promise.all([
       supabase
         .from('ticket_events')
-        .select('*, windows:ticket_windows(*)')
+        .select('*, windows:ticket_windows(*)', { count: 'exact' })
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .order('sort_order', { foreignTable: 'ticket_windows', ascending: true }),
+        .order('sort_order', { foreignTable: 'ticket_windows', ascending: true })
+        .range(eventFrom, eventTo),
       supabase
         .from('ticket_reservations')
         .select('*, event:ticket_events(title), window:ticket_windows(label)', { count: 'exact' })
@@ -67,16 +73,14 @@ export default function AdminTickets() {
 
     if (eventRes.error || reservationRes.error || reservationTotalsRes.error) {
       setError(eventRes.error?.message ?? reservationRes.error?.message ?? reservationTotalsRes.error?.message);
+      setLoading(false);
+      return false;
     } else {
-      const reservedByWindowId = new Map();
-      (reservationTotalsRes.data ?? []).forEach((item) => {
-        const windowId = String(item.window_id);
-        reservedByWindowId.set(windowId, Number(item.reserved_quantity ?? 0));
-      });
+      const reservedByWindowId = reservationTotalsRes.data ?? {};
       const eventsWithAvailability = (eventRes.data ?? []).map((event) => ({
         ...event,
         windows: (event.windows ?? []).map((windowItem) => {
-          const reservedQuantity = reservedByWindowId.get(String(windowItem.id)) ?? 0;
+          const reservedQuantity = Number(reservedByWindowId[String(windowItem.id)] ?? 0);
           return {
             ...windowItem,
             reserved_quantity: reservedQuantity,
@@ -92,9 +96,12 @@ export default function AdminTickets() {
       setSanityPerformanceLoadError(sanityPerformanceRes === null);
       setReservationPage(page);
       setReservationTotal(reservationRes.count ?? 0);
+      setEventPage(eventPageToLoad);
+      setEventTotal(eventRes.count ?? 0);
       if (!selectedId && eventRes.data?.[0]) setSelectedId(eventRes.data[0].id);
     }
     setLoading(false);
+    return true;
   };
 
   const loadReservations = async (page) => {
@@ -199,7 +206,7 @@ export default function AdminTickets() {
       return;
     }
     const capacity = Number(windowForm.capacity);
-    if (!Number.isInteger(capacity) || capacity < 0) {
+    if (!windowForm.capacity.trim() || !Number.isInteger(capacity) || capacity < 0) {
       setError('定員は0以上の整数で入力してください。');
       return;
     }
@@ -241,7 +248,7 @@ export default function AdminTickets() {
     }
     const capacity = Number(values.capacity);
     const reservedQuantity = Number(currentWindow.reserved_quantity ?? 0);
-    if (!Number.isInteger(capacity) || capacity < 0) {
+    if (!values.capacity.trim() || !Number.isInteger(capacity) || capacity < 0) {
       setError('定員は0以上の整数で入力してください。');
       return;
     }
@@ -283,7 +290,15 @@ export default function AdminTickets() {
     if (typeof window !== 'undefined' && !window.confirm(warning)) return;
     const res = await cancelTicketReservation(reservation.id);
     if (res.error) setError(res.error.message);
-    else await load(reservationPage);
+    else {
+      setReservations((currentReservations) => currentReservations.map((item) => (
+        item.id === reservation.id
+          ? { ...item, status: 'cancelled', cancelled_at: new Date().toISOString() }
+          : item
+      )));
+      const refreshed = await load(reservationPage, eventPage);
+      if (!refreshed) setError('キャンセルは完了しましたが、予約一覧の再読み込みに失敗しました。');
+    }
   };
 
   const linkedSanityPerformance = sanityPerformances.find(
@@ -312,6 +327,29 @@ export default function AdminTickets() {
               </button>
             ))}
           </div>
+          {eventTotal > EVENTS_PAGE_SIZE && (
+            <div className="admin-ticket-pagination" aria-label="販売ページ一覧ページング">
+              <button
+                type="button"
+                className="admin-view__button"
+                disabled={loading || eventPage === 0}
+                onClick={() => load(reservationPage, eventPage - 1)}
+              >
+                前の200件
+              </button>
+              <span>
+                {eventPage + 1} / {Math.ceil(eventTotal / EVENTS_PAGE_SIZE)}ページ
+              </span>
+              <button
+                type="button"
+                className="admin-view__button"
+                disabled={loading || (eventPage + 1) * EVENTS_PAGE_SIZE >= eventTotal}
+                onClick={() => load(reservationPage, eventPage + 1)}
+              >
+                次の200件
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="admin-ticket-panel">
@@ -362,7 +400,7 @@ export default function AdminTickets() {
                 <h3>予約枠追加</h3>
                 <label>枠名<input value={windowForm.label} onChange={(e) => setWindowForm((prev) => ({ ...prev, label: e.target.value }))} required disabled={addingWindow} /></label>
                 <label>日時<input type="datetime-local" value={windowForm.starts_at} onChange={(e) => setWindowForm((prev) => ({ ...prev, starts_at: e.target.value }))} disabled={addingWindow} /></label>
-                <label>定員<input type="number" min="0" value={windowForm.capacity} onChange={(e) => setWindowForm((prev) => ({ ...prev, capacity: e.target.value }))} disabled={addingWindow} /></label>
+                <label>定員<input type="number" min="0" value={windowForm.capacity} onChange={(e) => setWindowForm((prev) => ({ ...prev, capacity: e.target.value }))} required disabled={addingWindow} /></label>
                 <button className="admin-view__button" type="submit" disabled={addingWindow}>{addingWindow ? '追加中...' : '予約枠を追加'}</button>
               </form>
               <div className="admin-ticket-window-list">
@@ -375,7 +413,7 @@ export default function AdminTickets() {
                       <form className="admin-ticket-window" onSubmit={(e) => onSaveWindow(e, item.id)}>
                         <label>枠名<input value={values.label} onChange={(e) => onWindowFormChange(item.id, 'label', e.target.value)} required /></label>
                         <label>日時<input type="datetime-local" value={values.starts_at} onChange={(e) => onWindowFormChange(item.id, 'starts_at', e.target.value)} /></label>
-                        <label>定員<input type="number" min="0" value={values.capacity} onChange={(e) => onWindowFormChange(item.id, 'capacity', e.target.value)} /></label>
+                        <label>定員<input type="number" min="0" value={values.capacity} onChange={(e) => onWindowFormChange(item.id, 'capacity', e.target.value)} required /></label>
                         <p className="admin-ticket-window__meta">
                           {item.capacity > 0
                             ? `残数 ${item.remaining_quantity} / ${item.capacity}（予約済み ${item.reserved_quantity}）`

@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(77);
+select plan(80);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
@@ -282,6 +282,27 @@ select throws_ok(
   'quantity above the UI maximum is rejected in the database'
 );
 
+select throws_ok(
+  $$select * from public.create_ticket_reservation(910008, null, repeat('N', 201), 'test@example.com', 1, null)$$,
+  '23514',
+  'new row for relation "ticket_reservations" violates check constraint "ticket_reservations_customer_name_length_check"',
+  'customer names are length-limited in the database'
+);
+
+select throws_ok(
+  $$select * from public.create_ticket_reservation(910008, null, 'Test', repeat('e', 321) || '@example.com', 1, null)$$,
+  '23514',
+  'new row for relation "ticket_reservations" violates check constraint "ticket_reservations_customer_email_length_check"',
+  'customer email addresses are length-limited in the database'
+);
+
+select throws_ok(
+  $$select * from public.create_ticket_reservation(910008, null, 'Test', 'test@example.com', 1, repeat('N', 2001))$$,
+  '23514',
+  'new row for relation "ticket_reservations" violates check constraint "ticket_reservations_note_length_check"',
+  'reservation notes are length-limited in the database'
+);
+
 select results_eq(
   $$
     select count(*)
@@ -462,7 +483,7 @@ select results_eq(
 );
 
 select results_eq(
-  $$select reserved_quantity from public.get_ticket_window_reservation_totals() where window_id = 920001$$,
+  $$select (public.get_ticket_window_reservation_totals() ->> '920001')::bigint$$,
   array[2::bigint],
   'an admin receives database-aggregated reservation totals'
 );
