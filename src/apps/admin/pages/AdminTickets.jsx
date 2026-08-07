@@ -91,6 +91,9 @@ export default function AdminTickets() {
         }),
       }));
       setEvents(eventsWithAvailability);
+      if (selectedId && !eventsWithAvailability.some((event) => event.id === selectedId)) {
+        setSelectedId(eventsWithAvailability[0]?.id ?? null);
+      }
       setReservations(reservationRes.data ?? []);
       setSanityPerformances(Array.isArray(sanityPerformanceRes) ? sanityPerformanceRes : []);
       setSanityPerformanceLoadError(sanityPerformanceRes === null);
@@ -132,6 +135,7 @@ export default function AdminTickets() {
   }, []);
 
   useEffect(() => {
+    setWindowForm({ label: '', starts_at: '', capacity: '0' });
     if (!selectedEvent) {
       setForm(eventDefaults);
       setWindowForms({});
