@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(58);
+select plan(63);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
@@ -101,6 +101,24 @@ select ok(
     'EXECUTE'
   ),
   'anon can read aggregate ticket window availability'
+);
+
+select ok(
+  not has_function_privilege(
+    'anon',
+    'public.get_ticket_window_reservation_totals()',
+    'EXECUTE'
+  ),
+  'anon cannot execute admin reservation totals'
+);
+
+select ok(
+  has_function_privilege(
+    'authenticated',
+    'public.get_ticket_window_reservation_totals()',
+    'EXECUTE'
+  ),
+  'authenticated users reach the admin-checked reservation totals RPC'
 );
 
 set local role anon;
@@ -326,6 +344,13 @@ select throws_ok(
 );
 
 select throws_ok(
+  $$select * from public.get_ticket_window_reservation_totals()$$,
+  '42501',
+  'Ticket reservation totals require an administrator',
+  'a non-admin authenticated user cannot read reservation totals'
+);
+
+select throws_ok(
   $$
     insert into public.ticket_reservations (
       event_id, customer_name, customer_email, quantity
@@ -371,6 +396,12 @@ select results_eq(
   'an admin can read reservations and personal information'
 );
 
+select results_eq(
+  $$select reserved_quantity from public.get_ticket_window_reservation_totals() where window_id = 920001$$,
+  array[2::bigint],
+  'an admin receives database-aggregated reservation totals'
+);
+
 select throws_ok(
   $$insert into public.ticket_events (slug, title, status) values ('ticket-test-unlinked-published', 'Unlinked published', 'published')$$,
   '23514',
@@ -395,6 +426,13 @@ select throws_ok(
 select lives_ok(
   $$select public.delete_ticket_window(920001)$$,
   'an admin can soft-delete a ticket window'
+);
+
+select throws_ok(
+  $$select * from public.create_ticket_reservation(910001, null, 'No window', 'no-window@example.com', 1, null)$$,
+  'P0001',
+  'A ticket window is required',
+  'deleting all windows does not silently convert a windowed event to free seating'
 );
 
 select results_eq(

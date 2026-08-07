@@ -9,6 +9,7 @@ import {
   formatTicketDate,
   isTicketEventAccepting,
 } from '@src/utils/tickets.js';
+import { getTicketReservationMaxQuantity } from '@src/utils/ticketReservationRules.js';
 import './TicketReservation.scss';
 
 const initialForm = {
@@ -62,9 +63,25 @@ export default function TicketReservation({ onEntered }) {
   const accepting = isTicketEventAccepting(event);
   const hasAvailableWindow = windows.some(isWindowAvailable);
   const selectedWindow = windows.find((item) => String(item.id) === String(selectedWindowId));
+  const maxQuantity = getTicketReservationMaxQuantity(selectedWindow);
+  const quantityNumber = Number(form.quantity);
+  const hasValidQuantity = Number.isInteger(quantityNumber)
+    && quantityNumber >= 1
+    && quantityNumber <= maxQuantity;
   const canReserve = accepting && (!windows.length || (
     hasAvailableWindow && Boolean(selectedWindowId) && Boolean(selectedWindow) && isWindowAvailable(selectedWindow)
   ));
+
+  useEffect(() => {
+    if (maxQuantity < 1) return;
+    setForm((prev) => {
+      const currentQuantity = Number(prev.quantity);
+      if (Number.isInteger(currentQuantity) && currentQuantity >= 1 && currentQuantity <= maxQuantity) {
+        return prev;
+      }
+      return { ...prev, quantity: String(maxQuantity) };
+    });
+  }, [maxQuantity]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -74,6 +91,10 @@ export default function TicketReservation({ onEntered }) {
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!event || !canReserve) return;
+    if (!hasValidQuantity) {
+      setError(`選択した予約枠の残数以内で、1〜${maxQuantity}枚を指定してください。`);
+      return;
+    }
     setSaving(true);
     setError(null);
 
@@ -185,13 +206,13 @@ export default function TicketReservation({ onEntered }) {
           </label>
           <label>
             枚数
-            <input type="number" name="quantity" min="1" max="10" value={form.quantity} onChange={onChange} required disabled={saving || !canReserve} />
+            <input type="number" name="quantity" min="1" max={maxQuantity} value={form.quantity} onChange={onChange} required disabled={saving || !canReserve} />
           </label>
           <label>
             備考
             <textarea name="note" value={form.note} onChange={onChange} rows="4" disabled={saving || !canReserve} />
           </label>
-          <button type="submit" disabled={saving || !canReserve}>{saving ? '送信中...' : '予約する'}</button>
+          <button type="submit" disabled={saving || !canReserve || !hasValidQuantity}>{saving ? '送信中...' : '予約する'}</button>
         </form>
       </section>
     </Motion.section>

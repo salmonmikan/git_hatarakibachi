@@ -46,7 +46,7 @@ export default function AdminTickets() {
     setError(null);
     const reservationFrom = page * RESERVATIONS_PAGE_SIZE;
     const reservationTo = reservationFrom + RESERVATIONS_PAGE_SIZE - 1;
-    const [eventRes, reservationRes, availabilityRes] = await Promise.all([
+    const [eventRes, reservationRes, reservationTotalsRes] = await Promise.all([
       supabase
         .from('ticket_events')
         .select('*, windows:ticket_windows(*)')
@@ -59,21 +59,17 @@ export default function AdminTickets() {
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .range(reservationFrom, reservationTo),
-      supabase
-        .from('ticket_reservations')
-        .select('window_id, quantity')
-        .eq('status', 'reserved')
-        .is('deleted_at', null),
+      supabase.rpc('get_ticket_window_reservation_totals'),
     ]);
     const sanityPerformanceRes = await getTicketPerformanceOptions();
 
-    if (eventRes.error || reservationRes.error || availabilityRes.error) {
-      setError(eventRes.error?.message ?? reservationRes.error?.message ?? availabilityRes.error?.message);
+    if (eventRes.error || reservationRes.error || reservationTotalsRes.error) {
+      setError(eventRes.error?.message ?? reservationRes.error?.message ?? reservationTotalsRes.error?.message);
     } else {
       const reservedByWindowId = new Map();
-      (availabilityRes.data ?? []).forEach((item) => {
+      (reservationTotalsRes.data ?? []).forEach((item) => {
         const windowId = String(item.window_id);
-        reservedByWindowId.set(windowId, (reservedByWindowId.get(windowId) ?? 0) + Number(item.quantity ?? 0));
+        reservedByWindowId.set(windowId, Number(item.reserved_quantity ?? 0));
       });
       const eventsWithAvailability = (eventRes.data ?? []).map((event) => ({
         ...event,
