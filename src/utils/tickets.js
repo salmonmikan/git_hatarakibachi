@@ -52,6 +52,7 @@ export async function createTicketReservation(payload) {
       p_customer_email: payload.customer_email,
       p_quantity: payload.quantity,
       p_note: payload.note,
+      p_request_id: payload.request_id,
     })
     .single();
 

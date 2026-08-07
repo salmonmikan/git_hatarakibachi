@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(66);
+select plan(71);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
@@ -38,6 +38,15 @@ select ok(
     'EXECUTE'
   ),
   'anon can execute only the public reservation RPC'
+);
+
+select ok(
+  has_function_privilege(
+    'anon',
+    'public.create_ticket_reservation(bigint,bigint,text,text,integer,text,uuid)',
+    'EXECUTE'
+  ),
+  'anon can execute the idempotent public reservation RPC'
 );
 
 select ok(
@@ -133,6 +142,33 @@ select results_eq(
   $$,
   array[1::bigint],
   'anon reservation succeeds and returns only a reservation code'
+);
+
+select results_eq(
+  $$
+    select count(*)
+    from public.create_ticket_reservation(
+      910008, null, 'Idempotent customer', 'idempotent@example.com', 1, null,
+      '00000000-0000-0000-0000-000000000101'::uuid
+    )
+  $$,
+  array[1::bigint],
+  'a reservation request with an ID succeeds'
+);
+
+select results_eq(
+  $$
+    select count(*)
+    from public.create_ticket_reservation(
+      910008, null, 'Changed customer', 'changed@example.com', 1, null,
+      '00000000-0000-0000-0000-000000000101'::uuid
+    ) retry
+    join public.ticket_reservations stored
+      on stored.request_id = '00000000-0000-0000-0000-000000000101'::uuid
+     and stored.reservation_code = retry.reservation_code
+  $$,
+  array[1::bigint],
+  'repeating a reservation request ID returns the existing reservation'
 );
 
 select throws_ok(
@@ -392,7 +428,7 @@ select results_eq(
 
 select results_eq(
   $$select count(*) from public.ticket_reservations where event_id between 910001 and 910008$$,
-  array[4::bigint],
+  array[5::bigint],
   'an admin can read reservations and personal information'
 );
 
@@ -400,6 +436,13 @@ select results_eq(
   $$select reserved_quantity from public.get_ticket_window_reservation_totals() where window_id = 920001$$,
   array[2::bigint],
   'an admin receives database-aggregated reservation totals'
+);
+
+select throws_ok(
+  $$update public.ticket_windows set event_id = 910007 where id = 920001$$,
+  'P0001',
+  'Ticket windows with reservations cannot change events',
+  'a ticket window with reservation history cannot move to another event'
 );
 
 select throws_ok(
@@ -444,6 +487,22 @@ select throws_ok(
   'blank ticket window label updates are rejected'
 );
 
+select results_eq(
+  $$
+    with previous as (
+      select updated_at
+      from public.ticket_windows
+      where id = 920001
+    )
+    update public.ticket_windows
+    set label = 'Updated capacity window'
+    where id = 920001
+    returning (updated_at > (select updated_at from previous))::integer
+  $$,
+  array[1::integer],
+  'updating a ticket window refreshes updated_at'
+);
+
 select lives_ok(
   $$select public.delete_ticket_window(920001)$$,
   'an admin can soft-delete a ticket window'
@@ -486,9 +545,20 @@ select results_eq(
   'legacy reservation cancellation is persisted without rewriting its quantity'
 );
 
-select lives_ok(
-  $$update public.ticket_events set title = 'Admin updated' where id = 910002$$,
-  'an admin can update ticket events'
+select results_eq(
+  $$
+    with previous as (
+      select updated_at
+      from public.ticket_events
+      where id = 910002
+    )
+    update public.ticket_events
+    set title = 'Admin updated'
+    where id = 910002
+    returning (updated_at > (select updated_at from previous))::integer
+  $$,
+  array[1::integer],
+  'updating a ticket event refreshes updated_at'
 );
 
 select results_eq(

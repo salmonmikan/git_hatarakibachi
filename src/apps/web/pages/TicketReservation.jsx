@@ -44,6 +44,7 @@ export default function TicketReservation({ onEntered }) {
   const [loadError, setLoadError] = useState(null);
   const [error, setError] = useState(null);
   const [reservationCode, setReservationCode] = useState(null);
+  const [reservationRequestId, setReservationRequestId] = useState(null);
   const [clockTick, setClockTick] = useState(0);
 
   useEffect(() => {
@@ -105,6 +106,7 @@ export default function TicketReservation({ onEntered }) {
   const onChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setReservationRequestId(null);
   };
 
   const onSubmit = async (e) => {
@@ -114,8 +116,14 @@ export default function TicketReservation({ onEntered }) {
       setError(`選択した予約枠の残数以内で、1〜${maxQuantity}枚を指定してください。`);
       return;
     }
+    const requestId = reservationRequestId ?? globalThis.crypto?.randomUUID?.();
+    if (!requestId) {
+      setError('予約処理に必要なリクエストIDを生成できませんでした。');
+      return;
+    }
     setSaving(true);
     setError(null);
+    setReservationRequestId(requestId);
 
     const payload = {
       event_id: event.id,
@@ -124,6 +132,7 @@ export default function TicketReservation({ onEntered }) {
       customer_email: form.customer_email.trim(),
       quantity: Number(form.quantity),
       note: form.note.trim() || null,
+      request_id: requestId,
     };
 
     const res = await createTicketReservation(payload);
@@ -134,6 +143,7 @@ export default function TicketReservation({ onEntered }) {
     }
 
     setReservationCode(res.data.reservation_code);
+    setReservationRequestId(null);
     setForm(initialForm);
     const refreshed = await fetchPublishedTicketEvent(slug);
     if (refreshed.error) {
@@ -184,7 +194,10 @@ export default function TicketReservation({ onEntered }) {
                   name="window_id"
                   value={windowItem.id}
                   checked={selectedWindowId === String(windowItem.id)}
-                  onChange={(e) => setSelectedWindowId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedWindowId(e.target.value);
+                    setReservationRequestId(null);
+                  }}
                   disabled={windowItem.capacity > 0 && windowItem.remaining_quantity <= 0}
                 />
                 <span>
