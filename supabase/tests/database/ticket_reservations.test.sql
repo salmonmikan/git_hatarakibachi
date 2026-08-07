@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(47);
+select plan(50);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
@@ -87,6 +87,15 @@ select ok(
 select ok(
   not has_sequence_privilege('authenticated', 'public.ticket_reservations_id_seq', 'USAGE'),
   'authenticated users cannot allocate reservation IDs directly'
+);
+
+select ok(
+  has_function_privilege(
+    'anon',
+    'public.get_ticket_window_availability(bigint)',
+    'EXECUTE'
+  ),
+  'anon can read aggregate ticket window availability'
 );
 
 set local role anon;
@@ -207,6 +216,15 @@ select throws_ok(
   'P0001',
   'Ticket window does not have enough capacity',
   'a reservation cannot exceed remaining capacity'
+);
+
+select results_eq(
+  $$
+    select window_id, capacity, reserved_quantity, remaining_quantity
+    from public.get_ticket_window_availability(910001)
+  $$,
+  $$values (920001::bigint, 2, 2::bigint, 0::bigint)$$,
+  'public availability returns remaining capacity without reservation details'
 );
 
 reset role;
@@ -337,6 +355,13 @@ select results_eq(
   $$select count(*) from public.ticket_reservations where event_id between 910001 and 910008$$,
   array[4::bigint],
   'an admin can read reservations and personal information'
+);
+
+select throws_ok(
+  $$insert into public.ticket_events (slug, title) values ('ticket-test/invalid', 'Invalid slug')$$,
+  '23514',
+  'new row for relation "ticket_events" violates check constraint "ticket_events_slug_path_segment_check"',
+  'ticket slugs must be a single safe URL path segment'
 );
 
 select lives_ok(

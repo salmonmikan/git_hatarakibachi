@@ -38,7 +38,9 @@ export default function TicketReservation({ onEntered }) {
       if (!alive) return;
       if (res.error) setError(res.error.message);
       setEvent(res.data);
-      const firstWindow = res.data?.windows?.find((item) => !item.deleted_at);
+      const firstWindow = res.data?.windows?.find(
+        (item) => !item.deleted_at && (item.capacity <= 0 || item.remaining_quantity > 0)
+      );
       setSelectedWindowId(firstWindow ? String(firstWindow.id) : '');
       setLoading(false);
     }
@@ -50,6 +52,12 @@ export default function TicketReservation({ onEntered }) {
 
   const windows = useMemo(() => event?.windows?.filter((item) => !item.deleted_at) ?? [], [event]);
   const accepting = isTicketEventAccepting(event);
+  const hasAvailableWindow = windows.some(
+    (item) => item.capacity <= 0 || item.remaining_quantity > 0
+  );
+  const canReserve = accepting && (!windows.length || hasAvailableWindow) && (
+    !windows.length || Boolean(selectedWindowId)
+  );
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -58,7 +66,7 @@ export default function TicketReservation({ onEntered }) {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!event || !accepting) return;
+    if (!event || !canReserve) return;
     setSaving(true);
     setError(null);
 
@@ -111,23 +119,35 @@ export default function TicketReservation({ onEntered }) {
         {windows.length ? (
           <div className="ticket-window-list">
             {windows.map((windowItem) => (
-              <label key={windowItem.id} className="ticket-window-card">
+              <label
+                key={windowItem.id}
+                className="ticket-window-card"
+                data-sold-out={windowItem.capacity > 0 && windowItem.remaining_quantity <= 0 ? 'true' : undefined}
+              >
                 <input
                   type="radio"
                   name="window_id"
                   value={windowItem.id}
                   checked={selectedWindowId === String(windowItem.id)}
                   onChange={(e) => setSelectedWindowId(e.target.value)}
+                  disabled={windowItem.capacity > 0 && windowItem.remaining_quantity <= 0}
                 />
                 <span>
                   <strong>{windowItem.label}</strong>
-                  <small>{formatTicketDate(windowItem.starts_at)} / 定員 {windowItem.capacity || '未設定'}</small>
+                  <small>
+                    {formatTicketDate(windowItem.starts_at)} / 定員 {windowItem.capacity || '未設定'}
+                    {windowItem.capacity > 0 && ` / 残り ${windowItem.remaining_quantity}`}
+                  </small>
                 </span>
+                {windowItem.capacity > 0 && windowItem.remaining_quantity <= 0 && <em>満席</em>}
               </label>
             ))}
           </div>
         ) : (
           <p>自由席として予約を受け付けます。</p>
+        )}
+        {windows.length > 0 && !hasAvailableWindow && (
+          <p className="ticket-page__notice">現在、予約可能な枠がありません。</p>
         )}
       </section>
 
@@ -143,21 +163,21 @@ export default function TicketReservation({ onEntered }) {
         <form className="ticket-form" onSubmit={onSubmit}>
           <label>
             お名前
-            <input name="customer_name" value={form.customer_name} onChange={onChange} required disabled={saving || !accepting} />
+            <input name="customer_name" value={form.customer_name} onChange={onChange} required disabled={saving || !canReserve} />
           </label>
           <label>
             メールアドレス
-            <input type="email" name="customer_email" value={form.customer_email} onChange={onChange} required disabled={saving || !accepting} />
+            <input type="email" name="customer_email" value={form.customer_email} onChange={onChange} required disabled={saving || !canReserve} />
           </label>
           <label>
             枚数
-            <input type="number" name="quantity" min="1" max="10" value={form.quantity} onChange={onChange} required disabled={saving || !accepting} />
+            <input type="number" name="quantity" min="1" max="10" value={form.quantity} onChange={onChange} required disabled={saving || !canReserve} />
           </label>
           <label>
             備考
-            <textarea name="note" value={form.note} onChange={onChange} rows="4" disabled={saving || !accepting} />
+            <textarea name="note" value={form.note} onChange={onChange} rows="4" disabled={saving || !canReserve} />
           </label>
-          <button type="submit" disabled={saving || !accepting}>{saving ? '送信中...' : '予約する'}</button>
+          <button type="submit" disabled={saving || !canReserve}>{saving ? '送信中...' : '予約する'}</button>
         </form>
       </section>
     </Motion.section>

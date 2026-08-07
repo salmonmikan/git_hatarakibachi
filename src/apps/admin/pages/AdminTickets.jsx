@@ -14,6 +14,8 @@ const eventDefaults = {
   status: 'draft',
 };
 
+const RESERVATIONS_PAGE_SIZE = 200;
+
 export default function AdminTickets() {
   const [events, setEvents] = useState([]);
   const [reservations, setReservations] = useState([]);
@@ -22,15 +24,19 @@ export default function AdminTickets() {
   const [windowForm, setWindowForm] = useState({ label: '', starts_at: '', capacity: '0' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reservationPage, setReservationPage] = useState(0);
+  const [reservationTotal, setReservationTotal] = useState(0);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedId) ?? null,
     [events, selectedId]
   );
 
-  const load = async () => {
+  const load = async (page = reservationPage) => {
     setLoading(true);
     setError(null);
+    const reservationFrom = page * RESERVATIONS_PAGE_SIZE;
+    const reservationTo = reservationFrom + RESERVATIONS_PAGE_SIZE - 1;
     const [eventRes, reservationRes] = await Promise.all([
       supabase
         .from('ticket_events')
@@ -40,10 +46,10 @@ export default function AdminTickets() {
         .order('sort_order', { foreignTable: 'ticket_windows', ascending: true }),
       supabase
         .from('ticket_reservations')
-        .select('*, event:ticket_events(title), window:ticket_windows(label)')
+        .select('*, event:ticket_events(title), window:ticket_windows(label)', { count: 'exact' })
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(200),
+        .range(reservationFrom, reservationTo),
     ]);
 
     if (eventRes.error || reservationRes.error) {
@@ -51,6 +57,8 @@ export default function AdminTickets() {
     } else {
       setEvents(eventRes.data ?? []);
       setReservations(reservationRes.data ?? []);
+      setReservationPage(page);
+      setReservationTotal(reservationRes.count ?? 0);
       if (!selectedId && eventRes.data?.[0]) setSelectedId(eventRes.data[0].id);
     }
     setLoading(false);
@@ -96,7 +104,7 @@ export default function AdminTickets() {
     if (res.error) setError(res.error.message);
     else {
       setSelectedId(res.data.id);
-      await load();
+      await load(reservationPage);
     }
   };
 
@@ -113,14 +121,14 @@ export default function AdminTickets() {
     if (res.error) setError(res.error.message);
     else {
       setWindowForm({ label: '', starts_at: '', capacity: '0' });
-      await load();
+      await load(reservationPage);
     }
   };
 
   const onCancelReservation = async (id) => {
     const res = await cancelTicketReservation(id);
     if (res.error) setError(res.error.message);
-    else await load();
+    else await load(reservationPage);
   };
 
   if (loading) return <div className="admin-view">Loading...</div>;
@@ -147,7 +155,7 @@ export default function AdminTickets() {
         <section className="admin-ticket-panel">
           <h2>{selectedEvent ? '販売ページ編集' : '販売ページ追加'}</h2>
           <form className="admin-ticket-form" onSubmit={onSaveEvent}>
-            <label>URL slug<input name="slug" value={form.slug} onChange={onFormChange} required /></label>
+            <label>URL slug<input name="slug" value={form.slug} onChange={onFormChange} pattern="[A-Za-z0-9_-]+" title="英数字、ハイフン、アンダースコアのみ使用できます" required /></label>
             <label>タイトル<input name="title" value={form.title} onChange={onFormChange} required /></label>
             <label>説明<textarea name="description" value={form.description} onChange={onFormChange} rows="3" /></label>
             <label>会場<input name="venue" value={form.venue} onChange={onFormChange} /></label>
@@ -185,6 +193,29 @@ export default function AdminTickets() {
             </article>
           ))}
         </div>
+        {reservationTotal > RESERVATIONS_PAGE_SIZE && (
+          <div className="admin-ticket-pagination" aria-label="予約一覧ページング">
+            <button
+              type="button"
+              className="admin-view__button"
+              disabled={reservationPage === 0}
+              onClick={() => load(reservationPage - 1)}
+            >
+              前の200件
+            </button>
+            <span>
+              {reservationPage + 1} / {Math.ceil(reservationTotal / RESERVATIONS_PAGE_SIZE)}ページ
+            </span>
+            <button
+              type="button"
+              className="admin-view__button"
+              disabled={(reservationPage + 1) * RESERVATIONS_PAGE_SIZE >= reservationTotal}
+              onClick={() => load(reservationPage + 1)}
+            >
+              次の200件
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

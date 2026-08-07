@@ -9,7 +9,7 @@ export const TICKET_STATUS_LABEL = {
 };
 
 export async function fetchPublishedTicketEvent(slug) {
-  const res = await supabase
+  const eventRes = await supabase
     .from('ticket_events')
     .select('*, windows:ticket_windows(*)')
     .eq('slug', slug)
@@ -19,8 +19,28 @@ export async function fetchPublishedTicketEvent(slug) {
     .order('sort_order', { foreignTable: 'ticket_windows', ascending: true })
     .maybeSingle();
 
-  if (res.error) return { data: null, error: res.error };
-  return { data: res.data, error: null };
+  if (eventRes.error || !eventRes.data) {
+    return { data: eventRes.data, error: eventRes.error };
+  }
+
+  const availabilityRes = await supabase.rpc('get_ticket_window_availability', {
+    p_event_id: eventRes.data.id,
+  });
+  if (availabilityRes.error) return { data: null, error: availabilityRes.error };
+
+  const availabilityByWindowId = new Map(
+    (availabilityRes.data ?? []).map((item) => [String(item.window_id), item])
+  );
+  return {
+    data: {
+      ...eventRes.data,
+      windows: (eventRes.data.windows ?? []).map((windowItem) => ({
+        ...windowItem,
+        ...(availabilityByWindowId.get(String(windowItem.id)) ?? {}),
+      })),
+    },
+    error: null,
+  };
 }
 
 export async function createTicketReservation(payload) {

@@ -45,6 +45,10 @@
   padding: 0.8rem;
 }
 
+.ticket-window-card[data-sold-out="true"] {
+  opacity: 0.6;
+}
+
 .ticket-window-card small {
   display: block;
   margin-top: 0.2rem;

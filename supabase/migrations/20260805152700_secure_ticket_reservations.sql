@@ -5,6 +5,14 @@ create index if not exists ticket_reservations_window_active_idx
   on public.ticket_reservations (window_id)
   where deleted_at is null and status = 'reserved';
 
+alter table public.ticket_events
+  drop constraint if exists ticket_events_slug_path_segment_check;
+
+alter table public.ticket_events
+  add constraint ticket_events_slug_path_segment_check
+  check (slug ~ '^[A-Za-z0-9_-]+$')
+  not valid;
+
 drop policy if exists "Public can read published ticket events" on public.ticket_events;
 create policy "Public can read published ticket events"
   on public.ticket_events for select
@@ -222,6 +230,47 @@ $$;
 revoke all on function public.create_ticket_reservation(bigint, bigint, text, text, integer, text) from public;
 grant execute on function public.create_ticket_reservation(bigint, bigint, text, text, integer, text)
   to anon, authenticated;
+
+create or replace function public.get_ticket_window_availability(p_event_id bigint)
+returns table (
+  window_id bigint,
+  capacity integer,
+  reserved_quantity bigint,
+  remaining_quantity bigint
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    w.id,
+    w.capacity,
+    coalesce(sum(r.quantity), 0::bigint) as reserved_quantity,
+    case
+      when w.capacity > 0 then greatest(
+        w.capacity::bigint - coalesce(sum(r.quantity), 0::bigint),
+        0::bigint
+      )
+      else null::bigint
+    end as remaining_quantity
+  from public.ticket_windows w
+  join public.ticket_events e
+    on e.id = w.event_id
+   and e.id = p_event_id
+   and e.deleted_at is null
+   and e.status = 'published'
+  left join public.ticket_reservations r
+    on r.window_id = w.id
+   and r.deleted_at is null
+   and r.status = 'reserved'
+  where w.deleted_at is null
+  group by w.id, w.capacity, w.sort_order
+  order by w.sort_order, w.id;
+$$;
+
+revoke all on function public.get_ticket_window_availability(bigint) from public;
+grant execute on function public.get_ticket_window_availability(bigint) to anon, authenticated;
 
 create or replace function private.cancel_ticket_reservation(p_reservation_id bigint)
 returns void
