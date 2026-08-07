@@ -1,4 +1,5 @@
 export const PREVIEW_COOKIE_NAME = 'sanity-preview'
+const PREVIEW_TOKEN_PREFIX = '1.'
 
 function readPreviewCookieValue() {
   if (typeof document === 'undefined') return null
@@ -17,7 +18,10 @@ function readPreviewCookieValue() {
 }
 
 export function hasPreviewCookie() {
-  return readPreviewCookieValue() === '1'
+  const value = readPreviewCookieValue()
+  return (
+    value?.startsWith(PREVIEW_TOKEN_PREFIX) === true && value.length > PREVIEW_TOKEN_PREFIX.length
+  )
 }
 
 export function canUsePreviewMode() {
