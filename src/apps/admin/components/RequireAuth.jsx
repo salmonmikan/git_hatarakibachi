@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import supabase from '@src/utils/supabase.ts'
 
-export default function RequireAuth({ children }) {
+export default function RequireAuth() {
     const [loading, setLoading] = useState(true);
     const [authed, setAuthed] = useState(false);
 
