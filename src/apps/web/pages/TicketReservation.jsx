@@ -81,6 +81,7 @@ export default function TicketReservation({ onEntered }) {
 
   const windows = useMemo(() => event?.windows?.filter((item) => !item.deleted_at) ?? [], [event]);
   const accepting = isTicketEventAccepting(event);
+  const isWindowedEvent = windows.length > 0 || Boolean(event?.has_window_history);
   const hasAvailableWindow = windows.some(isWindowAvailable);
   const selectedWindow = windows.find((item) => String(item.id) === String(selectedWindowId));
   const maxQuantity = getTicketReservationMaxQuantity(selectedWindow);
@@ -88,7 +89,7 @@ export default function TicketReservation({ onEntered }) {
   const hasValidQuantity = Number.isInteger(quantityNumber)
     && quantityNumber >= 1
     && quantityNumber <= maxQuantity;
-  const canReserve = accepting && (!windows.length || (
+  const canReserve = accepting && (!isWindowedEvent || (
     hasAvailableWindow && Boolean(selectedWindowId) && Boolean(selectedWindow) && isWindowAvailable(selectedWindow)
   ));
 
@@ -211,10 +212,12 @@ export default function TicketReservation({ onEntered }) {
               </label>
             ))}
           </div>
+        ) : event.has_window_history ? (
+          <p>現在、予約可能な枠がありません。</p>
         ) : (
           <p>自由席として予約を受け付けます。</p>
         )}
-        {windows.length > 0 && !hasAvailableWindow && (
+        {isWindowedEvent && !hasAvailableWindow && (
           <p className="ticket-page__notice">現在、予約可能な枠がありません。</p>
         )}
       </section>

@@ -147,7 +147,10 @@ export default function AdminTickets() {
         capacity: String(item.capacity ?? 0),
       }])
     ));
-  }, [selectedEvent]);
+  // Keep editing forms intact when a background refresh replaces the selected event object.
+  // A different selected event still initializes all forms from the database.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
 
   const onFormChange = (e) => {
     const { name, value } = e.target;

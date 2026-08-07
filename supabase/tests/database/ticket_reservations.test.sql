@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(71);
+select plan(73);
 
 insert into public.admin_users (id, uuid, name)
 values (930001, '00000000-0000-0000-0000-000000000001', 'Ticket test admin');
@@ -113,6 +113,15 @@ select ok(
 );
 
 select ok(
+  has_function_privilege(
+    'anon',
+    'public.get_ticket_event_window_history(bigint)',
+    'EXECUTE'
+  ),
+  'anon can read whether a published event has reservation window history'
+);
+
+select ok(
   not has_function_privilege(
     'anon',
     'public.get_ticket_window_reservation_totals()',
@@ -158,17 +167,18 @@ select results_eq(
 
 select results_eq(
   $$
-    select count(*)
+    select first.reservation_code = retry.reservation_code
     from public.create_ticket_reservation(
+      910008, null, 'First customer', 'first@example.com', 1, null,
+      '00000000-0000-0000-0000-000000000101'::uuid
+    ) first
+    cross join public.create_ticket_reservation(
       910008, null, 'Changed customer', 'changed@example.com', 1, null,
       '00000000-0000-0000-0000-000000000101'::uuid
     ) retry
-    join public.ticket_reservations stored
-      on stored.request_id = '00000000-0000-0000-0000-000000000101'::uuid
-     and stored.reservation_code = retry.reservation_code
   $$,
-  array[1::bigint],
-  'repeating a reservation request ID returns the existing reservation'
+  $$values (true)$$,
+  'repeating a reservation request ID returns the existing reservation code'
 );
 
 select throws_ok(
@@ -525,6 +535,12 @@ select results_eq(
   $$select count(*) from public.ticket_reservations where window_id = 920001$$,
   array[1::bigint],
   'soft-deleting a ticket window preserves reservation history'
+);
+
+select results_eq(
+  $$select public.get_ticket_event_window_history(910001), public.get_ticket_event_window_history(910008)$$,
+  $$values (true, false)$$,
+  'public window history distinguishes windowed and free-seating events'
 );
 
 select throws_ok(

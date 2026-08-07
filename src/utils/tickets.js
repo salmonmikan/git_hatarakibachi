@@ -23,10 +23,16 @@ export async function fetchPublishedTicketEvent(slug) {
     return { data: eventRes.data, error: eventRes.error };
   }
 
-  const availabilityRes = await supabase.rpc('get_ticket_window_availability', {
-    p_event_id: eventRes.data.id,
-  });
+  const [availabilityRes, windowHistoryRes] = await Promise.all([
+    supabase.rpc('get_ticket_window_availability', {
+      p_event_id: eventRes.data.id,
+    }),
+    supabase.rpc('get_ticket_event_window_history', {
+      p_event_id: eventRes.data.id,
+    }),
+  ]);
   if (availabilityRes.error) return { data: null, error: availabilityRes.error };
+  if (windowHistoryRes.error) return { data: null, error: windowHistoryRes.error };
 
   const availabilityByWindowId = new Map(
     (availabilityRes.data ?? []).map((item) => [String(item.window_id), item])
@@ -34,6 +40,7 @@ export async function fetchPublishedTicketEvent(slug) {
   return {
     data: {
       ...eventRes.data,
+      has_window_history: windowHistoryRes.data === true,
       windows: (eventRes.data.windows ?? []).map((windowItem) => ({
         ...windowItem,
         ...(availabilityByWindowId.get(String(windowItem.id)) ?? {}),
