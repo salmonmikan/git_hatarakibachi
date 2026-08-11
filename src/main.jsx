@@ -50,5 +50,3 @@ createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </StrictMode>
 )
-
-export { RootApp }

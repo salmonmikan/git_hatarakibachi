@@ -1,5 +1,6 @@
 // src/admin/pages/AdminCredits.jsx
-import { Link, Outlet } from "react-router-dom";
+import { useMemo } from "react";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useAdminCtx } from "../hooks/useAdminCtx";
 import "./admin_view.scss";
 import AdminSearch from "../components/AdminSearch";

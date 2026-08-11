@@ -24,6 +24,15 @@ const COERCE = {
 export default function UpdateInfoEditModal() {
     const { lists } = useAdminCtx();
 
+    // 編集時に配列をカンマ区切り文字列に戻すための変換
+    const parseEntity = (entity) => {
+        if (!entity) return DEFAULTS;
+        return {
+            ...entity,
+            categories: Array.isArray(entity.categories) ? entity.categories.join(", ") : (entity.categories ?? ""),
+        };
+    };
+
     return (
         <EntityEditModal
             list={lists.updates}

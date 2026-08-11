@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "motion/react"
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 
-export default function About({ onEntered }) {
+export default function About() {
     const reduce = useReducedMotion();
 
     return (
@@ -20,7 +20,7 @@ export default function About({ onEntered }) {
                 <h2 id="about-title">About Us</h2>
                 <p>東京･千葉を拠点に活動する、<br />「ずっと演劇をしていたい」<br />人たちの社会人劇団。</p>
                 <p>現在活動のため準備中……</p>
-                <h2 id="about-title">活動経歴</h2>
+                <h2 id="about-title">​活動経歴</h2>
                 <p>2025/08/02：劇団はたらきばちを設立</p>
             </section>
         </motion.section>

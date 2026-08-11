@@ -61,9 +61,7 @@ export default function EntityEditModal({
             next[key] = value === null || value === undefined ? defaults[key] : value;
         }
         setForm(next);
-    // entityのID変更時だけ編集フォームを初期化する。defaults等の変更では再入力を壊さない。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [entity?.id]);
+    }, [entity?.id]); // entity切替時だけ
 
     const onChange = (e) => {
         const { name, value } = e.target;

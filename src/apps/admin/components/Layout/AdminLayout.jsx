@@ -95,7 +95,7 @@ export default function AdminLayout() {
             setListLoading("updates", false);
             return { data: res.data, error: null };
         },
-        [setListLoading, setListError]
+        [setListLoading, setListError, setLists]
     );
 
     const updateUpdate = useCallback(
@@ -124,7 +124,7 @@ export default function AdminLayout() {
             setListLoading("updates", false);
             return { data: res.data, error: null };
         },
-        [setListLoading, setListError]
+        [setListLoading, setListError, setLists]
     );
 
     const removeUpdate = useCallback(
@@ -153,7 +153,7 @@ export default function AdminLayout() {
             setListLoading("updates", false);
             return { data: { id }, error: null };
         },
-        [setListLoading, setListError]
+        [setListLoading, setListError, setLists]
     );
 
 
@@ -208,7 +208,7 @@ export default function AdminLayout() {
             setListLoading("credits", false);
             return { data: res.data, error: null };
         },
-        [setListLoading, setListError]
+        [setListLoading, setListError, setLists]
     );
 
     const updateCredit = useCallback(
@@ -237,7 +237,7 @@ export default function AdminLayout() {
             setListLoading("credits", false);
             return { data: res.data, error: null };
         },
-        [setListLoading, setListError]
+        [setListLoading, setListError, setLists]
     );
 
     const removeCredit = useCallback(
@@ -266,7 +266,7 @@ export default function AdminLayout() {
             setListLoading("credits", false);
             return { data: { id }, error: null };
         },
-        [setListLoading, setListError]
+        [setListLoading, setListError, setLists]
     );
 
     // memberAPI
@@ -318,7 +318,7 @@ export default function AdminLayout() {
             setListLoading("members", false);
             return { data: res.data, error: null };
         },
-        [setListLoading, setListError]
+        [setListLoading, setListError, setLists]
     );
 
     const updateMembers = useCallback(
@@ -347,7 +347,7 @@ export default function AdminLayout() {
             setListLoading("members", false);
             return { data: res.data, error: null };
         },
-        [setListLoading, setListError]
+        [setListLoading, setListError, setLists]
     );
 
     const removeMembers = useCallback(
@@ -376,7 +376,7 @@ export default function AdminLayout() {
             setListLoading("members", false);
             return { data: { id }, error: null };
         },
-        [setListLoading, setListError]
+        [setListLoading, setListError, setLists]
     );
 
     // member_affiliation_master
@@ -463,22 +463,7 @@ export default function AdminLayout() {
             },
             setLists,
         };
-    }, [
-        lists,
-        refreshMembers,
-        addMembers,
-        updateMembers,
-        removeMembers,
-        refreshCredits,
-        addCredit,
-        updateCredit,
-        removeCredit,
-        refreshUpdates,
-        addUpdate,
-        updateUpdate,
-        removeUpdate,
-        loadMembers_affiliation,
-    ]);
+    }, [lists]);
 
     return (
         <div className="admin-shell" data-surface="app">

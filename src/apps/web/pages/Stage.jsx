@@ -11,8 +11,8 @@ export default function Stage({ onEntered }) {
 
     useEffect(() => {
         async function getStageEntries() {
-            const { data } = await supabase.from('archive_urls').select('*').order('id', { ascending: true });
-            // console.log('supabase select ->', { data });
+            const { data, error } = await supabase.from('archive_urls').select('*').order('id', { ascending: true });
+            // console.log('supabase select ->', { data, error });
             setStages(data);
         }
 

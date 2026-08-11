@@ -23,8 +23,7 @@ export default defineConfig([
       },
     },
     rules: {
-      // motion is consumed as a JSX member expression (for example <motion.section>).
-      'no-unused-vars': ['error', { varsIgnorePattern: '^(motion|[A-Z_])' }],
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
 ])
