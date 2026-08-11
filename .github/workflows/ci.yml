@@ -59,3 +59,7 @@ jobs:
       - name: Build Studio
         working-directory: sanity-studio
         run: npm run build
+
+      - name: CI失敗時の案内
+        if: ${{ failure() }}
+        run: echo "::error::CIの検証に失敗しました。上記ログで失敗したステップを確認してください。"

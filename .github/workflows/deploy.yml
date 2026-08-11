@@ -58,6 +58,10 @@ jobs:
         id: revision
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+      - name: 対象SHA解決失敗時の案内
+        if: ${{ failure() }}
+        run: echo "::error::デプロイ対象SHAの解決に失敗しました。指定したrefまたはSHAを確認してください。"
+
   database:
     name: Database migrations
     needs: resolve-target
@@ -109,12 +113,12 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: npx --no-install supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
 
-      - name: Print migration recovery guidance
+      - name: マイグレーション失敗時の復旧案内
         if: ${{ failure() }}
         run: |
-          echo "::error::Supabase migration failed. Do not repair migration history automatically."
-          echo "Use a forward-fix migration after reviewing the failed SQL and restore from the approved Supabase backup or recovery point when required."
-          echo "Re-run this workflow with the same target SHA after the recovery decision is complete."
+          echo "::error::Supabaseマイグレーションに失敗しました。マイグレーション履歴を自動修復しないでください。"
+          echo "失敗したSQLを確認し、forward-fixマイグレーションで修正してください。必要な場合は、承認済みのSupabaseバックアップまたは復旧ポイントから復元してください。"
+          echo "復旧方針の決定と対応が完了した後、同じ対象SHAを指定してこのワークフローを再実行してください。"
 
   cms:
     name: Sanity Studio
@@ -164,6 +168,10 @@ jobs:
           SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}
         run: npm run deploy-graphql
 
+      - name: CMS失敗時の案内
+        if: ${{ failure() }}
+        run: echo "::error::Sanity Studioのビルドまたはデプロイに失敗しました。上記ログとSanityの認証・設定を確認してください。"
+
   frontend:
     name: Cloudflare Pages and Functions
     needs:
@@ -212,11 +220,11 @@ jobs:
         run: |
           set -eu
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_PAGES_PROJECT" ]; then
-            echo "::error::Cloudflare deployment variables are not configured for this GitHub Environment."
+            echo "::error::このGitHub EnvironmentにCloudflareデプロイ用の設定値が登録されていません。"
             exit 1
           fi
           if [ -z "$CLOUDFLARE_PAGES_BRANCH" ]; then
-            echo "::error::CLOUDFLARE_PAGES_BRANCH is required for Pages deployments."
+            echo "::error::PagesへのデプロイにはCLOUDFLARE_PAGES_BRANCHの設定が必要です。"
             exit 1
           fi
           if [ "$DEPLOY_ENV" = "production" ]; then
@@ -230,3 +238,7 @@ jobs:
               --branch "$CLOUDFLARE_PAGES_BRANCH" \
               --commit-hash "$TARGET_SHA"
           fi
+
+      - name: Frontend失敗時の案内
+        if: ${{ failure() }}
+        run: echo "::error::FrontendまたはPages Functionsのビルド・デプロイに失敗しました。上記ログとCloudflareの認証・設定を確認してください。"
