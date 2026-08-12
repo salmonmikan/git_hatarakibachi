@@ -64,3 +64,120 @@
 }
 
 
+
+.admin-ticket-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr);
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.admin-ticket-panel {
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 16px;
+    background: var(--color-bg);
+}
+
+.admin-ticket-form {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.admin-ticket-form label {
+    display: grid;
+    gap: 4px;
+    font-weight: 700;
+}
+
+.admin-ticket-form input,
+.admin-ticket-form textarea,
+.admin-ticket-form select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 10px;
+    font: inherit;
+}
+
+.admin-ticket-sanity {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+}
+
+.admin-ticket-sanity div {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.admin-ticket-sanity-warning {
+    color: var(--color-danger, #a00);
+}
+
+.admin-ticket-window-list {
+    margin-top: 16px;
+}
+
+.admin-ticket-window-list ul {
+    display: grid;
+    gap: 12px;
+    padding: 0;
+    list-style: none;
+}
+
+.admin-ticket-window {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+}
+
+.admin-ticket-window label {
+    display: grid;
+    gap: 4px;
+    font-weight: 700;
+}
+
+.admin-ticket-window input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 10px;
+    font: inherit;
+}
+
+.admin-ticket-window__meta {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.admin-ticket-window__deleted {
+    display: grid;
+    gap: 4px;
+    margin-top: 12px;
+    color: var(--color-muted, #666);
+    font-size: 0.9rem;
+}
+
+.admin-ticket-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+@media (max-width: 760px) {
+    .admin-ticket-grid {
+        grid-template-columns: 1fr;
+    }
+}
