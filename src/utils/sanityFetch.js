@@ -3,17 +3,18 @@ import { canUsePreviewMode } from '@src/utils/previewMode.js'
 
 const PROJECT_ID = 'pz9uficf'
 const isStaging =
+  import.meta.env.VITE_SANITY_DATASET === 'staging' ||
   import.meta.env.DEV ||
   (typeof window !== 'undefined' &&
     (window.location.hostname === 'staging.hatarakibachi.com' ||
       window.location.hostname === '127.0.0.1'))
-const DATASET = isStaging ? 'staging' : 'production'
+const DATASET =
+  import.meta.env.VITE_SANITY_DATASET === 'production'
+    ? 'production'
+    : isStaging
+      ? 'staging'
+      : 'production'
 const API_VERSION = '2023-05-03'
-const STUDIO_URL =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:3333'
-    : 'https://hatarakibachi.sanity.studio'
-
 const client = createClient({
   projectId: PROJECT_ID,
   dataset: DATASET,
@@ -21,24 +22,27 @@ const client = createClient({
   apiVersion: API_VERSION,
 })
 
-const previewClient = createClient({
-  projectId: PROJECT_ID,
-  dataset: DATASET,
-  useCdn: false,
-  apiVersion: API_VERSION,
-  token: import.meta.env.VITE_SANITY_READ_TOKEN,
-  perspective: 'previewDrafts',
-  stega: {
-    enabled: true,
-    studioUrl: STUDIO_URL,
-  },
-})
+async function fetchPreview(query, params) {
+  const response = await fetch('/api/sanity-preview', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ query, params }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Sanity preview fetch failed: ${response.status}`)
+  }
+
+  return response.json()
+}
 
 export async function sanityFetch(query, params = {}) {
-  const currentClient = canUsePreviewMode() ? previewClient : client
-
   try {
-    const result = await currentClient.fetch(query, params)
+    const result = canUsePreviewMode()
+      ? await fetchPreview(query, params)
+      : await client.fetch(query, params)
     return result
   } catch (error) {
     console.error('Sanity fetch error:', error)

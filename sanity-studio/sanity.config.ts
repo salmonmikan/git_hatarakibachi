@@ -5,7 +5,6 @@ import { presentationTool } from 'sanity/presentation'
 import { schemaTypes } from './schemaTypes'
 
 const projectId = 'pz9uficf'
-const previewSecret = process.env.SANITY_STUDIO_PREVIEW_SECRET ?? ''
 
 // Common presentation tool logic
 const createPresentationPlugin = (baseUrl: string) =>
@@ -37,7 +36,7 @@ const createPresentationPlugin = (baseUrl: string) =>
     previewUrl: {
       initial: baseUrl,
       previewMode: {
-        enable: `/api/draft?secret=${encodeURIComponent(previewSecret)}`,
+        enable: '/api/draft',
         disable: '/api/disable-draft',
       },
     },
