@@ -2,7 +2,7 @@ import { motion, useReducedMotion } from "motion/react"
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 import { trackDataLayerEvent } from "@src/utils/analytics.js";
 
-export default function Contact() {
+export default function Contact({ onEntered }) {
     const reduce = useReducedMotion();
     return (
         <motion.section
