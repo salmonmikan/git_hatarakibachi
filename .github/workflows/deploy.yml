@@ -180,7 +180,13 @@ jobs:
       - name: Deploy Studio
         env:
           SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}
-        run: npm run deploy -- --no-build --schema-required
+          SANITY_STUDIO_APP_ID: ${{ vars.SANITY_STUDIO_APP_ID }}
+        run: |
+          if [ -z "$SANITY_STUDIO_APP_ID" ]; then
+            echo "::error::このGitHub EnvironmentにSANITY_STUDIO_APP_IDが登録されていません。"
+            exit 1
+          fi
+          npm run deploy -- --no-build --schema-required
 
       - name: Deploy GraphQL API (opt-in)
         if: ${{ vars.SANITY_DEPLOY_GRAPHQL == 'true' || inputs.deploy_graphql == true }}
@@ -249,11 +255,10 @@ jobs:
             echo "::error::PagesへのデプロイにはCLOUDFLARE_PAGES_BRANCHの設定が必要です。"
             exit 1
           fi
-          if [ "$DEPLOY_ENV" = "production" ]; then
-            npx --no-install wrangler pages deploy dist \
-              --project-name "$CLOUDFLARE_PAGES_PROJECT" \
-              --branch "$CLOUDFLARE_PAGES_BRANCH" \
-              --commit-hash "$TARGET_SHA"
+          npx --no-install wrangler pages deploy dist \
+            --project-name "$CLOUDFLARE_PAGES_PROJECT" \
+            --branch "$CLOUDFLARE_PAGES_BRANCH" \
+            --commit-hash "$TARGET_SHA"
 
       - name: Smoke test deployed Pages and Functions
         env:
@@ -270,13 +275,6 @@ jobs:
             echo "::error::Pages Functionの確認に失敗しました。/api/draftのHTTP statusは${preview_status}でした。"
             exit 1
           fi
-          else
-            npx --no-install wrangler pages deploy dist \
-              --project-name "$CLOUDFLARE_PAGES_PROJECT" \
-              --branch "$CLOUDFLARE_PAGES_BRANCH" \
-              --commit-hash "$TARGET_SHA"
-          fi
-
       - name: Frontend失敗時の案内
         if: ${{ failure() }}
         run: echo "::error::FrontendまたはPages Functionsのビルド・デプロイに失敗しました。上記ログとCloudflareの認証・設定を確認してください。"

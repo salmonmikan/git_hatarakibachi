@@ -44,13 +44,14 @@ Deployの3ジョブはすべて対象Environmentに紐づくため、production�
 - `SUPABASE_PROJECT_REF`
 - `VITE_SUPABASE_URL`（Frontendで使用する対象EnvironmentのSupabase URL）
 - `VITE_SUPABASE_ANON_KEY`（Frontendで使用する対象Environmentの公開用anon keyまたはpublishable key）
+- `SANITY_STUDIO_APP_ID`（staging/productionで別々のSanity Studio deployment app IDを設定）
 - `SANITY_DEPLOY_GRAPHQL`（`true`の場合だけ自動Deploy時にもGraphQLをdeploy）
 
 CloudflareのアカウントIDとAPI token、Sanity token、Supabase token/passwordはSecretsからのみ受け取ります。Frontendへ配布するSupabase URLと公開用anon keyまたはpublishable keyはEnvironment Variablesからbuildへ渡します。workflowはSecretsの値をechoせず、権限も `contents: read` に限定しています。
 
 ## CMSとGraphQL
 
-CMSジョブはSanity Studioの依存関係を `sanity-studio/package-lock.json` から `npm ci` し、Preview用SecretをBuildへ渡さずに `npm run build` 後、workflowから `sanity deploy --no-build --schema-required` を実行します。schema公開失敗を警告で通過させないため、workflow側で `--schema-required` を明示しています。
+CMSジョブはSanity Studioの依存関係を `sanity-studio/package-lock.json` から `npm ci` し、Preview用SecretをBuildへ渡さずに `npm run build` 後、workflowから `sanity deploy --no-build --schema-required` を実行します。`SANITY_STUDIO_APP_ID`は対象Environmentごとに必須で、staging/productionは別のdeployment app IDへdeployします。schema公開失敗を警告で通過させないため、workflow側で `--schema-required` を明示しています。
 
 GraphQLは既存の `sanity-studio/package.json` にある `deploy-graphql` scriptを利用できますが、現行のCLI設定にはGraphQL API定義がなく、フロントエンドもSanity client/GROQ経由で取得しています。そのため通常は実行せず、手動実行の `deploy_graphql` またはEnvironment Variable `SANITY_DEPLOY_GRAPHQL=true` の明示指定時だけ実行します。GraphQL APIを利用する場合は、API定義・schema差分・互換性をレビューしてから有効化します。
 
