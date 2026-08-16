@@ -106,7 +106,7 @@ jobs:
           done
 
       - name: Start local Supabase database
-        run: npx --no-install supabase start --exclude analytics,edge-runtime,functions,imgproxy,inbucket,kong,meta,realtime,rest,storage,studio,vector --yes
+        run: npx --no-install supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector --yes
 
       - name: Reapply all migrations
         run: npx --no-install supabase db reset --local --no-seed
