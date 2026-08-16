@@ -8,7 +8,7 @@ on:
       - completed
     branches:
       - main
-      - develop
+      - staging
   workflow_dispatch:
     inputs:
       environment:
@@ -38,7 +38,7 @@ concurrency:
 
 env:
   DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
-  TARGET_REF: ${{ github.event_name == 'workflow_dispatch' && (inputs.ref || (inputs.environment == 'production' && 'main' || 'develop')) || github.event.workflow_run.head_sha }}
+  TARGET_REF: ${{ github.event_name == 'workflow_dispatch' && (inputs.ref || (inputs.environment == 'production' && 'main' || 'staging')) || github.event.workflow_run.head_sha }}
 
 jobs:
   resolve-target:
@@ -63,7 +63,7 @@ jobs:
         env:
           TARGET_SHA: ${{ steps.revision.outputs.sha }}
         run: |
-          expected_branch="develop"
+          expected_branch="staging"
           if [ "$DEPLOY_ENV" = "production" ]; then
             expected_branch="main"
           fi
