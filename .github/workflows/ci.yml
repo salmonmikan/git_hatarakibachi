@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            sanity-studio/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.2
+
+      - name: Verify toolchain
+        run: |
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Build Pages Functions
+        run: npx --no-install wrangler pages functions build functions --outfile "$RUNNER_TEMP/pages-functions-worker.js"
+
+      - name: Install Studio dependencies
+        working-directory: sanity-studio
+        run: npm ci
+
+      - name: Build Studio
+        working-directory: sanity-studio
+        run: npm run build
+
+      - name: CI失敗時の案内
+        if: ${{ failure() }}
+        run: echo "::error::Frontend、Pages Functions、またはSanity Studioの検証に失敗しました。上記ログで失敗したステップを確認してください。"
+
+  database:
+    name: Validate database migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate migration filenames
+        shell: bash
+        run: |
+          shopt -s nullglob
+          migrations=(supabase/migrations/*.sql)
+          if (( ${#migrations[@]} == 0 )); then
+            echo "::error::Supabase migrationファイルが見つかりません。"
+            exit 1
+          fi
+          for file in "${migrations[@]}"; do
+            name="$(basename "$file")"
+            if [[ ! "$name" =~ ^[0-9]{14}_[A-Za-z0-9_]+\.sql$ ]]; then
+              echo "::error file=$file::migrationファイル名は14桁timestamp_名称.sql形式にしてください。"
+              exit 1
+            fi
+          done
+
+      - name: Start local Supabase database
+        run: npx --no-install supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector --yes
+
+      - name: Reapply all migrations
+        run: npx --no-install supabase db reset --local --no-seed
+
+      - name: Stop local Supabase database
+        if: ${{ always() }}
+        run: npx --no-install supabase stop --no-backup
+
+      - name: Database検証失敗時の案内
+        if: ${{ failure() }}
+        run: echo "::error::Supabase migrationの命名またはローカル再適用に失敗しました。上記ログを確認してください。"
