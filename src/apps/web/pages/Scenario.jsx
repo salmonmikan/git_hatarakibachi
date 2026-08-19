@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "motion/react"
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 
-export default function Scenario() {
+export default function Scenario({ onEntered }) {
     const reduce = useReducedMotion();
 
     return (
