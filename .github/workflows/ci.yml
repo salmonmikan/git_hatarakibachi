@@ -101,7 +101,7 @@ jobs:
   database:
     name: Validate database migrations
     needs: changes
-    if: \${{ needs.changes.outputs.database == 'true' }}
+    if: ${{ needs.changes.outputs.database == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
