@@ -1,0 +1,280 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub Environment to deploy to
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      ref:
+        description: Commit SHA or ref to deploy. Leave blank to use the selected environment branch.
+        required: false
+        type: string
+      deploy_graphql:
+        description: Deploy the Sanity GraphQL API after the Studio deploy
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+  cancel-in-progress: false
+
+env:
+  DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+  TARGET_REF: ${{ github.event_name == 'workflow_dispatch' && (inputs.ref || (inputs.environment == 'production' && 'main' || 'staging')) || github.event.workflow_run.head_sha }}
+
+jobs:
+  resolve-target:
+    name: Resolve target SHA
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.revision.outputs.sha }}
+    steps:
+      - name: Checkout target ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_REF }}
+          fetch-depth: 0
+
+      - name: Resolve checked out SHA
+        id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Validate target branch
+        env:
+          TARGET_SHA: ${{ steps.revision.outputs.sha }}
+        run: |
+          expected_branch="staging"
+          if [ "$DEPLOY_ENV" = "production" ]; then
+            expected_branch="main"
+          fi
+          if ! git merge-base --is-ancestor "$TARGET_SHA" "origin/$expected_branch"; then
+            echo "::error::指定したrefまたはSHAは${expected_branch}ブランチに含まれていません。"
+            exit 1
+          fi
+
+      - name: 対象SHA解決失敗時の案内
+        if: ${{ failure() }}
+        run: echo "::error::デプロイ対象SHAの解決に失敗しました。指定したrefまたはSHAを確認してください。"
+
+  database:
+    name: Database migrations
+    needs: resolve-target
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-target.outputs.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Link Supabase project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: npx --no-install supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Check remote migration history
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: npx --no-install supabase migration list --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Preview pending migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: npx --no-install supabase db push --dry-run --linked --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: npx --no-install supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
+
+      - name: Verify remote migration history
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: npx --no-install supabase migration list --password "$SUPABASE_DB_PASSWORD"
+
+      - name: マイグレーション失敗時の復旧案内
+        if: ${{ failure() }}
+        run: |
+          echo "::error::Supabaseマイグレーションに失敗しました。マイグレーション履歴を自動修復しないでください。"
+          echo "失敗したSQLを確認し、forward-fixマイグレーションで修正してください。必要な場合は、承認済みのSupabaseバックアップまたは復旧ポイントから復元してください。"
+          echo "復旧方針の決定と対応が完了した後、同じ対象SHAを指定してこのワークフローを再実行してください。"
+
+  cms:
+    name: Sanity Studio
+    needs:
+      - resolve-target
+      - database
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: sanity-studio-deploy
+      cancel-in-progress: false
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+    defaults:
+      run:
+        working-directory: sanity-studio
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-target.outputs.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: sanity-studio/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.2
+
+      - name: Install Studio dependencies
+        run: npm ci
+
+      - name: Build Studio
+        run: npm run build
+
+      - name: Deploy Studio
+        env:
+          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}
+          SANITY_STUDIO_APP_ID: ${{ vars.SANITY_STUDIO_APP_ID }}
+        run: |
+          if [ -z "$SANITY_STUDIO_APP_ID" ]; then
+            echo "::error::このGitHub EnvironmentにSANITY_STUDIO_APP_IDが登録されていません。"
+            exit 1
+          fi
+          npm run deploy -- --no-build --schema-required
+
+      - name: Deploy GraphQL API (opt-in)
+        if: ${{ vars.SANITY_DEPLOY_GRAPHQL == 'true' || inputs.deploy_graphql == true }}
+        env:
+          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}
+        run: npm run deploy-graphql
+
+      - name: CMS失敗時の案内
+        if: ${{ failure() }}
+        run: echo "::error::Sanity Studioのビルドまたはデプロイに失敗しました。上記ログとSanityの認証・設定を確認してください。"
+
+  frontend:
+    name: Cloudflare Pages and Functions
+    needs:
+      - resolve-target
+      - cms
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-target.outputs.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        env:
+          VITE_SANITY_DATASET: ${{ env.DEPLOY_ENV }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Resolve checked out SHA
+        id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Pages and Functions
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          CLOUDFLARE_PAGES_BRANCH: ${{ vars.CLOUDFLARE_PAGES_BRANCH }}
+          DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
+          TARGET_SHA: ${{ steps.revision.outputs.sha }}
+        run: |
+          set -eu
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$CLOUDFLARE_PAGES_PROJECT" ]; then
+            echo "::error::このGitHub EnvironmentにCloudflareデプロイ用の設定値が登録されていません。"
+            exit 1
+          fi
+          if [ -z "$CLOUDFLARE_PAGES_BRANCH" ]; then
+            echo "::error::PagesへのデプロイにはCLOUDFLARE_PAGES_BRANCHの設定が必要です。"
+            exit 1
+          fi
+          npx --no-install wrangler pages deploy dist \
+            --project-name "$CLOUDFLARE_PAGES_PROJECT" \
+            --branch "$CLOUDFLARE_PAGES_BRANCH" \
+            --commit-hash "$TARGET_SHA"
+
+      - name: Smoke test deployed Pages and Functions
+        env:
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+        run: |
+          set -eu
+          if [ -z "$PUBLIC_BASE_URL" ]; then
+            echo "::error::公開後確認にはPUBLIC_BASE_URLの設定が必要です。"
+            exit 1
+          fi
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 "$PUBLIC_BASE_URL/" > /dev/null
+          preview_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$PUBLIC_BASE_URL/api/draft")"
+          if [ "$preview_status" != "401" ]; then
+            echo "::error::Pages Functionの確認に失敗しました。/api/draftのHTTP statusは${preview_status}でした。"
+            exit 1
+          fi
+      - name: Frontend失敗時の案内
+        if: ${{ failure() }}
+        run: echo "::error::FrontendまたはPages Functionsのビルド・デプロイに失敗しました。上記ログとCloudflareの認証・設定を確認してください。"
