@@ -18,6 +18,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect database migration changes
+    runs-on: ubuntu-latest
+    outputs:
+      database: ${{ steps.database.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect database migration changes
+        id: database
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          if printf '%s\n' "$changed_files" | grep -Eq '^(supabase/|package\.json$|package-lock\.json$)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   validate:
     name: Lint and build
     runs-on: ubuntu-latest
@@ -69,6 +100,8 @@ jobs:
 
   database:
     name: Validate database migrations
+    needs: changes
+    if: ${{ needs.changes.outputs.database == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
