@@ -1,9 +1,11 @@
-# Cloudflare重複デプロイジョブ削除結果
+# Cloudflare重複デプロイ削除とmigration CI短縮結果
 
 ## 実施結果
 
 - Deploy workflow内の `frontend` ジョブを削除した。
 - Cloudflare PagesのGit連携デプロイを唯一のフロントエンドデプロイ経路とした。
+- PRでは`supabase/`またはルートの依存定義に変更がない場合、ローカルSupabaseを起動するmigration完全検証をスキップする条件を追加した。
+- `main` / `staging` へのpushではmigration完全検証を常に実行する。
 - Supabase migrationおよびSanity Studioデプロイのジョブは変更していない。
 
 ## 検証
