@@ -5,20 +5,20 @@ Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要
 ## Workflow
 
 - `.github/workflows/ci.yml`
-  - `pull_request` と `main` / `develop` への `push` で実行。
+  - `pull_request` と `main` / `staging` への `push` で実行。
   - `.nvmrc` の Node.js 22.17.0 と npm 10.9.2 を使用し、rootと`sanity-studio`の`npm ci`、lint、build、Pages Functions bundle、Supabase migrationの命名・ローカル再適用を検証。
   - PRの古い実行は同じConcurrency group内でキャンセルする。
 - `.github/workflows/deploy.yml`
-  - `main` / `develop` のCI成功を受けた `workflow_run` と `workflow_dispatch` で実行。自動DeployはCI失敗時には起動しない。
+  - `main` / `staging` のCI成功を受けた `workflow_run` と `workflow_dispatch` で実行。自動DeployはCI失敗時には起動しない。
   - `database` → `cms` → `frontend` のジョブ依存で順序を固定する。各ジョブが失敗した場合、後続ジョブは実行しない。
-  - `main` は `production`、`develop` は `staging` に割り当てる。手動実行ではEnvironmentを選択できる。
+  - `main` は `production`、`staging` は `staging` に割り当てる。手動実行ではEnvironmentを選択できる。
   - 最初に指定`ref`を実SHAへ解決し、database・cms・frontendの全ジョブは同じSHAをcheckoutする。`ref` にコミットSHAを指定すると、同じSHAの再実行ができる。適用済みのSupabase migrationは履歴により再適用されない。
-  - 手動実行の対象SHAは、productionでは`main`、stagingでは`develop`に含まれるcommitだけを許可する。
+  - 手動実行の対象SHAは、productionでは`main`、stagingでは`staging`に含まれるcommitだけを許可する。
   - 同じEnvironmentのDeployはConcurrencyで直列化し、実行中のDeployをキャンセルしない。
 
 ## 初回有効化
 
-`workflow_run`と`workflow_dispatch`は、Deploy workflowが既定ブランチ`main`に存在する場合だけ起動します。初回導入では、4本のstacked PRを順番に`develop`へ統合し、GitHub Environmentと外部サービス設定を完了してから`develop`を`main`へリリースします。`main`へ入る前はstaging自動Deployと手動Deployを実行できません。
+`workflow_run`と`workflow_dispatch`は、Deploy workflowが既定ブランチ`main`に存在する場合だけ起動します。初回導入では、4本のstacked PRを順番に`staging`へ統合し、GitHub Environmentと外部サービス設定を完了してから`staging`を`main`へリリースします。`main`へ入る前はstaging自動Deployと手動Deployを実行できません。
 
 初回の`main`リリースはproduction Deployを起動するため、マージ前にproduction EnvironmentのRequired reviewersと全Secrets/Variablesを設定し、同じ変更内容がstagingで検証済みであることを承認者が確認します。
 
