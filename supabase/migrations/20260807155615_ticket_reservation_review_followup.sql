@@ -118,6 +118,7 @@ begin
   if not found
     or v_event.deleted_at is not null
     or v_event.status <> 'published'
+    or nullif(btrim(v_event.sanity_performance_id), '') is null
   then
     raise exception 'Ticket event is not accepting reservations' using errcode = 'P0001';
   end if;
@@ -163,7 +164,7 @@ begin
       raise exception 'Ticket window is unavailable' using errcode = 'P0001';
     end if;
 
-    if v_window.starts_at is not null and v_window.starts_at <= v_now then
+    if v_window.starts_at is not null and v_window.starts_at <= clock_timestamp() then
       raise exception 'Ticket window has already started' using errcode = 'P0001';
     end if;
 
