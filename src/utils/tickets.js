@@ -16,7 +16,7 @@ export async function fetchPublishedTicketEvent(slug) {
     .in('status', ['published', 'closed'])
     .is('deleted_at', null)
     .is('windows.deleted_at', null)
-    .order('sort_order', { foreignTable: 'ticket_windows', ascending: true })
+    .order('sort_order', { foreignTable: 'windows', ascending: true })
     .maybeSingle();
 
   if (eventRes.error || !eventRes.data) {
