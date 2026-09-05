@@ -119,6 +119,8 @@ export default function TicketReservation({ onEntered }) {
   const canReserve = accepting && (!isWindowedEvent || (
     hasAvailableWindow && Boolean(selectedWindowId) && Boolean(selectedWindow) && isWindowAvailable(selectedWindow)
   ));
+  const canRetryReservation = Boolean(reservationRequestId);
+  const canSubmitReservation = canReserve || canRetryReservation;
 
   useEffect(() => {
     if (maxQuantity < 1) return;
@@ -139,7 +141,7 @@ export default function TicketReservation({ onEntered }) {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!event || !canReserve) return;
+    if (!event || !canSubmitReservation) return;
     if (!hasValidQuantity) {
       setError(`選択した予約枠の残数以内で、1〜${maxQuantity}枚を指定してください。`);
       return;
@@ -174,11 +176,12 @@ export default function TicketReservation({ onEntered }) {
     setReservationRequestId(null);
     setForm(initialForm);
     const refreshed = await fetchPublishedTicketEvent(slug);
-    if (refreshed.error) {
-      setError(`予約は完了しましたが、残数の更新に失敗しました: ${refreshed.error.message}`);
+    if (refreshed.error || !refreshed.data) {
+      const refreshMessage = refreshed.error?.message ?? '公開中の予約情報を再取得できませんでした。';
+      setError(`予約は完了しましたが、残数の更新に失敗しました: ${refreshMessage}`);
     } else {
       setEvent(refreshed.data);
-      setSelectedWindowId(findSelectableWindowId(refreshed.data?.windows ?? [], selectedWindowId));
+      setSelectedWindowId(findSelectableWindowId(refreshed.data.windows ?? [], selectedWindowId));
     }
     setSaving(false);
   };
@@ -278,7 +281,7 @@ export default function TicketReservation({ onEntered }) {
             備考
             <textarea name="note" value={form.note} onChange={onChange} maxLength="2000" rows="4" disabled={saving || !canReserve} />
           </label>
-          <button type="submit" disabled={saving || !canReserve || !hasValidQuantity}>{saving ? '送信中...' : '予約する'}</button>
+          <button type="submit" disabled={saving || !canSubmitReservation || !hasValidQuantity}>{saving ? '送信中...' : '予約する'}</button>
         </form>
       </section>
     </Motion.section>
