@@ -24,6 +24,14 @@ test('returns the next event受付 boundary and ignores past boundaries', () => 
   );
 });
 
+test('keeps an exact event boundary eligible for one final timer refresh', () => {
+  const now = Date.parse('2026-08-07T02:00:00.000Z');
+  assert.equal(
+    getNextTicketEventBoundary({ closes_at: '2026-08-07T02:00:00.000Z' }, now),
+    now
+  );
+});
+
 test('free-seating and unlimited windows keep the public quantity limit', () => {
   assert.equal(getTicketReservationMaxQuantity(null), MAX_TICKET_QUANTITY);
   assert.equal(getTicketReservationMaxQuantity({ capacity: 0 }), MAX_TICKET_QUANTITY);
