@@ -51,11 +51,13 @@ alter table public.ticket_reservations enable row level security;
 drop policy if exists "Public can read published ticket events" on public.ticket_events;
 create policy "Public can read published ticket events"
   on public.ticket_events for select
+  to anon, authenticated
   using (deleted_at is null and status = 'published');
 
 drop policy if exists "Public can read ticket windows" on public.ticket_windows;
 create policy "Public can read ticket windows"
   on public.ticket_windows for select
+  to anon, authenticated
   using (deleted_at is null and exists (
     select 1 from public.ticket_events e
     where e.id = ticket_windows.event_id
@@ -64,26 +66,56 @@ create policy "Public can read ticket windows"
   ));
 
 drop policy if exists "Public can create ticket reservations" on public.ticket_reservations;
-revoke insert on table public.ticket_reservations from anon;
 
--- 管理画面は既存の認証済みユーザー運用に合わせ、チケット関連の全操作を許可する。
 drop policy if exists "Authenticated can manage ticket events" on public.ticket_events;
 create policy "Authenticated can manage ticket events"
   on public.ticket_events for all
   to authenticated
-  using (true)
-  with check (true);
+  using (exists (
+    select 1 from public.admin_users au
+    where au.uuid = (select auth.uid())
+  ))
+  with check (exists (
+    select 1 from public.admin_users au
+    where au.uuid = (select auth.uid())
+  ));
 
 drop policy if exists "Authenticated can manage ticket windows" on public.ticket_windows;
 create policy "Authenticated can manage ticket windows"
   on public.ticket_windows for all
   to authenticated
-  using (true)
-  with check (true);
+  using (exists (
+    select 1 from public.admin_users au
+    where au.uuid = (select auth.uid())
+  ))
+  with check (exists (
+    select 1 from public.admin_users au
+    where au.uuid = (select auth.uid())
+  ));
 
 drop policy if exists "Authenticated can manage ticket reservations" on public.ticket_reservations;
-create policy "Authenticated can manage ticket reservations"
-  on public.ticket_reservations for all
+drop policy if exists "Authenticated admins can read ticket reservations" on public.ticket_reservations;
+create policy "Authenticated admins can read ticket reservations"
+  on public.ticket_reservations for select
   to authenticated
-  using (true)
-  with check (true);
+  using (exists (
+    select 1 from public.admin_users au
+    where au.uuid = (select auth.uid())
+  ));
+
+revoke all on table public.ticket_events from anon, authenticated;
+grant select on table public.ticket_events to anon;
+grant select, insert, update, delete on table public.ticket_events to authenticated;
+
+revoke all on table public.ticket_windows from anon, authenticated;
+grant select on table public.ticket_windows to anon;
+grant select, insert, update, delete on table public.ticket_windows to authenticated;
+
+revoke all on table public.ticket_reservations from anon, authenticated;
+grant select on table public.ticket_reservations to authenticated;
+
+revoke all on sequence public.ticket_events_id_seq from anon, authenticated;
+revoke all on sequence public.ticket_windows_id_seq from anon, authenticated;
+revoke all on sequence public.ticket_reservations_id_seq from anon, authenticated;
+grant usage, select on sequence public.ticket_events_id_seq to authenticated;
+grant usage, select on sequence public.ticket_windows_id_seq to authenticated;
