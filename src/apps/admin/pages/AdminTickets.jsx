@@ -27,6 +27,7 @@ export default function AdminTickets() {
   const [events, setEvents] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+  const [creatingEvent, setCreatingEvent] = useState(false);
   const [form, setForm] = useState(eventDefaults);
   const [windowForm, setWindowForm] = useState({ label: '', starts_at: '', capacity: '0' });
   const [windowForms, setWindowForms] = useState({});
@@ -41,6 +42,7 @@ export default function AdminTickets() {
   const [reservationLoading, setReservationLoading] = useState(false);
   const [addingWindow, setAddingWindow] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
+  const [cancellingReservationId, setCancellingReservationId] = useState(null);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedId) ?? null,
@@ -93,6 +95,7 @@ export default function AdminTickets() {
       }));
       setEvents(eventsWithAvailability);
       if (selectedId && !eventsWithAvailability.some((event) => event.id === selectedId)) {
+        setCreatingEvent(false);
         setSelectedId(eventsWithAvailability[0]?.id ?? null);
       }
       setReservations(reservationRes.data ?? []);
@@ -102,7 +105,7 @@ export default function AdminTickets() {
       setReservationTotal(reservationRes.count ?? 0);
       setEventPage(eventPageToLoad);
       setEventTotal(eventRes.count ?? 0);
-      if (!selectedId && eventRes.data?.[0]) setSelectedId(eventRes.data[0].id);
+      if (!selectedId && !creatingEvent && eventRes.data?.[0]) setSelectedId(eventRes.data[0].id);
     }
     setLoading(false);
     return true;
@@ -164,6 +167,21 @@ export default function AdminTickets() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
+  const startCreatingEvent = () => {
+    if (savingEvent) return;
+    setCreatingEvent(true);
+    setSelectedId(null);
+    setForm(eventDefaults);
+    setWindowForm({ label: '', starts_at: '', capacity: '0' });
+    setWindowForms({});
+  };
+
+  const selectEvent = (eventId) => {
+    if (savingEvent) return;
+    setCreatingEvent(false);
+    setSelectedId(eventId);
+  };
+
   const onFormChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -192,7 +210,7 @@ export default function AdminTickets() {
       setError('公開する販売ページにはSanity公演情報を連携してください。');
       return;
     }
-    const isCreatingEvent = !selectedEvent;
+    const isCreatingEvent = creatingEvent || !selectedEvent;
     setSavingEvent(true);
     try {
       const res = selectedEvent
@@ -208,6 +226,7 @@ export default function AdminTickets() {
             : '保存は完了しましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。');
           return;
         }
+        setCreatingEvent(false);
         setSelectedId(res.data.id);
       }
     } finally {
@@ -314,18 +333,24 @@ export default function AdminTickets() {
   };
 
   const onCancelReservation = async (reservation) => {
+    if (cancellingReservationId !== null) return;
     const warning = `予約番号 ${reservation.reservation_code} をキャンセルします。この操作は元に戻せません。続行しますか？`;
     if (typeof window !== 'undefined' && !window.confirm(warning)) return;
-    const res = await cancelTicketReservation(reservation.id);
-    if (res.error) setError(res.error.message);
-    else {
-      setReservations((currentReservations) => currentReservations.map((item) => (
-        item.id === reservation.id
-          ? { ...item, status: 'cancelled', cancelled_at: new Date().toISOString() }
-          : item
-      )));
-      const refreshed = await load(reservationPage, eventPage);
-      if (!refreshed) setError('キャンセルは完了しましたが、予約一覧の再読み込みに失敗しました。');
+    setCancellingReservationId(reservation.id);
+    try {
+      const res = await cancelTicketReservation(reservation.id);
+      if (res.error) setError(res.error.message);
+      else {
+        setReservations((currentReservations) => currentReservations.map((item) => (
+          item.id === reservation.id
+            ? { ...item, status: 'cancelled', cancelled_at: new Date().toISOString() }
+            : item
+        )));
+        const refreshed = await load(reservationPage, eventPage);
+        if (!refreshed) setError('キャンセルは完了しましたが、予約一覧の再読み込みに失敗しました。');
+      }
+    } finally {
+      setCancellingReservationId(null);
     }
   };
 
@@ -343,10 +368,10 @@ export default function AdminTickets() {
       <div className="admin-ticket-grid">
         <section className="admin-ticket-panel">
           <h2>販売ページ</h2>
-          <button type="button" className="admin-view__button" onClick={() => setSelectedId(null)} disabled={savingEvent}>新規作成</button>
+          <button type="button" className="admin-view__button" onClick={startCreatingEvent} disabled={savingEvent}>新規作成</button>
           <div className="admin-view__list">
             {events.map((event) => (
-              <button key={event.id} type="button" className="admin-view__link" onClick={() => setSelectedId(event.id)} disabled={savingEvent}>
+              <button key={event.id} type="button" className="admin-view__link" onClick={() => selectEvent(event.id)} disabled={savingEvent}>
                 <div className="admin-view__name">{event.title}</div>
                 <small>
                   /{`tickets/${event.slug}`} / {TICKET_STATUS_LABEL[event.status] ?? event.status} /{' '}
@@ -482,7 +507,16 @@ export default function AdminTickets() {
               <div className="admin-view__name">{reservation.customer_name} / {reservation.quantity}枚 / {TICKET_STATUS_LABEL[reservation.status]}</div>
               <small>{reservation.event?.title} - {reservation.window?.label ?? '自由席'} / {reservation.customer_email} / {reservation.reservation_code}</small>
               {reservation.note && <small>備考：{reservation.note}</small>}
-              {reservation.status !== 'cancelled' && <button type="button" className="admin-view__button" onClick={() => onCancelReservation(reservation)}>キャンセル</button>}
+              {reservation.status !== 'cancelled' && (
+                <button
+                  type="button"
+                  className="admin-view__button"
+                  onClick={() => onCancelReservation(reservation)}
+                  disabled={cancellingReservationId !== null}
+                >
+                  {cancellingReservationId === reservation.id ? 'キャンセル中...' : 'キャンセル'}
+                </button>
+              )}
             </article>
           ))}
         </div>
@@ -491,7 +525,7 @@ export default function AdminTickets() {
             <button
               type="button"
               className="admin-view__button"
-              disabled={reservationLoading || reservationPage === 0}
+              disabled={reservationLoading || cancellingReservationId !== null || reservationPage === 0}
               onClick={() => loadReservations(reservationPage - 1)}
             >
               前の200件
@@ -502,7 +536,7 @@ export default function AdminTickets() {
             <button
               type="button"
               className="admin-view__button"
-              disabled={reservationLoading || (reservationPage + 1) * RESERVATIONS_PAGE_SIZE >= reservationTotal}
+              disabled={reservationLoading || cancellingReservationId !== null || (reservationPage + 1) * RESERVATIONS_PAGE_SIZE >= reservationTotal}
               onClick={() => loadReservations(reservationPage + 1)}
             >
               次の200件
