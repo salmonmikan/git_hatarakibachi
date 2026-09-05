@@ -190,13 +190,14 @@ export default function AdminTickets() {
       setError('公開する販売ページにはSanity公演情報を連携してください。');
       return;
     }
+    const isCreatingEvent = !selectedEvent;
     const res = selectedEvent
       ? await supabase.from('ticket_events').update(payload).eq('id', selectedEvent.id).select('id').single()
       : await supabase.from('ticket_events').insert(payload).select('id').single();
 
     if (res.error) setError(res.error.message);
     else {
-      await load(reservationPage);
+      await load(reservationPage, isCreatingEvent ? 0 : eventPage);
       setSelectedId(res.data.id);
     }
   };
@@ -234,9 +235,16 @@ export default function AdminTickets() {
   };
 
   const onWindowFormChange = (windowId, field, value) => {
+    const currentWindow = selectedEvent?.windows?.find((item) => item.id === windowId);
     setWindowForms((prev) => ({
       ...prev,
-      [windowId]: { ...prev[windowId], [field]: value },
+      [windowId]: {
+        label: currentWindow?.label ?? '',
+        starts_at: toDatetimeLocal(currentWindow?.starts_at),
+        capacity: String(currentWindow?.capacity ?? 0),
+        ...prev[windowId],
+        [field]: value,
+      },
     }));
   };
 
