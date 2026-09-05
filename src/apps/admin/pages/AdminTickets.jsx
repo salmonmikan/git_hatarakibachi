@@ -40,6 +40,7 @@ export default function AdminTickets() {
   const [eventTotal, setEventTotal] = useState(0);
   const [reservationLoading, setReservationLoading] = useState(false);
   const [addingWindow, setAddingWindow] = useState(false);
+  const [savingEvent, setSavingEvent] = useState(false);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedId) ?? null,
@@ -59,7 +60,7 @@ export default function AdminTickets() {
         .select('*, windows:ticket_windows(*)', { count: 'exact' })
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .order('sort_order', { foreignTable: 'ticket_windows', ascending: true })
+        .order('sort_order', { foreignTable: 'windows', ascending: true })
         .range(eventFrom, eventTo),
       supabase
         .from('ticket_reservations')
@@ -170,6 +171,7 @@ export default function AdminTickets() {
 
   const onSaveEvent = async (e) => {
     e.preventDefault();
+    if (savingEvent) return;
     const title = form.title.trim();
     if (!title) {
       setError('タイトルを入力してください。');
@@ -191,20 +193,25 @@ export default function AdminTickets() {
       return;
     }
     const isCreatingEvent = !selectedEvent;
-    const res = selectedEvent
-      ? await supabase.from('ticket_events').update(payload).eq('id', selectedEvent.id).select('id').single()
-      : await supabase.from('ticket_events').insert(payload).select('id').single();
+    setSavingEvent(true);
+    try {
+      const res = selectedEvent
+        ? await supabase.from('ticket_events').update(payload).eq('id', selectedEvent.id).select('id').single()
+        : await supabase.from('ticket_events').insert(payload).select('id').single();
 
-    if (res.error) setError(res.error.message);
-    else {
-      const refreshed = await load(reservationPage, isCreatingEvent ? 0 : eventPage);
-      if (!refreshed) {
-        setError(isCreatingEvent
-          ? '販売ページは作成されましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。'
-          : '保存は完了しましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。');
-        return;
+      if (res.error) setError(res.error.message);
+      else {
+        const refreshed = await load(reservationPage, isCreatingEvent ? 0 : eventPage);
+        if (!refreshed) {
+          setError(isCreatingEvent
+            ? '販売ページは作成されましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。'
+            : '保存は完了しましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。');
+          return;
+        }
+        setSelectedId(res.data.id);
       }
-      setSelectedId(res.data.id);
+    } finally {
+      setSavingEvent(false);
     }
   };
 
@@ -232,8 +239,11 @@ export default function AdminTickets() {
       });
       if (res.error) setError(res.error.message);
       else {
+        const refreshed = await load(reservationPage);
         setWindowForm({ label: '', starts_at: '', capacity: '0' });
-        await load(reservationPage);
+        if (!refreshed) {
+          setError('予約枠は追加されましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。');
+        }
       }
     } finally {
       setAddingWindow(false);
@@ -333,10 +343,10 @@ export default function AdminTickets() {
       <div className="admin-ticket-grid">
         <section className="admin-ticket-panel">
           <h2>販売ページ</h2>
-          <button type="button" className="admin-view__button" onClick={() => setSelectedId(null)}>新規作成</button>
+          <button type="button" className="admin-view__button" onClick={() => setSelectedId(null)} disabled={savingEvent}>新規作成</button>
           <div className="admin-view__list">
             {events.map((event) => (
-              <button key={event.id} type="button" className="admin-view__link" onClick={() => setSelectedId(event.id)}>
+              <button key={event.id} type="button" className="admin-view__link" onClick={() => setSelectedId(event.id)} disabled={savingEvent}>
                 <div className="admin-view__name">{event.title}</div>
                 <small>
                   /{`tickets/${event.slug}`} / {TICKET_STATUS_LABEL[event.status] ?? event.status} /{' '}
@@ -350,7 +360,7 @@ export default function AdminTickets() {
               <button
                 type="button"
                 className="admin-view__button"
-                disabled={loading || eventPage === 0}
+                disabled={loading || savingEvent || eventPage === 0}
                 onClick={() => load(reservationPage, eventPage - 1)}
               >
                 前の200件
@@ -361,7 +371,7 @@ export default function AdminTickets() {
               <button
                 type="button"
                 className="admin-view__button"
-                disabled={loading || (eventPage + 1) * EVENTS_PAGE_SIZE >= eventTotal}
+                disabled={loading || savingEvent || (eventPage + 1) * EVENTS_PAGE_SIZE >= eventTotal}
                 onClick={() => load(reservationPage, eventPage + 1)}
               >
                 次の200件
@@ -395,7 +405,7 @@ export default function AdminTickets() {
               </select>
             </label>
             <label>状態<select name="status" value={form.status} onChange={onFormChange}><option value="draft">下書き</option><option value="published">公開中</option><option value="closed">受付終了</option></select></label>
-            <button className="admin-view__button" type="submit">保存</button>
+            <button className="admin-view__button" type="submit" disabled={savingEvent}>{savingEvent ? '保存中...' : '保存'}</button>
           </form>
 
           {linkedSanityPerformance ? (
