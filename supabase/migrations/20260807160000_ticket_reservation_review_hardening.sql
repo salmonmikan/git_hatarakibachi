@@ -198,7 +198,7 @@ language plpgsql
 stable
 security definer
 set search_path = ''
-as $$;
+as $$
 begin
   if (select auth.uid()) is null or not exists (
     select 1
