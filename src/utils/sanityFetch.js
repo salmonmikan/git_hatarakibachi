@@ -23,6 +23,7 @@ const client = createClient({
   dataset: DATASET,
   useCdn: true,
   apiVersion: API_VERSION,
+  perspective: 'published',
 })
 
 const previewClient = createClient({
@@ -97,7 +98,13 @@ export async function getTicketPerformanceOptions() {
     performanceDate,
     venue
   }`
-  return sanityFetch(query)
+
+  try {
+    return await client.fetch(query)
+  } catch (error) {
+    console.error('Sanity published performance fetch error:', error)
+    return null
+  }
 }
 
 export function getSanityPerformancePublicUrl(slug) {
