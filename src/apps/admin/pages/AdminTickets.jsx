@@ -197,7 +197,13 @@ export default function AdminTickets() {
 
     if (res.error) setError(res.error.message);
     else {
-      await load(reservationPage, isCreatingEvent ? 0 : eventPage);
+      const refreshed = await load(reservationPage, isCreatingEvent ? 0 : eventPage);
+      if (!refreshed) {
+        setError(isCreatingEvent
+          ? '販売ページは作成されましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。'
+          : '保存は完了しましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。');
+        return;
+      }
       setSelectedId(res.data.id);
     }
   };
@@ -378,6 +384,9 @@ export default function AdminTickets() {
               {sanityPerformanceLoadError && <small className="admin-ticket-sanity-warning">Sanity公演情報を取得できません。連携先を確認してから公開してください。</small>}
               <select name="sanity_performance_id" value={form.sanity_performance_id} onChange={onFormChange} required={['published', 'closed'].includes(form.status)}>
                 <option value="">未連携（下書きのみ）</option>
+                {form.sanity_performance_id && !sanityPerformances.some((performance) => performance._id === form.sanity_performance_id) && (
+                  <option value={form.sanity_performance_id}>現在の連携先（候補一覧外）: {form.sanity_performance_id}</option>
+                )}
                 {sanityPerformances.map((performance) => (
                   <option key={performance._id} value={performance._id}>
                     {performance.title} {performance.slug ? `(/${performance.slug})` : ''}
