@@ -136,6 +136,7 @@ export default function TicketReservation({ onEntered }) {
   const onChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setReservationCode(null);
     setReservationRequestId(null);
   };
 
@@ -146,6 +147,7 @@ export default function TicketReservation({ onEntered }) {
       setError(`選択した予約枠の残数以内で、1〜${maxQuantity}枚を指定してください。`);
       return;
     }
+    const retryingRequest = Boolean(reservationRequestId);
     const requestId = reservationRequestId ?? globalThis.crypto?.randomUUID?.();
     if (!requestId) {
       setError('予約処理に必要なリクエストIDを生成できませんでした。');
@@ -153,6 +155,7 @@ export default function TicketReservation({ onEntered }) {
     }
     setSaving(true);
     setError(null);
+    if (!retryingRequest) setReservationCode(null);
     setReservationRequestId(requestId);
 
     const payload = {
@@ -228,9 +231,10 @@ export default function TicketReservation({ onEntered }) {
                   checked={selectedWindowId === String(windowItem.id)}
                   onChange={(e) => {
                     setSelectedWindowId(e.target.value);
+                    setReservationCode(null);
                     setReservationRequestId(null);
                   }}
-                  disabled={!isWindowAvailable(windowItem)}
+                  disabled={saving || !canReserve || !isWindowAvailable(windowItem)}
                 />
                 <span>
                   <strong>{windowItem.label}</strong>
