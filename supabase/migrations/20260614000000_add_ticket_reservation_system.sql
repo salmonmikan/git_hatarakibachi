@@ -64,9 +64,7 @@ create policy "Public can read ticket windows"
   ));
 
 drop policy if exists "Public can create ticket reservations" on public.ticket_reservations;
-create policy "Public can create ticket reservations"
-  on public.ticket_reservations for insert
-  with check (deleted_at is null and status = 'reserved');
+revoke insert on table public.ticket_reservations from anon;
 
 -- 管理画面は既存の認証済みユーザー運用に合わせ、チケット関連の全操作を許可する。
 drop policy if exists "Authenticated can manage ticket events" on public.ticket_events;
