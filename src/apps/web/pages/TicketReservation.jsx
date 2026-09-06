@@ -40,6 +40,10 @@ function findSelectableWindowId(windowItems, preferredId = '') {
   return nextWindow ? String(nextWindow.id) : '';
 }
 
+function isDefinitiveReservationFailure(error) {
+  return typeof error?.code === 'string' && error.code.trim() !== '';
+}
+
 export default function TicketReservation({ onEntered }) {
   const { slug } = useParams();
   const reduce = useReducedMotion();
@@ -119,7 +123,8 @@ export default function TicketReservation({ onEntered }) {
   const canReserve = accepting && (!isWindowedEvent || (
     hasAvailableWindow && Boolean(selectedWindowId) && Boolean(selectedWindow) && isWindowAvailable(selectedWindow)
   ));
-  const canRetryReservation = Boolean(reservationRequestId);
+  const retryLocked = Boolean(reservationRequestId);
+  const canRetryReservation = retryLocked;
   const canSubmitReservation = canReserve || canRetryReservation;
 
   useEffect(() => {
@@ -134,10 +139,12 @@ export default function TicketReservation({ onEntered }) {
   }, [maxQuantity]);
 
   const onChange = (e) => {
+    if (reservationRequestId) return;
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setReservationCode(null);
     setReservationRequestId(null);
+    setError(null);
   };
 
   const onSubmit = async (e) => {
@@ -171,6 +178,9 @@ export default function TicketReservation({ onEntered }) {
     const res = await createTicketReservation(payload);
     if (res.error) {
       setError(res.error.message);
+      if (isDefinitiveReservationFailure(res.error)) {
+        setReservationRequestId(null);
+      }
       setSaving(false);
       return;
     }
@@ -230,11 +240,13 @@ export default function TicketReservation({ onEntered }) {
                   value={windowItem.id}
                   checked={selectedWindowId === String(windowItem.id)}
                   onChange={(e) => {
+                    if (reservationRequestId) return;
                     setSelectedWindowId(e.target.value);
                     setReservationCode(null);
                     setReservationRequestId(null);
+                    setError(null);
                   }}
-                  disabled={saving || Boolean(reservationRequestId) || !accepting || !isWindowAvailable(windowItem)}
+                  disabled={saving || retryLocked || !accepting || !isWindowAvailable(windowItem)}
                 />
                 <span>
                   <strong>{windowItem.label}</strong>
@@ -254,7 +266,7 @@ export default function TicketReservation({ onEntered }) {
         ) : (
           <p>自由席として予約を受け付けます。</p>
         )}
-        {isWindowedEvent && !hasAvailableWindow && (
+        {windows.length > 0 && !hasAvailableWindow && (
           <p className="ticket-page__notice">現在、予約可能な枠がありません。</p>
         )}
       </section>
@@ -271,19 +283,19 @@ export default function TicketReservation({ onEntered }) {
         <form className="ticket-form" onSubmit={onSubmit}>
           <label>
             お名前
-            <input name="customer_name" value={form.customer_name} onChange={onChange} maxLength="200" required disabled={saving || !canReserve} />
+            <input name="customer_name" value={form.customer_name} onChange={onChange} maxLength="200" required disabled={saving || retryLocked || !canReserve} />
           </label>
           <label>
             メールアドレス
-            <input type="email" name="customer_email" value={form.customer_email} onChange={onChange} maxLength="320" required disabled={saving || !canReserve} />
+            <input type="email" name="customer_email" value={form.customer_email} onChange={onChange} maxLength="320" required disabled={saving || retryLocked || !canReserve} />
           </label>
           <label>
             枚数
-            <input type="number" name="quantity" min="1" max={maxQuantity} value={form.quantity} onChange={onChange} required disabled={saving || !canReserve} />
+            <input type="number" name="quantity" min="1" max={maxQuantity} value={form.quantity} onChange={onChange} required disabled={saving || retryLocked || !canReserve} />
           </label>
           <label>
             備考
-            <textarea name="note" value={form.note} onChange={onChange} maxLength="2000" rows="4" disabled={saving || !canReserve} />
+            <textarea name="note" value={form.note} onChange={onChange} maxLength="2000" rows="4" disabled={saving || retryLocked || !canReserve} />
           </label>
           <button type="submit" disabled={saving || !canSubmitReservation || !hasValidQuantity}>{saving ? '送信中...' : '予約する'}</button>
         </form>
