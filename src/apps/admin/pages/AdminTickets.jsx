@@ -42,12 +42,14 @@ export default function AdminTickets() {
   const [reservationLoading, setReservationLoading] = useState(false);
   const [activeMutation, setActiveMutation] = useState(null);
   const activeMutationRef = useRef(null);
+  const reservationLoadingRef = useRef(false);
 
   const selectedEvent = useMemo(
     () => events.find((event) => event.id === selectedId) ?? null,
     [events, selectedId]
   );
   const mutationBusy = activeMutation !== null;
+  const writeBlocked = mutationBusy || reservationLoading;
   const savingEvent = activeMutation?.type === 'event-save';
   const windowMutation = activeMutation?.type?.startsWith('window-') ? activeMutation : null;
   const cancellingReservationId = activeMutation?.type === 'reservation-cancel'
@@ -118,25 +120,33 @@ export default function AdminTickets() {
   };
 
   const loadReservations = async (page) => {
+    if (reservationLoadingRef.current || activeMutationRef.current !== null) return false;
+    reservationLoadingRef.current = true;
     setReservationLoading(true);
     setError(null);
-    const reservationFrom = page * RESERVATIONS_PAGE_SIZE;
-    const reservationTo = reservationFrom + RESERVATIONS_PAGE_SIZE - 1;
-    const reservationRes = await supabase
-      .from('ticket_reservations')
-      .select('*, event:ticket_events(title), window:ticket_windows(label)', { count: 'exact' })
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .range(reservationFrom, reservationTo);
+    try {
+      const reservationFrom = page * RESERVATIONS_PAGE_SIZE;
+      const reservationTo = reservationFrom + RESERVATIONS_PAGE_SIZE - 1;
+      const reservationRes = await supabase
+        .from('ticket_reservations')
+        .select('*, event:ticket_events(title), window:ticket_windows(label)', { count: 'exact' })
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .range(reservationFrom, reservationTo);
 
-    if (reservationRes.error) {
-      setError(reservationRes.error.message);
-    } else {
+      if (reservationRes.error) {
+        setError(reservationRes.error.message);
+        return false;
+      }
+
       setReservations(reservationRes.data ?? []);
       setReservationPage(page);
       setReservationTotal(reservationRes.count ?? 0);
+      return true;
+    } finally {
+      reservationLoadingRef.current = false;
+      setReservationLoading(false);
     }
-    setReservationLoading(false);
   };
 
   useEffect(() => {
@@ -174,7 +184,7 @@ export default function AdminTickets() {
   }, [selectedId]);
 
   const beginMutation = (mutation) => {
-    if (activeMutationRef.current !== null) return false;
+    if (activeMutationRef.current !== null || reservationLoadingRef.current) return false;
     activeMutationRef.current = mutation;
     setActiveMutation(mutation);
     return true;
@@ -207,7 +217,7 @@ export default function AdminTickets() {
 
   const onSaveEvent = async (e) => {
     e.preventDefault();
-    if (activeMutationRef.current !== null) return;
+    if (activeMutationRef.current !== null || reservationLoadingRef.current) return;
     const title = form.title.trim();
     if (!title) {
       setError('タイトルを入力してください。');
@@ -254,7 +264,7 @@ export default function AdminTickets() {
 
   const onAddWindow = async (e) => {
     e.preventDefault();
-    if (!selectedEvent || activeMutationRef.current !== null) return;
+    if (!selectedEvent || activeMutationRef.current !== null || reservationLoadingRef.current) return;
     const label = windowForm.label.trim();
     if (!label) {
       setError('枠名を入力してください。');
@@ -303,7 +313,7 @@ export default function AdminTickets() {
 
   const onSaveWindow = async (e, windowId) => {
     e.preventDefault();
-    if (activeMutationRef.current !== null) return;
+    if (activeMutationRef.current !== null || reservationLoadingRef.current) return;
     const values = windowForms[windowId];
     const currentWindow = selectedEvent?.windows?.find((item) => item.id === windowId);
     if (!values || !currentWindow) return;
@@ -324,11 +334,12 @@ export default function AdminTickets() {
     }
     if (!beginMutation({ type: 'window-save', windowId })) return;
     try {
+      const startsAt = fromDatetimeLocal(values.starts_at, currentWindow.starts_at);
       const res = await supabase
         .from('ticket_windows')
         .update({
           label,
-          starts_at: fromDatetimeLocal(values.starts_at, currentWindow.starts_at),
+          starts_at: startsAt,
           capacity,
         })
         .eq('id', windowId)
@@ -337,14 +348,29 @@ export default function AdminTickets() {
         .select('id')
         .single();
       if (res.error) setError(res.error.message);
-      else await load(reservationPage);
+      else {
+        setEvents((currentEvents) => currentEvents.map((eventItem) => (
+          eventItem.id === selectedEvent.id
+            ? {
+                ...eventItem,
+                windows: (eventItem.windows ?? []).map((item) => (
+                  item.id === windowId ? { ...item, label, starts_at: startsAt, capacity } : item
+                )),
+              }
+            : eventItem
+        )));
+        const refreshed = await load(reservationPage);
+        if (!refreshed) {
+          setError('予約枠は保存されましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。');
+        }
+      }
     } finally {
       endMutation();
     }
   };
 
   const onDeleteWindow = async (windowId) => {
-    if (activeMutationRef.current !== null) return;
+    if (activeMutationRef.current !== null || reservationLoadingRef.current) return;
     const currentWindow = selectedEvent?.windows?.find((item) => item.id === windowId);
     if (!currentWindow) return;
     const reservedQuantity = Number(currentWindow.reserved_quantity ?? 0);
@@ -356,14 +382,35 @@ export default function AdminTickets() {
     try {
       const res = await supabase.rpc('delete_ticket_window', { p_window_id: windowId });
       if (res.error) setError(res.error.message);
-      else await load(reservationPage);
+      else {
+        const deletedAt = new Date().toISOString();
+        setEvents((currentEvents) => currentEvents.map((eventItem) => (
+          eventItem.id === selectedEvent.id
+            ? {
+                ...eventItem,
+                windows: (eventItem.windows ?? []).map((item) => (
+                  item.id === windowId ? { ...item, deleted_at: deletedAt } : item
+                )),
+              }
+            : eventItem
+        )));
+        setWindowForms((currentForms) => {
+          const nextForms = { ...currentForms };
+          delete nextForms[windowId];
+          return nextForms;
+        });
+        const refreshed = await load(reservationPage);
+        if (!refreshed) {
+          setError('予約枠は販売停止・削除済みですが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。');
+        }
+      }
     } finally {
       endMutation();
     }
   };
 
   const onCancelReservation = async (reservation) => {
-    if (activeMutationRef.current !== null) return;
+    if (activeMutationRef.current !== null || reservationLoadingRef.current) return;
     const warning = `予約番号 ${reservation.reservation_code} をキャンセルします。この操作は元に戻せません。続行しますか？`;
     if (typeof window !== 'undefined' && !window.confirm(warning)) return;
     if (!beginMutation({ type: 'reservation-cancel', reservationId: reservation.id })) return;
@@ -460,7 +507,7 @@ export default function AdminTickets() {
               </select>
             </label>
             <label>状態<select name="status" value={form.status} onChange={onFormChange} disabled={mutationBusy}><option value="draft">下書き</option><option value="published">公開中</option><option value="closed">受付終了</option></select></label>
-            <button className="admin-view__button" type="submit" disabled={mutationBusy}>{savingEvent ? '保存中...' : '保存'}</button>
+            <button className="admin-view__button" type="submit" disabled={writeBlocked}>{savingEvent ? '保存中...' : '保存'}</button>
           </form>
 
           {linkedSanityPerformance ? (
@@ -487,7 +534,7 @@ export default function AdminTickets() {
                 <label>枠名<input value={windowForm.label} onChange={(e) => setWindowForm((prev) => ({ ...prev, label: e.target.value }))} required disabled={mutationBusy} /></label>
                 <label>日時<input type="datetime-local" value={windowForm.starts_at} onChange={(e) => setWindowForm((prev) => ({ ...prev, starts_at: e.target.value }))} disabled={mutationBusy} /></label>
                 <label>定員<input type="number" min="0" value={windowForm.capacity} onChange={(e) => setWindowForm((prev) => ({ ...prev, capacity: e.target.value }))} required disabled={mutationBusy} /></label>
-                <button className="admin-view__button" type="submit" disabled={mutationBusy}>{windowMutation?.type === 'window-add' ? '追加中...' : '予約枠を追加'}</button>
+                <button className="admin-view__button" type="submit" disabled={writeBlocked}>{windowMutation?.type === 'window-add' ? '追加中...' : '予約枠を追加'}</button>
               </form>
               <div className="admin-ticket-window-list">
                 <h3>予約枠一覧</h3>
@@ -508,8 +555,8 @@ export default function AdminTickets() {
                         </p>
                         {selectedEvent.status === 'published' && <small>公開中の枠を削除すると販売停止になります。</small>}
                         <div>
-                          <button className="admin-view__button" type="submit" disabled={mutationBusy}>{activeWindowMutation === 'window-save' ? '保存中...' : '予約枠を保存'}</button>
-                          <button className="admin-view__button" type="button" onClick={() => onDeleteWindow(item.id)} disabled={mutationBusy}>{activeWindowMutation === 'window-delete' ? '削除中...' : '販売停止・削除'}</button>
+                          <button className="admin-view__button" type="submit" disabled={writeBlocked}>{activeWindowMutation === 'window-save' ? '保存中...' : '予約枠を保存'}</button>
+                          <button className="admin-view__button" type="button" onClick={() => onDeleteWindow(item.id)} disabled={writeBlocked}>{activeWindowMutation === 'window-delete' ? '削除中...' : '販売停止・削除'}</button>
                         </div>
                       </form>
                     </li>
@@ -543,7 +590,7 @@ export default function AdminTickets() {
                   type="button"
                   className="admin-view__button"
                   onClick={() => onCancelReservation(reservation)}
-                  disabled={mutationBusy}
+                  disabled={writeBlocked}
                 >
                   {cancellingReservationId === reservation.id ? 'キャンセル中...' : 'キャンセル'}
                 </button>
