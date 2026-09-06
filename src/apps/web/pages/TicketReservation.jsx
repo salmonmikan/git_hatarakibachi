@@ -234,7 +234,7 @@ export default function TicketReservation({ onEntered }) {
                     setReservationCode(null);
                     setReservationRequestId(null);
                   }}
-                  disabled={saving || !accepting || !isWindowAvailable(windowItem)}
+                  disabled={saving || Boolean(reservationRequestId) || !accepting || !isWindowAvailable(windowItem)}
                 />
                 <span>
                   <strong>{windowItem.label}</strong>
