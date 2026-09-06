@@ -234,7 +234,7 @@ export default function TicketReservation({ onEntered }) {
                     setReservationCode(null);
                     setReservationRequestId(null);
                   }}
-                  disabled={saving || !canReserve || !isWindowAvailable(windowItem)}
+                  disabled={saving || !accepting || !isWindowAvailable(windowItem)}
                 />
                 <span>
                   <strong>{windowItem.label}</strong>
@@ -255,7 +255,7 @@ export default function TicketReservation({ onEntered }) {
           <p>自由席として予約を受け付けます。</p>
         )}
         {isWindowedEvent && !hasAvailableWindow && (
-          <p className="ticket-page__notice">現在、予約可能な枠がありません。</p>
+          <p className="ticket-page__notice">現在、予約可能な枠がありません。</p>}
         )}
       </section>
 
