@@ -19,7 +19,7 @@ function prefetchMembers() {
 }
 
 
-export default function Member() {
+export default function Member({ onEntered }) {
     const reduce = useReducedMotion();
     const [selected, setSelected] = useState(null);
     const [members, setMembers] = useState([]);

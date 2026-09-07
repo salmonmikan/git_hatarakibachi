@@ -5,14 +5,7 @@ import { trackDataLayerEvent } from '@src/utils/analytics.js';
 
 
 
-export default function MemberCard({ m, id, hurigana, name, role, photoUrl, photoAlt, onOpen }) {
-    async function fetchImg(path, el) {
-        const res = await fetch(`/api/img-url?path=${encodeURIComponent(path)}`);
-        if (!res.ok) throw new Error("failed to get img url");
-        const data = await res.json();
-        el.src = data.url;
-    }
-
+export default function MemberCard({ id, hurigana, name, role, photoUrl, photoAlt, onOpen }) {
     const hasPhoto = Boolean(photoUrl);
     const imageAlt = photoAlt || (name ? `${name} photo` : 'Member photo');
 
@@ -58,7 +51,7 @@ export default function MemberCard({ m, id, hurigana, name, role, photoUrl, phot
                     width={400}
                     height={400}
                     src={returnPhotoUrl(photoUrl, 400, "top")}
-                    alt={name}
+                    alt={imageAlt}
                     {...analyticsProps}
                 />
             ) : (
