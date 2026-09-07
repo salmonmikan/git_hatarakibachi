@@ -17,11 +17,12 @@
 - 枠定員の縮小、予約済み枠のevent変更は専用triggerで保護する。
 - 行単体の文字数、slug、タイトル、日時順、Sanity連携などは新規テーブルのconstraintとして最初から定義する。
 - 予約番号は10文字仕様を維持し、transaction advisory lockを使って衝突候補を再生成する。
-- 既存API互換のため、note有無・request ID有無の公開RPC overloadは維持する。
+- 機能は未リリースで外部互換要件がないため、公開予約RPCの互換overloadを削除し、`note` と `request_id` を受けるcanonical RPC 1本へ整理した。`request_id` は必須、`note` はNULL可とする。
 
 ## レビュー基準
 
 - `AGENTS.md` にDB migrationのsquash条件とレビュー対象を追記した。
+- さらに、不要な状態・互換経路・ページング・キャッシュ等をレビュー指摘ごとに積み増さず、必要性を確認して単純化を優先する一般ルールを追加した。
 - 未リリース・未適用migrationの試行錯誤prefixを独立した本番状態としてP1/P2評価しない。
 - 既に適用済みのmigration、rolling deploy、非transactional操作など実運用で観測可能な中間状態は引き続きレビュー対象とする。
 
@@ -29,5 +30,6 @@
 
 - 本番Supabaseのmigration履歴は2026-04-24までで、予約系migrationが未適用であることを確認した。
 - STG Supabaseには変更を加えていない。
-- GitHub Actions CIと再レビューをsquash後の最新headで確認する。
-- このセッションではローカルSupabase / PostgreSQL実行環境がないため、fresh migrationとpgTAPの実行確認は未実施。
+- canonical RPC契約に合わせてpgTAPテストの呼び出しと権限検査を更新した。
+- GitHub Actions CIと再レビューを最新headで確認する。
+- このセッションではローカルSupabase / PostgreSQL実行環境がないため、fresh migrationとpgTAPの実行確認はGitHub Actions側の検証範囲に依存する。

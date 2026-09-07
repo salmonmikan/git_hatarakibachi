@@ -38,12 +38,9 @@ insert into public.ticket_reservations (
 );
 
 select ok(
-  has_function_privilege(
-    'anon',
-    'public.create_ticket_reservation(bigint,bigint,text,text,integer,text)',
-    'EXECUTE'
-  ),
-  'anon can execute only the public reservation RPC'
+  to_regprocedure('public.create_ticket_reservation(bigint,bigint,text,text,integer,text)') is null
+    and to_regprocedure('public.create_ticket_reservation(bigint,bigint,text,text,integer,uuid)') is null,
+  'legacy reservation RPC overloads are not exposed'
 );
 
 select ok(
@@ -52,7 +49,7 @@ select ok(
     'public.create_ticket_reservation(bigint,bigint,text,text,integer,text,uuid)',
     'EXECUTE'
   ),
-  'anon can execute the idempotent public reservation RPC'
+  'anon can execute the canonical idempotent public reservation RPC'
 );
 
 select ok(
@@ -68,7 +65,7 @@ select ok(
 select ok(
   not has_function_privilege(
     'anon',
-    'private.create_ticket_reservation(bigint,bigint,text,text,integer,text)',
+    'private.create_ticket_reservation(bigint,bigint,text,text,integer,text,uuid)',
     'EXECUTE'
   ),
   'anon cannot execute the private reservation function directly'
@@ -151,7 +148,7 @@ select results_eq(
   $$
     select count(*)
     from public.create_ticket_reservation(
-      910008, null, 'Anonymous customer', 'anon@example.com', 1, null
+      910008, null, 'Anonymous customer', 'anon@example.com', 1, null, gen_random_uuid()
     )
     where reservation_code ~ '^[A-Z0-9]{10}$'
   $$,
@@ -206,98 +203,98 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910002, null, 'Test', 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910002, null, 'Test', 'test@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'Ticket event is not accepting reservations',
   'draft events reject reservations'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910003, null, 'Test', 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910003, null, 'Test', 'test@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'Ticket event is not accepting reservations',
   'closed events reject reservations'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910004, null, 'Test', 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910004, null, 'Test', 'test@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'Ticket event is not accepting reservations',
   'deleted events reject reservations'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910005, null, 'Test', 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910005, null, 'Test', 'test@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'Ticket reservation is not open',
   'events before their opening time reject reservations'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910006, null, 'Test', 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910006, null, 'Test', 'test@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'Ticket reservation is closed',
   'events after their closing time reject reservations'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910001, null, 'Test', 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910001, null, 'Test', 'test@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'A ticket window is required',
   'events with active windows require a window'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910001, 920002, 'Test', 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910001, 920002, 'Test', 'test@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'Ticket window is unavailable',
   'a window from another event is rejected'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910001, 920003, 'Test', 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910001, 920003, 'Test', 'test@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'Ticket window is unavailable',
   'a deleted window is rejected'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910009, 920004, 'Test', 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910009, 920004, 'Test', 'test@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'Ticket window has already started',
   'a reservation cannot target a window that has already started'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910008, null, 'Test', 'test@example.com', 0, null)$$,
+  $$select * from public.create_ticket_reservation(910008, null, 'Test', 'test@example.com', 0, null, gen_random_uuid())$$,
   'P0001',
   'Ticket quantity must be between 1 and 10',
   'zero quantity is rejected in the database'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910008, null, 'Test', 'test@example.com', 11, null)$$,
+  $$select * from public.create_ticket_reservation(910008, null, 'Test', 'test@example.com', 11, null, gen_random_uuid())$$,
   'P0001',
   'Ticket quantity must be between 1 and 10',
   'quantity above the UI maximum is rejected in the database'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910008, null, repeat('N', 201), 'test@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910008, null, repeat('N', 201), 'test@example.com', 1, null, gen_random_uuid())$$,
   '23514',
   'new row for relation "ticket_reservations" violates check constraint "ticket_reservations_customer_name_length_check"',
   'customer names are length-limited in the database'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910008, null, 'Test', repeat('e', 321) || '@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910008, null, 'Test', repeat('e', 321) || '@example.com', 1, null, gen_random_uuid())$$,
   '23514',
   'new row for relation "ticket_reservations" violates check constraint "ticket_reservations_customer_email_length_check"',
   'customer email addresses are length-limited in the database'
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910008, null, 'Test', 'test@example.com', 1, repeat('N', 2001))$$,
+  $$select * from public.create_ticket_reservation(910008, null, 'Test', 'test@example.com', 1, repeat('N', 2001), gen_random_uuid())$$,
   '23514',
   'new row for relation "ticket_reservations" violates check constraint "ticket_reservations_note_length_check"',
   'reservation notes are length-limited in the database'
@@ -307,7 +304,7 @@ select results_eq(
   $$
     select count(*)
     from public.create_ticket_reservation(
-      910001, 920001, 'Capacity customer', 'capacity@example.com', 2, null
+      910001, 920001, 'Capacity customer', 'capacity@example.com', 2, null, gen_random_uuid()
     )
   $$,
   array[1::bigint],
@@ -315,7 +312,7 @@ select results_eq(
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910001, 920001, 'Overflow', 'overflow@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910001, 920001, 'Overflow', 'overflow@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'Ticket window does not have enough capacity',
   'a reservation cannot exceed remaining capacity'
@@ -379,7 +376,7 @@ select results_eq(
   $$
     select count(*)
     from public.create_ticket_reservation(
-      910008, null, 'Authenticated customer', 'authenticated@example.com', 1, null
+      910008, null, 'Authenticated customer', 'authenticated@example.com', 1, null, gen_random_uuid()
     )
   $$,
   array[1::bigint],
@@ -573,7 +570,7 @@ select lives_ok(
 );
 
 select throws_ok(
-  $$select * from public.create_ticket_reservation(910001, null, 'No window', 'no-window@example.com', 1, null)$$,
+  $$select * from public.create_ticket_reservation(910001, null, 'No window', 'no-window@example.com', 1, null, gen_random_uuid())$$,
   'P0001',
   'A ticket window is required',
   'deleting all windows does not silently convert a windowed event to free seating'
