@@ -153,6 +153,23 @@ export default function TicketReservation({ onEntered }) {
     setError(null);
   };
 
+  const refreshAvailability = async () => {
+    if (saving || reservationRequestId) return;
+    setLoading(true);
+    setLoadError(null);
+    setError(null);
+    const refreshed = await fetchPublishedTicketEvent(slug);
+    if (refreshed.error || !refreshed.data) {
+      setEvent(null);
+      setSelectedWindowId('');
+      setLoadError(refreshed.error?.message ?? '予約ページの最新状態を取得できませんでした。');
+    } else {
+      setEvent(refreshed.data);
+      setSelectedWindowId(findSelectableWindowId(refreshed.data.windows ?? [], selectedWindowId));
+    }
+    setLoading(false);
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!event || !canSubmitReservation) return;
@@ -187,9 +204,13 @@ export default function TicketReservation({ onEntered }) {
       if (isDefinitiveReservationFailure(res.error)) {
         setReservationRequestId(null);
         const refreshed = await fetchPublishedTicketEvent(slug);
-        if (!refreshed.error) {
+        if (refreshed.error || !refreshed.data) {
+          setEvent(null);
+          setSelectedWindowId('');
+          setLoadError(refreshed.error?.message ?? '予約状況を再取得できませんでした。ページを再読み込みしてください。');
+        } else {
           setEvent(refreshed.data);
-          setSelectedWindowId(findSelectableWindowId(refreshed.data?.windows ?? [], selectedWindowId));
+          setSelectedWindowId(findSelectableWindowId(refreshed.data.windows ?? [], selectedWindowId));
         }
       }
       setSaving(false);
@@ -236,6 +257,7 @@ export default function TicketReservation({ onEntered }) {
 
       <section className="ticket-page__panel" aria-labelledby="ticket-window-title">
         <h2 id="ticket-window-title">予約枠</h2>
+        <button type="button" onClick={refreshAvailability} disabled={saving || retryLocked}>空席状況を更新</button>
         {windows.length ? (
           <div className="ticket-window-list">
             {windows.map((windowItem) => (
@@ -274,6 +296,8 @@ export default function TicketReservation({ onEntered }) {
           </div>
         ) : event.has_window_history ? (
           <p>現在、予約可能な枠がありません。</p>
+        ) : event.status === 'closed' ? (
+          <p>予約受付は終了しました。</p>
         ) : (
           <p>自由席として予約を受け付けます。</p>
         )}
