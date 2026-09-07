@@ -41,10 +41,12 @@ export async function fetchPublishedTicketEvent(slug) {
     data: {
       ...eventRes.data,
       has_window_history: windowHistoryRes.data === true,
-      windows: (eventRes.data.windows ?? []).map((windowItem) => ({
-        ...windowItem,
-        ...(availabilityByWindowId.get(String(windowItem.id)) ?? {}),
-      })),
+      windows: (eventRes.data.windows ?? [])
+        .filter((windowItem) => availabilityByWindowId.has(String(windowItem.id)))
+        .map((windowItem) => ({
+          ...windowItem,
+          ...availabilityByWindowId.get(String(windowItem.id)),
+        })),
     },
     error: null,
   };
@@ -58,7 +60,7 @@ export async function createTicketReservation(payload) {
       p_customer_name: payload.customer_name,
       p_customer_email: payload.customer_email,
       p_quantity: payload.quantity,
-      p_note: payload.note,
+      p_note: payload.note ?? null,
       p_request_id: payload.request_id,
     })
     .single();

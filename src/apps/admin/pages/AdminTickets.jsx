@@ -230,6 +230,21 @@ export default function AdminTickets() {
       setError('公開する販売ページにはSanity公演情報を連携してください。');
       return;
     }
+    const keepsExistingPublishedLink = Boolean(
+      selectedEvent
+      && ['published', 'closed'].includes(selectedEvent.status)
+      && payload.sanity_performance_id === selectedEvent.sanity_performance_id
+    );
+    const mustVerifySanityCandidate = ['published', 'closed'].includes(form.status)
+      && !keepsExistingPublishedLink;
+    if (mustVerifySanityCandidate && !sanityPerformances.some(
+      (performance) => performance._id === payload.sanity_performance_id
+    )) {
+      setError(sanityPerformanceLoadError
+        ? 'Sanity公演情報を取得できないため、新規公開または連携先の変更はできません。'
+        : '公開する販売ページには、現在公開済みのSanity公演を連携してください。');
+      return;
+    }
     const isCreatingEvent = creatingEvent || !selectedEvent;
     if (!beginMutation({ type: 'event-save' })) return;
     try {
