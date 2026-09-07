@@ -31,5 +31,5 @@
 - 本番Supabaseのmigration履歴は2026-04-24までで、予約系migrationが未適用であることを確認した。
 - STG Supabaseには変更を加えていない。
 - canonical RPC契約に合わせてpgTAPテストの呼び出しと権限検査を更新した。
-- GitHub Actions CIと再レビューを最新headで確認する。
-- このセッションではローカルSupabase / PostgreSQL実行環境がないため、fresh migrationとpgTAPの実行確認はGitHub Actions側の検証範囲に依存する。
+- GitHub Actionsのdatabase jobでfresh migration再適用後に `supabase test db --local` を実行し、`supabase/tests` 配下のpgTAPを自動検証するようにした。
+- 共有・本番DBには検証目的のapplyを行わない。
