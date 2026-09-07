@@ -525,67 +525,6 @@ revoke all on function private.create_ticket_reservation(
   bigint, bigint, text, text, integer, text, uuid
 ) from public, anon, authenticated;
 
-create or replace function private.create_ticket_reservation(
-  p_event_id bigint,
-  p_window_id bigint,
-  p_customer_name text,
-  p_customer_email text,
-  p_quantity integer,
-  p_note text default null
-)
-returns table (reservation_code text)
-language sql
-security definer
-set search_path = ''
-as $$
-  select *
-  from private.create_ticket_reservation(
-    p_event_id,
-    p_window_id,
-    p_customer_name,
-    p_customer_email,
-    p_quantity,
-    p_note,
-    gen_random_uuid()
-  );
-$$;
-
-revoke all on function private.create_ticket_reservation(
-  bigint, bigint, text, text, integer, text
-) from public, anon, authenticated;
-
-create or replace function public.create_ticket_reservation(
-  p_event_id bigint,
-  p_window_id bigint,
-  p_customer_name text,
-  p_customer_email text,
-  p_quantity integer,
-  p_note text default null
-)
-returns table (reservation_code text)
-language sql
-security definer
-set search_path = ''
-as $$
-  select *
-  from private.create_ticket_reservation(
-    p_event_id,
-    p_window_id,
-    p_customer_name,
-    p_customer_email,
-    p_quantity,
-    p_note,
-    gen_random_uuid()
-  );
-$$;
-
-revoke all on function public.create_ticket_reservation(
-  bigint, bigint, text, text, integer, text
-) from public;
-grant execute on function public.create_ticket_reservation(
-  bigint, bigint, text, text, integer, text
-) to anon, authenticated;
-
 create or replace function public.create_ticket_reservation(
   p_event_id bigint,
   p_window_id bigint,
@@ -617,38 +556,6 @@ revoke all on function public.create_ticket_reservation(
 ) from public;
 grant execute on function public.create_ticket_reservation(
   bigint, bigint, text, text, integer, text, uuid
-) to anon, authenticated;
-
-create or replace function public.create_ticket_reservation(
-  p_event_id bigint,
-  p_window_id bigint,
-  p_customer_name text,
-  p_customer_email text,
-  p_quantity integer,
-  p_request_id uuid
-)
-returns table (reservation_code text)
-language sql
-security definer
-set search_path = ''
-as $$
-  select *
-  from private.create_ticket_reservation(
-    p_event_id,
-    p_window_id,
-    p_customer_name,
-    p_customer_email,
-    p_quantity,
-    null::text,
-    p_request_id
-  );
-$$;
-
-revoke all on function public.create_ticket_reservation(
-  bigint, bigint, text, text, integer, uuid
-) from public;
-grant execute on function public.create_ticket_reservation(
-  bigint, bigint, text, text, integer, uuid
 ) to anon, authenticated;
 
 create or replace function public.get_ticket_window_availability(p_event_id bigint)
