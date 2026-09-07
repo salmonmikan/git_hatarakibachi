@@ -354,7 +354,17 @@ export default function AdminTickets() {
             ? {
                 ...eventItem,
                 windows: (eventItem.windows ?? []).map((item) => (
-                  item.id === windowId ? { ...item, label, starts_at: startsAt, capacity } : item
+                  item.id === windowId
+                    ? {
+                        ...item,
+                        label,
+                        starts_at: startsAt,
+                        capacity,
+                        remaining_quantity: capacity > 0
+                          ? Math.max(capacity - reservedQuantity, 0)
+                          : null,
+                      }
+                    : item
                 )),
               }
             : eventItem
@@ -462,7 +472,7 @@ export default function AdminTickets() {
               <button
                 type="button"
                 className="admin-view__button"
-                disabled={loading || mutationBusy || eventPage === 0}
+                disabled={loading || writeBlocked || eventPage === 0}
                 onClick={() => load(reservationPage, eventPage - 1)}
               >
                 前の200件
@@ -473,7 +483,7 @@ export default function AdminTickets() {
               <button
                 type="button"
                 className="admin-view__button"
-                disabled={loading || mutationBusy || (eventPage + 1) * EVENTS_PAGE_SIZE >= eventTotal}
+                disabled={loading || writeBlocked || (eventPage + 1) * EVENTS_PAGE_SIZE >= eventTotal}
                 onClick={() => load(reservationPage, eventPage + 1)}
               >
                 次の200件
