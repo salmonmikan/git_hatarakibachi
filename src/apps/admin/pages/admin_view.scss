@@ -28,14 +28,14 @@
 
 .admin-view__link {
     display: block;
-    border: 1px solid #eee;
+    border: 1px solid var(--color-border);
     // width: 100%;
     min-width: 200px;
     border-radius: 12px;
     padding: 10px;
     text-decoration: none;
-    color: inherit;
-    background: #fff;
+    color: var(--color-text);
+    background: var(--color-bg);
 
     &[data-visual="button"] {
         color: black;
