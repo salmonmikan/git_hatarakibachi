@@ -25,6 +25,19 @@ If there are conflicting rules in codex/AGENTS.md, the rules in codex/AGENTS.md 
 - 既存の未コミット変更はユーザーの作業として扱い、勝手に戻さない。
 - Treat existing uncommitted changes as the user's work and never revert them without permission.
 
+## 複雑性とレビュー対応
+
+- 新しい状態、互換経路、キャッシュ、リトライ、ページング、抽象化、重複検証を追加する前に、現在の要件・規模・実際の障害モードで必要かを確認する。仮想的な将来要件だけを理由に複雑性を増やさない。
+- Before adding state, compatibility paths, caching, retries, pagination, abstractions, or duplicated validation, verify that current requirements, scale, or real failure modes justify them. Do not add complexity solely for hypothetical future needs.
+- レビュー指摘の根本原因が不要な複雑性にある場合は、例外分岐や状態を追加して塞ぐより、不要な機能・状態・互換層を削除または単純化する対応を優先する。
+- When a review finding is caused by unnecessary complexity, prefer removing or simplifying the unnecessary feature, state, or compatibility layer instead of adding more branches or state to patch each edge case.
+- サーバーやDB由来の派生値をクライアント側で保持する場合、取得後に変化し得る値を権威ある値として扱わない。再取得できない場合は、古い値から完全な状態を推測するより未確定として扱う。
+- When keeping client-side derived values from a server or database, do not treat values that can change after fetch as authoritative. If refresh fails, prefer marking the value unknown/stale over reconstructing authoritative state from stale data.
+- 未リリースで外部利用者のいないインターフェースは、明確な互換要件がない限り過去の試行APIとの互換性を維持しない。リリース後の互換性は実際の利用契約・移行方針に基づいて判断する。
+- For unreleased interfaces with no external consumers, do not preserve compatibility with experimental APIs unless a concrete compatibility requirement exists. After release, decide compatibility from the actual support and migration contract.
+- レビューコメントは再現性、要求仕様、影響度を確認してから対応する。妥当でない指摘を機械的に実装せず、妥当な指摘でも単純化で根本原因を除ける場合はその方法を優先する。
+- Evaluate review comments for reproducibility, requirements, and impact before changing code. Do not mechanically implement invalid findings, and prefer root-cause simplification when it resolves a valid finding more cleanly.
+
 ## DB migration とレビュー方針
 
 - 未リリースかつ共有環境へ未適用の新機能 migration は、マージ前に可能な限り最終形へ整理し、レビュー修正だけを目的とした細切れ migration を積み重ねない。

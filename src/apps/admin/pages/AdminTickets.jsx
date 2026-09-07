@@ -21,7 +21,6 @@ const eventDefaults = {
 };
 
 const RESERVATIONS_PAGE_SIZE = 200;
-const EVENTS_PAGE_SIZE = 200;
 
 export default function AdminTickets() {
   const [events, setEvents] = useState([]);
@@ -37,8 +36,6 @@ export default function AdminTickets() {
   const [error, setError] = useState(null);
   const [reservationPage, setReservationPage] = useState(0);
   const [reservationTotal, setReservationTotal] = useState(0);
-  const [eventPage, setEventPage] = useState(0);
-  const [eventTotal, setEventTotal] = useState(0);
   const [reservationLoading, setReservationLoading] = useState(false);
   const [activeMutation, setActiveMutation] = useState(null);
   const activeMutationRef = useRef(null);
@@ -57,21 +54,18 @@ export default function AdminTickets() {
     : null;
   const studioDataset = import.meta.env.DEV ? 'staging' : getAdminSanityDataset();
 
-  const load = async (page = reservationPage, eventPageToLoad = eventPage) => {
+  const load = async (page = reservationPage) => {
     setLoading(true);
     setError(null);
     const reservationFrom = page * RESERVATIONS_PAGE_SIZE;
     const reservationTo = reservationFrom + RESERVATIONS_PAGE_SIZE - 1;
-    const eventFrom = eventPageToLoad * EVENTS_PAGE_SIZE;
-    const eventTo = eventFrom + EVENTS_PAGE_SIZE - 1;
     const [eventRes, reservationRes, reservationTotalsRes] = await Promise.all([
       supabase
         .from('ticket_events')
-        .select('*, windows:ticket_windows(*)', { count: 'exact' })
+        .select('*, windows:ticket_windows(*)')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .order('sort_order', { foreignTable: 'windows', ascending: true })
-        .range(eventFrom, eventTo),
+        .order('sort_order', { foreignTable: 'windows', ascending: true }),
       supabase
         .from('ticket_reservations')
         .select('*, event:ticket_events(title), window:ticket_windows(label)', { count: 'exact' })
@@ -111,8 +105,6 @@ export default function AdminTickets() {
       setSanityPerformanceLoadError(sanityPerformanceRes === null);
       setReservationPage(page);
       setReservationTotal(reservationRes.count ?? 0);
-      setEventPage(eventPageToLoad);
-      setEventTotal(eventRes.count ?? 0);
       if (!selectedId && !creatingEvent && eventRes.data?.[0]) setSelectedId(eventRes.data[0].id);
     }
     setLoading(false);
@@ -247,7 +239,7 @@ export default function AdminTickets() {
 
       if (res.error) setError(res.error.message);
       else {
-        const refreshed = await load(reservationPage, isCreatingEvent ? 0 : eventPage);
+        const refreshed = await load(reservationPage);
         if (!refreshed) {
           setError(isCreatingEvent
             ? '販売ページは作成されましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。'
@@ -323,13 +315,8 @@ export default function AdminTickets() {
       return;
     }
     const capacity = Number(values.capacity);
-    const reservedQuantity = Number(currentWindow.reserved_quantity ?? 0);
     if (!values.capacity.trim() || !Number.isInteger(capacity) || capacity < 0) {
       setError('定員は0以上の整数で入力してください。');
-      return;
-    }
-    if (capacity > 0 && reservedQuantity > capacity) {
-      setError('既存予約数を下回る定員には変更できません。');
       return;
     }
     if (!beginMutation({ type: 'window-save', windowId })) return;
@@ -432,27 +419,14 @@ export default function AdminTickets() {
             : item
         )));
         if (reservation.window_id) {
-          const cancelledQuantity = Number(reservation.quantity ?? 0);
           setEvents((currentEvents) => currentEvents.map((eventItem) => ({
             ...eventItem,
-            windows: (eventItem.windows ?? []).map((item) => {
-              if (item.id !== reservation.window_id) return item;
-              const nextReservedQuantity = Math.max(
-                Number(item.reserved_quantity ?? 0) - cancelledQuantity,
-                0
-              );
-              return {
-                ...item,
-                reserved_quantity: nextReservedQuantity,
-                remaining_quantity: item.capacity > 0
-                  ? Math.max(Number(item.capacity) - nextReservedQuantity, 0)
-                  : null,
-                availability_stale: true,
-              };
-            }),
+            windows: (eventItem.windows ?? []).map((item) => (
+              item.id === reservation.window_id ? { ...item, availability_stale: true } : item
+            )),
           })));
         }
-        const refreshed = await load(reservationPage, eventPage);
+        const refreshed = await load(reservationPage);
         if (!refreshed) {
           setError('キャンセルは完了しましたが、在庫情報を再取得できませんでした。ページを再読み込みして確認してください。');
         }
@@ -488,29 +462,6 @@ export default function AdminTickets() {
               </button>
             ))}
           </div>
-          {eventTotal > EVENTS_PAGE_SIZE && (
-            <div className="admin-ticket-pagination" aria-label="販売ページ一覧ページング">
-              <button
-                type="button"
-                className="admin-view__button"
-                disabled={loading || writeBlocked || eventPage === 0}
-                onClick={() => load(reservationPage, eventPage - 1)}
-              >
-                前の200件
-              </button>
-              <span>
-                {eventPage + 1} / {Math.ceil(eventTotal / EVENTS_PAGE_SIZE)}ページ
-              </span>
-              <button
-                type="button"
-                className="admin-view__button"
-                disabled={loading || writeBlocked || (eventPage + 1) * EVENTS_PAGE_SIZE >= eventTotal}
-                onClick={() => load(reservationPage, eventPage + 1)}
-              >
-                次の200件
-              </button>
-            </div>
-          )}
         </section>
 
         <section className="admin-ticket-panel">
