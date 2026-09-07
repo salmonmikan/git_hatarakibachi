@@ -28,15 +28,19 @@ function isWindowStarted(windowItem, now = Date.now()) {
   return Number.isFinite(startsAt) && startsAt <= now;
 }
 
-function isWindowAvailable(windowItem) {
-  if (isWindowStarted(windowItem)) return false;
+function hasWindowCapacity(windowItem) {
   return windowItem.capacity <= 0 || windowItem.remaining_quantity > 0;
 }
 
+function isWindowAvailableByClientClock(windowItem) {
+  return !isWindowStarted(windowItem) && hasWindowCapacity(windowItem);
+}
+
 function findSelectableWindowId(windowItems, preferredId = '') {
-  const availableWindows = windowItems.filter((item) => !item.deleted_at && isWindowAvailable(item));
-  const preferredWindow = availableWindows.find((item) => String(item.id) === String(preferredId));
-  const nextWindow = preferredWindow ?? availableWindows[0];
+  const capacityAvailableWindows = windowItems.filter((item) => !item.deleted_at && hasWindowCapacity(item));
+  const preferredWindow = capacityAvailableWindows.find((item) => String(item.id) === String(preferredId));
+  const nextByClientClock = capacityAvailableWindows.find((item) => !isWindowStarted(item));
+  const nextWindow = preferredWindow ?? nextByClientClock ?? capacityAvailableWindows[0];
   return nextWindow ? String(nextWindow.id) : '';
 }
 
@@ -111,21 +115,23 @@ export default function TicketReservation({ onEntered }) {
   }, [event, clockTick]);
 
   const windows = event?.windows?.filter((item) => !item.deleted_at) ?? [];
-  const accepting = isTicketEventAccepting(event);
+  const acceptingByClientClock = isTicketEventAccepting(event);
+  const eventIsPublished = event?.status === 'published';
   const isWindowedEvent = windows.length > 0 || Boolean(event?.has_window_history);
-  const hasAvailableWindow = windows.some(isWindowAvailable);
+  const hasAvailableWindowByClientClock = windows.some(isWindowAvailableByClientClock);
+  const hasWindowWithCapacity = windows.some(hasWindowCapacity);
   const selectedWindow = windows.find((item) => String(item.id) === String(selectedWindowId));
   const maxQuantity = getTicketReservationMaxQuantity(selectedWindow);
   const quantityNumber = Number(form.quantity);
   const hasValidQuantity = Number.isInteger(quantityNumber)
     && quantityNumber >= 1
     && quantityNumber <= maxQuantity;
-  const canReserve = accepting && (!isWindowedEvent || (
-    hasAvailableWindow && Boolean(selectedWindowId) && Boolean(selectedWindow) && isWindowAvailable(selectedWindow)
+  const canAttemptReservation = eventIsPublished && (!isWindowedEvent || (
+    hasWindowWithCapacity && Boolean(selectedWindowId) && Boolean(selectedWindow) && hasWindowCapacity(selectedWindow)
   ));
   const retryLocked = Boolean(reservationRequestId);
   const canRetryReservation = retryLocked;
-  const canSubmitReservation = canReserve || canRetryReservation;
+  const canSubmitReservation = canAttemptReservation || canRetryReservation;
 
   useEffect(() => {
     if (maxQuantity < 1) return;
@@ -180,6 +186,11 @@ export default function TicketReservation({ onEntered }) {
       setError(res.error.message);
       if (isDefinitiveReservationFailure(res.error)) {
         setReservationRequestId(null);
+        const refreshed = await fetchPublishedTicketEvent(slug);
+        if (!refreshed.error) {
+          setEvent(refreshed.data);
+          setSelectedWindowId(findSelectableWindowId(refreshed.data?.windows ?? [], selectedWindowId));
+        }
       }
       setSaving(false);
       return;
@@ -246,7 +257,7 @@ export default function TicketReservation({ onEntered }) {
                     setReservationRequestId(null);
                     setError(null);
                   }}
-                  disabled={saving || retryLocked || !accepting || !isWindowAvailable(windowItem)}
+                  disabled={saving || retryLocked || !eventIsPublished || !hasWindowCapacity(windowItem)}
                 />
                 <span>
                   <strong>{windowItem.label}</strong>
@@ -256,7 +267,7 @@ export default function TicketReservation({ onEntered }) {
                   </small>
                 </span>
                 {isWindowStarted(windowItem)
-                  ? <em>受付終了</em>
+                  ? <em>開始時刻経過</em>
                   : windowItem.capacity > 0 && windowItem.remaining_quantity <= 0 && <em>満席</em>}
               </label>
             ))}
@@ -266,14 +277,14 @@ export default function TicketReservation({ onEntered }) {
         ) : (
           <p>自由席として予約を受け付けます。</p>
         )}
-        {windows.length > 0 && !hasAvailableWindow && (
-          <p className="ticket-page__notice">現在、予約可能な枠がありません。</p>
+        {windows.length > 0 && !hasAvailableWindowByClientClock && (
+          <p className="ticket-page__notice">端末時刻上は予約可能な枠がありません。最終的な受付可否は送信時に確認します。</p>
         )}
       </section>
 
       <section className="ticket-page__panel" aria-labelledby="ticket-form-title">
         <h2 id="ticket-form-title">予約フォーム</h2>
-        {!accepting && <p className="ticket-page__notice">現在、この公演の予約受付期間外です。</p>}
+        {!acceptingByClientClock && eventIsPublished && <p className="ticket-page__notice">端末時刻上は予約受付期間外です。最終的な受付可否は送信時に確認します。</p>}
         {reservationCode && (
           <div className="ticket-page__success" role="status">
             予約を受け付けました。予約番号：<strong>{reservationCode}</strong>
@@ -283,19 +294,19 @@ export default function TicketReservation({ onEntered }) {
         <form className="ticket-form" onSubmit={onSubmit}>
           <label>
             お名前
-            <input name="customer_name" value={form.customer_name} onChange={onChange} maxLength="200" required disabled={saving || retryLocked || !canReserve} />
+            <input name="customer_name" value={form.customer_name} onChange={onChange} maxLength="200" required disabled={saving || retryLocked || !canAttemptReservation} />
           </label>
           <label>
             メールアドレス
-            <input type="email" name="customer_email" value={form.customer_email} onChange={onChange} maxLength="320" required disabled={saving || retryLocked || !canReserve} />
+            <input type="email" name="customer_email" value={form.customer_email} onChange={onChange} maxLength="320" required disabled={saving || retryLocked || !canAttemptReservation} />
           </label>
           <label>
             枚数
-            <input type="number" name="quantity" min="1" max={maxQuantity} value={form.quantity} onChange={onChange} required disabled={saving || retryLocked || !canReserve} />
+            <input type="number" name="quantity" min="1" max={maxQuantity} value={form.quantity} onChange={onChange} required disabled={saving || retryLocked || !canAttemptReservation} />
           </label>
           <label>
             備考
-            <textarea name="note" value={form.note} onChange={onChange} maxLength="2000" rows="4" disabled={saving || retryLocked || !canReserve} />
+            <textarea name="note" value={form.note} onChange={onChange} maxLength="2000" rows="4" disabled={saving || retryLocked || !canAttemptReservation} />
           </label>
           <button type="submit" disabled={saving || !canSubmitReservation || !hasValidQuantity}>{saving ? '送信中...' : '予約する'}</button>
         </form>
