@@ -360,9 +360,7 @@ export default function AdminTickets() {
                         label,
                         starts_at: startsAt,
                         capacity,
-                        remaining_quantity: capacity > 0
-                          ? Math.max(capacity - reservedQuantity, 0)
-                          : null,
+                        availability_stale: true,
                       }
                     : item
                 )),
@@ -371,7 +369,7 @@ export default function AdminTickets() {
         )));
         const refreshed = await load(reservationPage);
         if (!refreshed) {
-          setError('予約枠は保存されましたが、一覧の再読み込みに失敗しました。ページを再読み込みして確認してください。');
+          setError('予約枠は保存されましたが、在庫情報を再取得できませんでした。ページを再読み込みして確認してください。');
         }
       }
     } finally {
@@ -433,8 +431,31 @@ export default function AdminTickets() {
             ? { ...item, status: 'cancelled', cancelled_at: new Date().toISOString() }
             : item
         )));
+        if (reservation.window_id) {
+          const cancelledQuantity = Number(reservation.quantity ?? 0);
+          setEvents((currentEvents) => currentEvents.map((eventItem) => ({
+            ...eventItem,
+            windows: (eventItem.windows ?? []).map((item) => {
+              if (item.id !== reservation.window_id) return item;
+              const nextReservedQuantity = Math.max(
+                Number(item.reserved_quantity ?? 0) - cancelledQuantity,
+                0
+              );
+              return {
+                ...item,
+                reserved_quantity: nextReservedQuantity,
+                remaining_quantity: item.capacity > 0
+                  ? Math.max(Number(item.capacity) - nextReservedQuantity, 0)
+                  : null,
+                availability_stale: true,
+              };
+            }),
+          })));
+        }
         const refreshed = await load(reservationPage, eventPage);
-        if (!refreshed) setError('キャンセルは完了しましたが、予約一覧の再読み込みに失敗しました。');
+        if (!refreshed) {
+          setError('キャンセルは完了しましたが、在庫情報を再取得できませんでした。ページを再読み込みして確認してください。');
+        }
       }
     } finally {
       endMutation();
@@ -559,9 +580,11 @@ export default function AdminTickets() {
                         <label>日時<input type="datetime-local" value={values.starts_at} onChange={(e) => onWindowFormChange(item.id, 'starts_at', e.target.value)} disabled={mutationBusy} /></label>
                         <label>定員<input type="number" min="0" value={values.capacity} onChange={(e) => onWindowFormChange(item.id, 'capacity', e.target.value)} required disabled={mutationBusy} /></label>
                         <p className="admin-ticket-window__meta">
-                          {item.capacity > 0
-                            ? `残数 ${item.remaining_quantity} / ${item.capacity}（予約済み ${item.reserved_quantity}）`
-                            : `残数 無制限（予約済み ${item.reserved_quantity}）`}
+                          {item.availability_stale
+                            ? '在庫情報は再読み込み後に確認してください。'
+                            : item.capacity > 0
+                              ? `残数 ${item.remaining_quantity} / ${item.capacity}（予約済み ${item.reserved_quantity}）`
+                              : `残数 無制限（予約済み ${item.reserved_quantity}）`}
                         </p>
                         {selectedEvent.status === 'published' && <small>公開中の枠を削除すると販売停止になります。</small>}
                         <div>
