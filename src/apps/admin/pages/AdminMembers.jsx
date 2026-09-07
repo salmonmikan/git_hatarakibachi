@@ -1,6 +1,6 @@
 // src/admin/pages/AdminMembers.jsx
 import { Link, Outlet } from "react-router-dom";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAdminCtx } from "../hooks/useAdminCtx";
 import { SortableList } from "../components/Parts/SortableList.jsx";
 import "./admin_view.scss";
@@ -55,7 +55,7 @@ export default function AdminMembers() {
                 );
             }
         },
-        [supabase, refreshMembers]
+        [refreshMembers]
     );
 
     if (membersLoading) return <div className="admin-view">Loading...</div>;
