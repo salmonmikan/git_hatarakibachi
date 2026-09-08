@@ -26,6 +26,14 @@ const client = createClient({
   perspective: 'published',
 })
 
+const freshPublishedClient = createClient({
+  projectId: PROJECT_ID,
+  dataset: DATASET,
+  useCdn: false,
+  apiVersion: API_VERSION,
+  perspective: 'published',
+})
+
 const previewClient = createClient({
   projectId: PROJECT_ID,
   dataset: DATASET,
@@ -103,6 +111,18 @@ export async function getTicketPerformanceOptions() {
     return await client.fetch(query)
   } catch (error) {
     console.error('Sanity published performance fetch error:', error)
+    return null
+  }
+}
+
+export async function getFreshPublishedTicketPerformance(performanceId) {
+  if (!performanceId) return null
+  const query = `*[_type == "performance" && _id == $performanceId][0]{ _id }`
+
+  try {
+    return await freshPublishedClient.fetch(query, { performanceId })
+  } catch (error) {
+    console.error('Sanity fresh published performance fetch error:', error)
     return null
   }
 }
