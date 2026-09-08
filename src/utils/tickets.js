@@ -9,7 +9,7 @@ export const TICKET_STATUS_LABEL = {
 };
 
 export async function fetchPublishedTicketEvent(slug) {
-  const fetchEvent = () => supabase
+  const eventRes = await supabase
     .from('ticket_events')
     .select('*, windows:ticket_windows(*)')
     .eq('slug', slug)
@@ -18,8 +18,6 @@ export async function fetchPublishedTicketEvent(slug) {
     .is('windows.deleted_at', null)
     .order('sort_order', { foreignTable: 'windows', ascending: true })
     .maybeSingle();
-
-  const eventRes = await fetchEvent();
 
   if (eventRes.error || !eventRes.data) {
     return { data: eventRes.data, error: eventRes.error };
@@ -36,11 +34,17 @@ export async function fetchPublishedTicketEvent(slug) {
   if (availabilityRes.error) return { data: null, error: availabilityRes.error };
   if (windowHistoryRes.error) return { data: null, error: windowHistoryRes.error };
 
-  // Re-read after the aggregate RPCs so a concurrently unpublished/deleted event
-  // is not returned from the older first snapshot as if it were still public.
-  const latestEventRes = await fetchEvent();
-  if (latestEventRes.error || !latestEventRes.data) {
-    return { data: latestEventRes.data, error: latestEventRes.error };
+  // Re-check only the event's public state. Keep the event/window payload from the
+  // first read so window rows are not mixed with availability from another snapshot.
+  const latestEventStateRes = await supabase
+    .from('ticket_events')
+    .select('id')
+    .eq('id', eventRes.data.id)
+    .in('status', ['published', 'closed'])
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (latestEventStateRes.error || !latestEventStateRes.data) {
+    return { data: latestEventStateRes.data, error: latestEventStateRes.error };
   }
 
   const availabilityByWindowId = new Map(
@@ -48,9 +52,9 @@ export async function fetchPublishedTicketEvent(slug) {
   );
   return {
     data: {
-      ...latestEventRes.data,
+      ...eventRes.data,
       has_window_history: windowHistoryRes.data === true,
-      windows: (latestEventRes.data.windows ?? [])
+      windows: (eventRes.data.windows ?? [])
         .filter((windowItem) => availabilityByWindowId.has(String(windowItem.id)))
         .map((windowItem) => ({
           ...windowItem,
@@ -65,7 +69,7 @@ export async function createTicketReservation(payload) {
   const res = await supabase
     .rpc('create_ticket_reservation', {
       p_event_id: payload.event_id,
-      p_window_id: payload.window_id,
+      p_window_id: payload.window_id ?? null,
       p_customer_name: payload.customer_name,
       p_customer_email: payload.customer_email,
       p_quantity: payload.quantity,
