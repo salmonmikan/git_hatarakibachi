@@ -80,6 +80,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Test
+        run: npm test --if-present
+
       - name: Build
         run: npm run build
 
