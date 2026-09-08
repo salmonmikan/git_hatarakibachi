@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useReducedMotion } from 'motion/react';
 import { motion as Motion } from 'framer-motion';
@@ -48,9 +48,27 @@ function isDefinitiveReservationFailure(error) {
   return typeof error?.code === 'string' && error.code.trim() !== '';
 }
 
-export default function TicketReservation({ onEntered, onPendingChange }) {
+function formFromPendingReservation(pendingReservation) {
+  const payload = pendingReservation?.payload;
+  if (!payload) return initialForm;
+  return {
+    customer_name: payload.customer_name ?? '',
+    customer_email: payload.customer_email ?? '',
+    quantity: String(payload.quantity ?? 1),
+    note: payload.note ?? '',
+  };
+}
+
+export default function TicketReservation({
+  onEntered,
+  pendingReservation,
+  onPendingReservationChange,
+}) {
   const { slug } = useParams();
   const reduce = useReducedMotion();
+  const initialPendingReservationRef = useRef(
+    pendingReservation?.slug === slug ? pendingReservation : null
+  );
   const [event, setEvent] = useState(null);
   const [selectedWindowId, setSelectedWindowId] = useState('');
   const [form, setForm] = useState(initialForm);
@@ -63,15 +81,21 @@ export default function TicketReservation({ onEntered, onPendingChange }) {
   const [availabilityStale, setAvailabilityStale] = useState(false);
   const [clockTick, setClockTick] = useState(0);
 
+  const matchingPendingReservation = pendingReservation?.slug === slug ? pendingReservation : null;
+  const hasOtherPendingReservation = Boolean(pendingReservation && pendingReservation.slug !== slug);
+
   useEffect(() => {
+    const restoredPending = initialPendingReservationRef.current;
     setEvent(null);
-    setSelectedWindowId('');
-    setForm(initialForm);
+    setSelectedWindowId(restoredPending?.payload?.window_id != null
+      ? String(restoredPending.payload.window_id)
+      : '');
+    setForm(formFromPendingReservation(restoredPending));
     setSaving(false);
     setLoadError(null);
     setError(null);
     setReservationCode(null);
-    setReservationRequestId(null);
+    setReservationRequestId(restoredPending?.payload?.request_id ?? null);
     setAvailabilityStale(false);
     setClockTick(0);
     let alive = true;
@@ -84,10 +108,18 @@ export default function TicketReservation({ onEntered, onPendingChange }) {
       if (res.error) {
         setLoadError(res.error.message);
         setEvent(null);
-        setSelectedWindowId('');
+        if (!restoredPending) setSelectedWindowId('');
       } else {
         setEvent(res.data);
-        setSelectedWindowId(findSelectableWindowId(res.data?.windows ?? []));
+        if (restoredPending) {
+          setSelectedWindowId(restoredPending.payload.window_id != null
+            ? String(restoredPending.payload.window_id)
+            : '');
+          setForm(formFromPendingReservation(restoredPending));
+          setReservationRequestId(restoredPending.payload.request_id);
+        } else {
+          setSelectedWindowId(findSelectableWindowId(res.data?.windows ?? []));
+        }
         setAvailabilityStale(false);
       }
       setLoading(false);
@@ -129,28 +161,18 @@ export default function TicketReservation({ onEntered, onPendingChange }) {
   const hasValidQuantity = Number.isInteger(quantityNumber)
     && quantityNumber >= 1
     && quantityNumber <= maxQuantity;
-  const canAttemptReservation = !availabilityStale && eventIsPublished && (!isWindowedEvent || (
-    hasWindowWithCapacity && Boolean(selectedWindowId) && Boolean(selectedWindow) && hasWindowCapacity(selectedWindow)
-  ));
+  const canAttemptReservation = !hasOtherPendingReservation
+    && !availabilityStale
+    && eventIsPublished
+    && (!isWindowedEvent || (
+      hasWindowWithCapacity && Boolean(selectedWindowId) && Boolean(selectedWindow) && hasWindowCapacity(selectedWindow)
+    ));
   const retryLocked = Boolean(reservationRequestId);
   const canRetryReservation = retryLocked;
   const canSubmitReservation = canAttemptReservation || canRetryReservation;
-  const reservationResultUncertain = saving || retryLocked;
 
   useEffect(() => {
-    if (typeof onPendingChange === 'function') {
-      onPendingChange(reservationResultUncertain);
-    }
-  }, [onPendingChange, reservationResultUncertain]);
-
-  useEffect(() => () => {
-    if (typeof onPendingChange === 'function') {
-      onPendingChange(false);
-    }
-  }, [onPendingChange]);
-
-  useEffect(() => {
-    if (maxQuantity < 1) return;
+    if (maxQuantity < 1 || retryLocked) return;
     setForm((prev) => {
       const currentQuantity = Number(prev.quantity);
       if (Number.isInteger(currentQuantity) && currentQuantity >= 1 && currentQuantity <= maxQuantity) {
@@ -158,14 +180,13 @@ export default function TicketReservation({ onEntered, onPendingChange }) {
       }
       return { ...prev, quantity: String(maxQuantity) };
     });
-  }, [maxQuantity]);
+  }, [maxQuantity, retryLocked]);
 
   const onChange = (e) => {
     if (reservationRequestId) return;
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setReservationCode(null);
-    setReservationRequestId(null);
     setError(null);
   };
 
@@ -198,26 +219,36 @@ export default function TicketReservation({ onEntered, onPendingChange }) {
       setError('予約処理に必要なリクエストIDを生成できませんでした。');
       return;
     }
+
+    const payload = retryingRequest
+      && matchingPendingReservation?.payload?.request_id === requestId
+      ? matchingPendingReservation.payload
+      : {
+          event_id: event.id,
+          window_id: selectedWindowId ? Number(selectedWindowId) : null,
+          customer_name: form.customer_name.trim(),
+          customer_email: form.customer_email.trim(),
+          quantity: Number(form.quantity),
+          note: form.note.trim() || null,
+          request_id: requestId,
+        };
+
     setSaving(true);
     setError(null);
     if (!retryingRequest) setReservationCode(null);
     setReservationRequestId(requestId);
-
-    const payload = {
-      event_id: event.id,
-      window_id: selectedWindowId ? Number(selectedWindowId) : null,
-      customer_name: form.customer_name.trim(),
-      customer_email: form.customer_email.trim(),
-      quantity: Number(form.quantity),
-      note: form.note.trim() || null,
-      request_id: requestId,
-    };
+    if (typeof onPendingReservationChange === 'function') {
+      onPendingReservationChange({ slug, payload });
+    }
 
     const res = await createTicketReservation(payload);
     if (res.error) {
       setError(res.error.message);
       if (isDefinitiveReservationFailure(res.error)) {
         setReservationRequestId(null);
+        if (typeof onPendingReservationChange === 'function') {
+          onPendingReservationChange(null);
+        }
         const refreshed = await fetchPublishedTicketEvent(slug);
         if (refreshed.error || !refreshed.data) {
           setAvailabilityStale(true);
@@ -234,6 +265,9 @@ export default function TicketReservation({ onEntered, onPendingChange }) {
 
     setReservationCode(res.data.reservation_code);
     setReservationRequestId(null);
+    if (typeof onPendingReservationChange === 'function') {
+      onPendingReservationChange(null);
+    }
     setForm(initialForm);
     const refreshed = await fetchPublishedTicketEvent(slug);
     if (refreshed.error || !refreshed.data) {
@@ -278,6 +312,12 @@ export default function TicketReservation({ onEntered, onPendingChange }) {
         {availabilityStale && (
           <p className="ticket-page__notice">空席状況を確認できていません。更新が完了するまで新しい予約はできません。</p>
         )}
+        {hasOtherPendingReservation && (
+          <p className="ticket-page__notice">
+            別の予約結果を確認中です。先にその予約を確認してください。{' '}
+            <Link to={`/tickets/${encodeURIComponent(pendingReservation.slug)}`}>確認中の予約ページへ戻る</Link>
+          </p>
+        )}
         {windows.length ? (
           <div className="ticket-window-list">
             {windows.map((windowItem) => (
@@ -296,10 +336,9 @@ export default function TicketReservation({ onEntered, onPendingChange }) {
                     if (reservationRequestId) return;
                     setSelectedWindowId(e.target.value);
                     setReservationCode(null);
-                    setReservationRequestId(null);
                     setError(null);
                   }}
-                  disabled={saving || retryLocked || availabilityStale || !eventIsPublished || !hasWindowCapacity(windowItem)}
+                  disabled={saving || retryLocked || hasOtherPendingReservation || availabilityStale || !eventIsPublished || !hasWindowCapacity(windowItem)}
                 />
                 <span>
                   <strong>{windowItem.label}</strong>
@@ -352,7 +391,7 @@ export default function TicketReservation({ onEntered, onPendingChange }) {
             備考
             <textarea name="note" value={form.note} onChange={onChange} maxLength="2000" rows="4" disabled={saving || retryLocked || !canAttemptReservation} />
           </label>
-          <button type="submit" disabled={saving || !canSubmitReservation || !hasValidQuantity}>{saving ? '送信中...' : '予約する'}</button>
+          <button type="submit" disabled={saving || !canSubmitReservation || !hasValidQuantity}>{saving ? '送信中...' : retryLocked ? '予約結果を再確認' : '予約する'}</button>
         </form>
       </section>
     </Motion.section>
