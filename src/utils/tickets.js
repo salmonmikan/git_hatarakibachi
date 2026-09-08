@@ -9,7 +9,7 @@ export const TICKET_STATUS_LABEL = {
 };
 
 export async function fetchPublishedTicketEvent(slug) {
-  const eventRes = await supabase
+  const fetchEvent = () => supabase
     .from('ticket_events')
     .select('*, windows:ticket_windows(*)')
     .eq('slug', slug)
@@ -18,6 +18,8 @@ export async function fetchPublishedTicketEvent(slug) {
     .is('windows.deleted_at', null)
     .order('sort_order', { foreignTable: 'windows', ascending: true })
     .maybeSingle();
+
+  const eventRes = await fetchEvent();
 
   if (eventRes.error || !eventRes.data) {
     return { data: eventRes.data, error: eventRes.error };
@@ -34,14 +36,21 @@ export async function fetchPublishedTicketEvent(slug) {
   if (availabilityRes.error) return { data: null, error: availabilityRes.error };
   if (windowHistoryRes.error) return { data: null, error: windowHistoryRes.error };
 
+  // Re-read after the aggregate RPCs so a concurrently unpublished/deleted event
+  // is not returned from the older first snapshot as if it were still public.
+  const latestEventRes = await fetchEvent();
+  if (latestEventRes.error || !latestEventRes.data) {
+    return { data: latestEventRes.data, error: latestEventRes.error };
+  }
+
   const availabilityByWindowId = new Map(
     (availabilityRes.data ?? []).map((item) => [String(item.window_id), item])
   );
   return {
     data: {
-      ...eventRes.data,
+      ...latestEventRes.data,
       has_window_history: windowHistoryRes.data === true,
-      windows: (eventRes.data.windows ?? [])
+      windows: (latestEventRes.data.windows ?? [])
         .filter((windowItem) => availabilityByWindowId.has(String(windowItem.id)))
         .map((windowItem) => ({
           ...windowItem,
