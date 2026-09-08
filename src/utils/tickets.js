@@ -34,17 +34,28 @@ export async function fetchPublishedTicketEvent(slug) {
   if (availabilityRes.error) return { data: null, error: availabilityRes.error };
   if (windowHistoryRes.error) return { data: null, error: windowHistoryRes.error };
 
-  // Re-check only the event's public state. Keep the event/window payload from the
-  // first read so window rows are not mixed with availability from another snapshot.
+  // Re-check only fields that decide whether the first snapshot may still be used.
+  // Window rows stay on the first snapshot so they are not mixed with availability
+  // from a later point in time.
   const latestEventStateRes = await supabase
     .from('ticket_events')
-    .select('id')
+    .select('id, status, opens_at, closes_at')
     .eq('id', eventRes.data.id)
     .in('status', ['published', 'closed'])
     .is('deleted_at', null)
     .maybeSingle();
   if (latestEventStateRes.error || !latestEventStateRes.data) {
     return { data: latestEventStateRes.data, error: latestEventStateRes.error };
+  }
+
+  const acceptanceSnapshotChanged = ['status', 'opens_at', 'closes_at'].some(
+    (field) => (latestEventStateRes.data[field] ?? null) !== (eventRes.data[field] ?? null)
+  );
+  if (acceptanceSnapshotChanged) {
+    return {
+      data: null,
+      error: new Error('予約受付状態が更新されました。最新情報を再取得してください。'),
+    };
   }
 
   const availabilityByWindowId = new Map(
