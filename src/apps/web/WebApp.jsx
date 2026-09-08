@@ -25,6 +25,7 @@ function WebApp() {
   const mainRef = useRef(null);
   const lastScrollYRef = useRef(0);
   const [navHidden, setNavHidden] = useState(false);
+  const [reservationNavigationBlocked, setReservationNavigationBlocked] = useState(false);
 
   useEffect(() => {
     function onScroll() {
@@ -53,8 +54,27 @@ function WebApp() {
     });
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!reservationNavigationBlocked) return undefined;
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [reservationNavigationBlocked]);
+
+  const onNavigationCapture = (event) => {
+    if (!reservationNavigationBlocked) return;
+    const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   return (
-    <div className="web-shell">
+    <div className="web-shell" onClickCapture={onNavigationCapture}>
       <ScrollToTop />
       <VisualEditing />
       <header className={navHidden ? "is-nav-hidden" : ""}>
@@ -111,7 +131,7 @@ function WebApp() {
             <Route path="post/:slug" element={<PostDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="performance/:slug" element={<PerformanceDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="news/:slug" element={<NewsDetail onEntered={() => mainRef.current?.focus()} />} />
-            <Route path="tickets/:slug" element={<TicketReservation onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="tickets/:slug" element={<TicketReservation onEntered={() => mainRef.current?.focus()} onPendingChange={setReservationNavigationBlocked} />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
