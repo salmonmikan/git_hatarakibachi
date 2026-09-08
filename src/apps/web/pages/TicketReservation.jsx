@@ -60,6 +60,7 @@ export default function TicketReservation({ onEntered }) {
   const [error, setError] = useState(null);
   const [reservationCode, setReservationCode] = useState(null);
   const [reservationRequestId, setReservationRequestId] = useState(null);
+  const [availabilityStale, setAvailabilityStale] = useState(false);
   const [clockTick, setClockTick] = useState(0);
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function TicketReservation({ onEntered }) {
     setError(null);
     setReservationCode(null);
     setReservationRequestId(null);
+    setAvailabilityStale(false);
     setClockTick(0);
     let alive = true;
     async function load() {
@@ -86,6 +88,7 @@ export default function TicketReservation({ onEntered }) {
       } else {
         setEvent(res.data);
         setSelectedWindowId(findSelectableWindowId(res.data?.windows ?? []));
+        setAvailabilityStale(false);
       }
       setLoading(false);
     }
@@ -126,12 +129,13 @@ export default function TicketReservation({ onEntered }) {
   const hasValidQuantity = Number.isInteger(quantityNumber)
     && quantityNumber >= 1
     && quantityNumber <= maxQuantity;
-  const canAttemptReservation = eventIsPublished && (!isWindowedEvent || (
+  const canAttemptReservation = !availabilityStale && eventIsPublished && (!isWindowedEvent || (
     hasWindowWithCapacity && Boolean(selectedWindowId) && Boolean(selectedWindow) && hasWindowCapacity(selectedWindow)
   ));
   const retryLocked = Boolean(reservationRequestId);
   const canRetryReservation = retryLocked;
   const canSubmitReservation = canAttemptReservation || canRetryReservation;
+  const reservationResultUncertain = saving || retryLocked;
 
   useEffect(() => {
     if (maxQuantity < 1) return;
@@ -156,16 +160,15 @@ export default function TicketReservation({ onEntered }) {
   const refreshAvailability = async () => {
     if (saving || reservationRequestId) return;
     setLoading(true);
-    setLoadError(null);
     setError(null);
     const refreshed = await fetchPublishedTicketEvent(slug);
     if (refreshed.error || !refreshed.data) {
-      setEvent(null);
-      setSelectedWindowId('');
-      setLoadError(refreshed.error?.message ?? '予約ページの最新状態を取得できませんでした。');
+      setAvailabilityStale(true);
+      setError(refreshed.error?.message ?? '予約ページの最新状態を取得できませんでした。');
     } else {
       setEvent(refreshed.data);
       setSelectedWindowId(findSelectableWindowId(refreshed.data.windows ?? [], selectedWindowId));
+      setAvailabilityStale(false);
     }
     setLoading(false);
   };
@@ -205,12 +208,12 @@ export default function TicketReservation({ onEntered }) {
         setReservationRequestId(null);
         const refreshed = await fetchPublishedTicketEvent(slug);
         if (refreshed.error || !refreshed.data) {
-          setEvent(null);
-          setSelectedWindowId('');
-          setLoadError(refreshed.error?.message ?? '予約状況を再取得できませんでした。ページを再読み込みしてください。');
+          setAvailabilityStale(true);
+          setError(`${res.error.message} 最新の空席状況を取得できませんでした。空席状況を更新してください。`);
         } else {
           setEvent(refreshed.data);
           setSelectedWindowId(findSelectableWindowId(refreshed.data.windows ?? [], selectedWindowId));
+          setAvailabilityStale(false);
         }
       }
       setSaving(false);
@@ -223,10 +226,12 @@ export default function TicketReservation({ onEntered }) {
     const refreshed = await fetchPublishedTicketEvent(slug);
     if (refreshed.error || !refreshed.data) {
       const refreshMessage = refreshed.error?.message ?? '公開中の予約情報を再取得できませんでした。';
+      setAvailabilityStale(true);
       setError(`予約は完了しましたが、残数の更新に失敗しました: ${refreshMessage}`);
     } else {
       setEvent(refreshed.data);
       setSelectedWindowId(findSelectableWindowId(refreshed.data.windows ?? [], selectedWindowId));
+      setAvailabilityStale(false);
     }
     setSaving(false);
   };
@@ -247,7 +252,11 @@ export default function TicketReservation({ onEntered }) {
         if (typeof onEntered === 'function') onEntered();
       }}
     >
-      <Link to="/stage" className="ticket-page__back">← Stageへ戻る</Link>
+      {reservationResultUncertain ? (
+        <span className="ticket-page__back" aria-disabled="true">← Stageへ戻る</span>
+      ) : (
+        <Link to="/stage" className="ticket-page__back">← Stageへ戻る</Link>
+      )}
       <header className="ticket-page__header">
         <p className="ticket-page__eyebrow">Ticket Reservation</p>
         <h1>{event.title}</h1>
@@ -258,6 +267,9 @@ export default function TicketReservation({ onEntered }) {
       <section className="ticket-page__panel" aria-labelledby="ticket-window-title">
         <h2 id="ticket-window-title">予約枠</h2>
         <button type="button" onClick={refreshAvailability} disabled={saving || retryLocked}>空席状況を更新</button>
+        {availabilityStale && (
+          <p className="ticket-page__notice">空席状況を確認できていません。更新が完了するまで新しい予約はできません。</p>
+        )}
         {windows.length ? (
           <div className="ticket-window-list">
             {windows.map((windowItem) => (
@@ -279,7 +291,7 @@ export default function TicketReservation({ onEntered }) {
                     setReservationRequestId(null);
                     setError(null);
                   }}
-                  disabled={saving || retryLocked || !eventIsPublished || !hasWindowCapacity(windowItem)}
+                  disabled={saving || retryLocked || availabilityStale || !eventIsPublished || !hasWindowCapacity(windowItem)}
                 />
                 <span>
                   <strong>{windowItem.label}</strong>
