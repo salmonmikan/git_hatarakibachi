@@ -4,6 +4,7 @@ import { fromDatetimeLocal, toDatetimeLocal } from '@src/utils/datetimeLocal.js'
 import { cancelTicketReservation, formatTicketDate, TICKET_STATUS_LABEL } from '@src/utils/tickets.js';
 import { buildSanityStudioEditUrl, getAdminSanityDataset } from '../components/sanityStudioLink.js';
 import {
+  getFreshPublishedTicketPerformance,
   getSanityPerformancePublicUrl,
   getTicketPerformanceOptions,
 } from '@src/utils/sanityFetch.js';
@@ -237,17 +238,19 @@ export default function AdminTickets() {
     );
     const mustVerifySanityCandidate = ['published', 'closed'].includes(form.status)
       && !keepsExistingPublishedLink;
-    if (mustVerifySanityCandidate && !sanityPerformances.some(
-      (performance) => performance._id === payload.sanity_performance_id
-    )) {
-      setError(sanityPerformanceLoadError
-        ? 'Sanity公演情報を取得できないため、新規公開または連携先の変更はできません。'
-        : '公開する販売ページには、現在公開済みのSanity公演を連携してください。');
-      return;
-    }
     const isCreatingEvent = creatingEvent || !selectedEvent;
     if (!beginMutation({ type: 'event-save' })) return;
     try {
+      if (mustVerifySanityCandidate) {
+        const freshSanityPerformance = await getFreshPublishedTicketPerformance(
+          payload.sanity_performance_id
+        );
+        if (!freshSanityPerformance) {
+          setError('Sanity側で公開済みの公演を最新状態で確認できないため、販売ページを公開できません。');
+          return;
+        }
+      }
+
       const res = selectedEvent
         ? await supabase.from('ticket_events').update(payload).eq('id', selectedEvent.id).select('id').single()
         : await supabase.from('ticket_events').insert(payload).select('id').single();
