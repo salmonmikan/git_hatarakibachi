@@ -253,11 +253,16 @@ export default function AdminTickets() {
       }
 
       const res = selectedEvent
-        ? await supabase.from('ticket_events').update(payload).eq('id', selectedEvent.id).select('id').single()
-        : await supabase.from('ticket_events').insert(payload).select('id').single();
+        ? await supabase.from('ticket_events').update(payload).eq('id', selectedEvent.id).select('*').single()
+        : await supabase.from('ticket_events').insert(payload).select('*').single();
 
       if (res.error) setError(res.error.message);
       else {
+        if (selectedEvent) {
+          setEvents((currentEvents) => currentEvents.map((eventItem) => (
+            eventItem.id === selectedEvent.id ? { ...eventItem, ...res.data } : eventItem
+          )));
+        }
         const refreshed = await load(reservationPage);
         if (!refreshed) {
           setError(isCreatingEvent
