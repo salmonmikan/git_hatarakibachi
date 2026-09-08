@@ -209,11 +209,11 @@ export default function TicketReservation({
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!event || !canSubmitReservation) return;
-    if (!hasValidQuantity) {
+    const retryingRequest = Boolean(reservationRequestId);
+    if (!retryingRequest && !hasValidQuantity) {
       setError(`選択した予約枠の残数以内で、1〜${maxQuantity}枚を指定してください。`);
       return;
     }
-    const retryingRequest = Boolean(reservationRequestId);
     const requestId = reservationRequestId ?? globalThis.crypto?.randomUUID?.();
     if (!requestId) {
       setError('予約処理に必要なリクエストIDを生成できませんでした。');
@@ -391,7 +391,7 @@ export default function TicketReservation({
             備考
             <textarea name="note" value={form.note} onChange={onChange} maxLength="2000" rows="4" disabled={saving || retryLocked || !canAttemptReservation} />
           </label>
-          <button type="submit" disabled={saving || !canSubmitReservation || !hasValidQuantity}>{saving ? '送信中...' : retryLocked ? '予約結果を再確認' : '予約する'}</button>
+          <button type="submit" disabled={saving || !canSubmitReservation || (!retryLocked && !hasValidQuantity)}>{saving ? '送信中...' : retryLocked ? '予約結果を再確認' : '予約する'}</button>
         </form>
       </section>
     </Motion.section>
