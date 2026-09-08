@@ -58,6 +58,18 @@ export async function fetchPublishedTicketEvent(slug) {
     };
   }
 
+  const initialWindowIds = new Set(
+    (eventRes.data.windows ?? []).map((windowItem) => String(windowItem.id))
+  );
+  if ((availabilityRes.data ?? []).some(
+    (item) => !initialWindowIds.has(String(item.window_id))
+  )) {
+    return {
+      data: null,
+      error: new Error('予約枠状態が更新されました。最新情報を再取得してください。'),
+    };
+  }
+
   const availabilityByWindowId = new Map(
     (availabilityRes.data ?? []).map((item) => [String(item.window_id), item])
   );
