@@ -227,15 +227,18 @@ export default function AdminTickets() {
       setError('受付終了日時は受付開始日時以降に設定してください。');
       return;
     }
-    if (['published', 'closed'].includes(form.status) && !payload.sanity_performance_id) {
+    const isPublicTicketState = ['published', 'closed'].includes(form.status);
+    if (isPublicTicketState && !payload.sanity_performance_id) {
       setError('公開する販売ページにはSanity公演情報を連携してください。');
       return;
     }
-    const mustVerifySanityCandidate = form.status === 'published' && Boolean(
-      !selectedEvent
-      || selectedEvent.status !== 'published'
-      || payload.sanity_performance_id !== selectedEvent.sanity_performance_id
+    const keepsExistingPublicLink = Boolean(
+      selectedEvent
+      && ['published', 'closed'].includes(selectedEvent.status)
+      && payload.sanity_performance_id === selectedEvent.sanity_performance_id
+      && !(selectedEvent.status === 'closed' && form.status === 'published')
     );
+    const mustVerifySanityCandidate = isPublicTicketState && !keepsExistingPublicLink;
     const isCreatingEvent = creatingEvent || !selectedEvent;
     if (!beginMutation({ type: 'event-save' })) return;
     try {
@@ -244,7 +247,7 @@ export default function AdminTickets() {
           payload.sanity_performance_id
         );
         if (!freshSanityPerformance) {
-          setError('Sanity側で公開済みの公演を最新状態で確認できないため、販売ページを公開できません。');
+          setError('Sanity側で公開済みの公演を最新状態で確認できないため、販売ページを公開状態で保存できません。');
           return;
         }
       }
