@@ -48,7 +48,7 @@ function isDefinitiveReservationFailure(error) {
   return typeof error?.code === 'string' && error.code.trim() !== '';
 }
 
-export default function TicketReservation({ onEntered }) {
+export default function TicketReservation({ onEntered, onPendingChange }) {
   const { slug } = useParams();
   const reduce = useReducedMotion();
   const [event, setEvent] = useState(null);
@@ -136,6 +136,18 @@ export default function TicketReservation({ onEntered }) {
   const canRetryReservation = retryLocked;
   const canSubmitReservation = canAttemptReservation || canRetryReservation;
   const reservationResultUncertain = saving || retryLocked;
+
+  useEffect(() => {
+    if (typeof onPendingChange === 'function') {
+      onPendingChange(reservationResultUncertain);
+    }
+  }, [onPendingChange, reservationResultUncertain]);
+
+  useEffect(() => () => {
+    if (typeof onPendingChange === 'function') {
+      onPendingChange(false);
+    }
+  }, [onPendingChange]);
 
   useEffect(() => {
     if (maxQuantity < 1) return;
@@ -252,11 +264,7 @@ export default function TicketReservation({ onEntered }) {
         if (typeof onEntered === 'function') onEntered();
       }}
     >
-      {reservationResultUncertain ? (
-        <span className="ticket-page__back" aria-disabled="true">← Stageへ戻る</span>
-      ) : (
-        <Link to="/stage" className="ticket-page__back">← Stageへ戻る</Link>
-      )}
+      <Link to="/stage" className="ticket-page__back">← Stageへ戻る</Link>
       <header className="ticket-page__header">
         <p className="ticket-page__eyebrow">Ticket Reservation</p>
         <h1>{event.title}</h1>
