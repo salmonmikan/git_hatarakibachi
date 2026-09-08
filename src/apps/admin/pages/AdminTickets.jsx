@@ -231,13 +231,11 @@ export default function AdminTickets() {
       setError('公開する販売ページにはSanity公演情報を連携してください。');
       return;
     }
-    const keepsExistingPublishedLink = Boolean(
-      selectedEvent
-      && ['published', 'closed'].includes(selectedEvent.status)
-      && payload.sanity_performance_id === selectedEvent.sanity_performance_id
+    const mustVerifySanityCandidate = form.status === 'published' && Boolean(
+      !selectedEvent
+      || selectedEvent.status !== 'published'
+      || payload.sanity_performance_id !== selectedEvent.sanity_performance_id
     );
-    const mustVerifySanityCandidate = ['published', 'closed'].includes(form.status)
-      && !keepsExistingPublishedLink;
     const isCreatingEvent = creatingEvent || !selectedEvent;
     if (!beginMutation({ type: 'event-save' })) return;
     try {
@@ -386,10 +384,7 @@ export default function AdminTickets() {
     if (activeMutationRef.current !== null || reservationLoadingRef.current) return;
     const currentWindow = selectedEvent?.windows?.find((item) => item.id === windowId);
     if (!currentWindow) return;
-    const reservedQuantity = Number(currentWindow.reserved_quantity ?? 0);
-    const warning = reservedQuantity > 0
-      ? `この予約枠には${reservedQuantity}枚の既存予約があります。枠を販売停止し、予約履歴を保持します。続行しますか？`
-      : 'この予約枠を販売停止して削除します。続行しますか？';
+    const warning = 'この予約枠を販売停止して削除します。既存予約がある場合も予約履歴は保持されます。続行しますか？';
     if (typeof window !== 'undefined' && !window.confirm(warning)) return;
     if (!beginMutation({ type: 'window-delete', windowId })) return;
     try {
