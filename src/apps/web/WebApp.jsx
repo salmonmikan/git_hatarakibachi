@@ -25,7 +25,7 @@ function WebApp() {
   const mainRef = useRef(null);
   const lastScrollYRef = useRef(0);
   const [navHidden, setNavHidden] = useState(false);
-  const [pendingReservation, setPendingReservation] = useState(null);
+  const [reservationTransaction, setReservationTransaction] = useState(null);
 
   useEffect(() => {
     function onScroll() {
@@ -55,14 +55,14 @@ function WebApp() {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!pendingReservation) return undefined;
+    if (reservationTransaction?.status !== 'pending') return undefined;
     const onBeforeUnload = (event) => {
       event.preventDefault();
       event.returnValue = '';
     };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [pendingReservation]);
+  }, [reservationTransaction]);
 
   return (
     <div className="web-shell">
@@ -127,8 +127,8 @@ function WebApp() {
               element={(
                 <TicketReservation
                   onEntered={() => mainRef.current?.focus()}
-                  pendingReservation={pendingReservation}
-                  onPendingReservationChange={setPendingReservation}
+                  reservationTransaction={reservationTransaction}
+                  onReservationTransactionChange={setReservationTransaction}
                 />
               )}
             />
