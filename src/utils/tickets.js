@@ -9,83 +9,12 @@ export const TICKET_STATUS_LABEL = {
 };
 
 export async function fetchPublishedTicketEvent(slug) {
-  const eventRes = await supabase
-    .from('ticket_events')
-    .select('*, windows:ticket_windows(*)')
-    .eq('slug', slug)
-    .in('status', ['published', 'closed'])
-    .is('deleted_at', null)
-    .is('windows.deleted_at', null)
-    .order('sort_order', { foreignTable: 'windows', ascending: true })
-    .maybeSingle();
+  const res = await supabase.rpc('get_public_ticket_event', {
+    p_slug: slug,
+  });
 
-  if (eventRes.error || !eventRes.data) {
-    return { data: eventRes.data, error: eventRes.error };
-  }
-
-  const [availabilityRes, windowHistoryRes] = await Promise.all([
-    supabase.rpc('get_ticket_window_availability', {
-      p_event_id: eventRes.data.id,
-    }),
-    supabase.rpc('get_ticket_event_window_history', {
-      p_event_id: eventRes.data.id,
-    }),
-  ]);
-  if (availabilityRes.error) return { data: null, error: availabilityRes.error };
-  if (windowHistoryRes.error) return { data: null, error: windowHistoryRes.error };
-
-  // Re-check only fields that decide whether the first snapshot may still be used.
-  // Window rows stay on the first snapshot so they are not mixed with availability
-  // from a later point in time.
-  const latestEventStateRes = await supabase
-    .from('ticket_events')
-    .select('id, status, opens_at, closes_at')
-    .eq('id', eventRes.data.id)
-    .in('status', ['published', 'closed'])
-    .is('deleted_at', null)
-    .maybeSingle();
-  if (latestEventStateRes.error || !latestEventStateRes.data) {
-    return { data: latestEventStateRes.data, error: latestEventStateRes.error };
-  }
-
-  const acceptanceSnapshotChanged = ['status', 'opens_at', 'closes_at'].some(
-    (field) => (latestEventStateRes.data[field] ?? null) !== (eventRes.data[field] ?? null)
-  );
-  if (acceptanceSnapshotChanged) {
-    return {
-      data: null,
-      error: new Error('予約受付状態が更新されました。最新情報を再取得してください。'),
-    };
-  }
-
-  const initialWindowIds = new Set(
-    (eventRes.data.windows ?? []).map((windowItem) => String(windowItem.id))
-  );
-  if ((availabilityRes.data ?? []).some(
-    (item) => !initialWindowIds.has(String(item.window_id))
-  )) {
-    return {
-      data: null,
-      error: new Error('予約枠状態が更新されました。最新情報を再取得してください。'),
-    };
-  }
-
-  const availabilityByWindowId = new Map(
-    (availabilityRes.data ?? []).map((item) => [String(item.window_id), item])
-  );
-  return {
-    data: {
-      ...eventRes.data,
-      has_window_history: windowHistoryRes.data === true,
-      windows: (eventRes.data.windows ?? [])
-        .filter((windowItem) => availabilityByWindowId.has(String(windowItem.id)))
-        .map((windowItem) => ({
-          ...windowItem,
-          ...availabilityByWindowId.get(String(windowItem.id)),
-        })),
-    },
-    error: null,
-  };
+  if (res.error) return { data: null, error: res.error };
+  return { data: res.data ?? null, error: null };
 }
 
 export async function createTicketReservation(payload) {
