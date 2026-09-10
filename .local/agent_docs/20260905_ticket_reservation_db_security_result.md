@@ -18,6 +18,8 @@
 - 行単体の文字数、slug、タイトル、日時順、Sanity連携などは新規テーブルのconstraintとして最初から定義する。
 - 予約番号は10文字仕様を維持し、transaction advisory lockを使って衝突候補を再生成する。
 - 機能は未リリースで外部互換要件がないため、公開予約RPCの互換overloadを削除し、`note` と `request_id` を受けるcanonical RPC 1本へ整理した。`request_id` は必須、`note` はNULL可とする。
+- 公開予約画面向けreadは `public.get_public_ticket_event(text)` 1本へ整理した。イベント本体、予約枠、予約済み枚数、残数、予約枠履歴を同一SQL statementのスナップショットからJSONBで返す。
+- 旧 `get_ticket_window_availability` / `get_ticket_event_window_history` は削除し、複数RPC間の時点差をクライアント側のstale判定で補う設計を廃止した。
 
 ## レビュー基準
 
@@ -30,6 +32,6 @@
 
 - 本番Supabaseのmigration履歴は2026-04-24までで、予約系migrationが未適用であることを確認した。
 - STG Supabaseには変更を加えていない。
-- canonical RPC契約に合わせてpgTAPテストの呼び出しと権限検査を更新した。
+- canonical write/read RPC契約に合わせてpgTAPテストの呼び出しと権限検査を更新した。
 - GitHub Actionsのdatabase jobでfresh migration再適用後に `supabase test db --local` を実行し、`supabase/tests` 配下のpgTAPを自動検証するようにした。
 - 共有・本番DBには検証目的のapplyを行わない。
