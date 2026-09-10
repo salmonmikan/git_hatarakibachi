@@ -558,75 +558,84 @@ grant execute on function public.create_ticket_reservation(
   bigint, bigint, text, text, integer, text, uuid
 ) to anon, authenticated;
 
-create or replace function public.get_ticket_window_availability(p_event_id bigint)
-returns table (
-  window_id bigint,
-  capacity integer,
-  reserved_quantity bigint,
-  remaining_quantity bigint
-)
+create or replace function public.get_public_ticket_event(p_slug text)
+returns jsonb
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select
-    w.id,
-    w.capacity,
-    coalesce(sum(r.quantity), 0::bigint) as reserved_quantity,
-    case
-      when w.capacity > 0 then greatest(
-        w.capacity::bigint - coalesce(sum(r.quantity), 0::bigint),
-        0::bigint
-      )
-      else null::bigint
-    end as remaining_quantity
-  from public.ticket_windows w
-  join public.ticket_events e
-    on e.id = w.event_id
-   and e.id = p_event_id
-   and e.deleted_at is null
-   and e.status in ('published', 'closed')
-   and nullif(btrim(e.sanity_performance_id), '') is not null
-  left join public.ticket_reservations r
-    on r.window_id = w.id
-   and r.deleted_at is null
-   and r.status = 'reserved'
-  where w.deleted_at is null
-  group by w.id, w.capacity, w.sort_order
-  order by w.sort_order, w.id;
-$$;
-
-revoke all on function public.get_ticket_window_availability(bigint)
-  from public, anon, authenticated;
-grant execute on function public.get_ticket_window_availability(bigint)
-  to anon, authenticated;
-
-create or replace function public.get_ticket_event_window_history(p_event_id bigint)
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select exists (
-    select 1
+  with event_row as (
+    select e.*
     from public.ticket_events e
-    where e.id = p_event_id
+    where e.slug = p_slug
       and e.deleted_at is null
       and e.status in ('published', 'closed')
       and nullif(btrim(e.sanity_performance_id), '') is not null
-  )
-  and exists (
-    select 1
+    limit 1
+  ),
+  window_rows as (
+    select
+      w.id,
+      w.event_id,
+      w.label,
+      w.starts_at,
+      w.capacity,
+      w.sort_order,
+      w.created_at,
+      w.updated_at,
+      w.deleted_at,
+      coalesce(sum(r.quantity), 0::bigint) as reserved_quantity,
+      case
+        when w.capacity > 0 then greatest(
+          w.capacity::bigint - coalesce(sum(r.quantity), 0::bigint),
+          0::bigint
+        )
+        else null::bigint
+      end as remaining_quantity
     from public.ticket_windows w
-    where w.event_id = p_event_id
-  );
+    join event_row e on e.id = w.event_id
+    left join public.ticket_reservations r
+      on r.window_id = w.id
+     and r.deleted_at is null
+     and r.status = 'reserved'
+    where w.deleted_at is null
+    group by
+      w.id,
+      w.event_id,
+      w.label,
+      w.starts_at,
+      w.capacity,
+      w.sort_order,
+      w.created_at,
+      w.updated_at,
+      w.deleted_at
+  )
+  select case
+    when not exists (select 1 from event_row) then null::jsonb
+    else (
+      select to_jsonb(e) || jsonb_build_object(
+        'has_window_history', exists (
+          select 1
+          from public.ticket_windows w
+          where w.event_id = e.id
+        ),
+        'windows', coalesce(
+          (
+            select jsonb_agg(to_jsonb(wr) order by wr.sort_order, wr.id)
+            from window_rows wr
+          ),
+          '[]'::jsonb
+        )
+      )
+      from event_row e
+    )
+  end;
 $$;
 
-revoke all on function public.get_ticket_event_window_history(bigint)
+revoke all on function public.get_public_ticket_event(text)
   from public, anon, authenticated;
-grant execute on function public.get_ticket_event_window_history(bigint)
+grant execute on function public.get_public_ticket_event(text)
   to anon, authenticated;
 
 create or replace function private.cancel_ticket_reservation(p_reservation_id bigint)
