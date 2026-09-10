@@ -109,19 +109,16 @@ select ok(
 select ok(
   has_function_privilege(
     'anon',
-    'public.get_ticket_window_availability(bigint)',
+    'public.get_public_ticket_event(text)',
     'EXECUTE'
   ),
-  'anon can read aggregate ticket window availability'
+  'anon can execute the canonical public ticket read RPC'
 );
 
 select ok(
-  has_function_privilege(
-    'anon',
-    'public.get_ticket_event_window_history(bigint)',
-    'EXECUTE'
-  ),
-  'anon can read whether a published event has reservation window history'
+  to_regprocedure('public.get_ticket_window_availability(bigint)') is null
+    and to_regprocedure('public.get_ticket_event_window_history(bigint)') is null,
+  'legacy multi-request public ticket read RPCs are not exposed'
 );
 
 select ok(
@@ -320,11 +317,18 @@ select throws_ok(
 
 select results_eq(
   $$
-    select window_id, capacity, reserved_quantity, remaining_quantity
-    from public.get_ticket_window_availability(910001)
+    select
+      (payload ->> 'id')::bigint,
+      payload ->> 'status',
+      (payload ->> 'has_window_history')::boolean,
+      (payload -> 'windows' -> 0 ->> 'id')::bigint,
+      (payload -> 'windows' -> 0 ->> 'capacity')::integer,
+      (payload -> 'windows' -> 0 ->> 'reserved_quantity')::bigint,
+      (payload -> 'windows' -> 0 ->> 'remaining_quantity')::bigint
+    from (select public.get_public_ticket_event('ticket-test-active') as payload) s
   $$,
-  $$values (920001::bigint, 2, 2::bigint, 0::bigint)$$,
-  'public availability returns remaining capacity without reservation details'
+  $$values (910001::bigint, 'published'::text, true, 920001::bigint, 2, 2::bigint, 0::bigint)$$,
+  'canonical public ticket read returns event, window history, and availability together'
 );
 
 reset role;
@@ -589,9 +593,13 @@ select results_eq(
 );
 
 select results_eq(
-  $$select public.get_ticket_event_window_history(910001), public.get_ticket_event_window_history(910008)$$,
+  $$
+    select
+      (public.get_public_ticket_event('ticket-test-active') ->> 'has_window_history')::boolean,
+      (public.get_public_ticket_event('ticket-test-free') ->> 'has_window_history')::boolean
+  $$,
   $$values (true, false)$$,
-  'public window history distinguishes windowed and free-seating events'
+  'canonical public ticket read distinguishes windowed and free-seating event history'
 );
 
 select throws_ok(
