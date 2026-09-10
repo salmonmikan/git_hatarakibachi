@@ -103,22 +103,18 @@ async function verifySquareSignature(
 }
 
 async function claimEvent(env: MemberFeeEnv, event: SquareWebhookEvent) {
-  const params = new URLSearchParams({ on_conflict: "event_id" })
   const response = await supabaseRequest(
     env,
-    `/rest/v1/square_webhook_events?${params.toString()}`,
+    "/rest/v1/rpc/claim_square_webhook_event",
     {
       method: "POST",
-      headers: { Prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
-        event_id: event.event_id,
-        event_type: event.type,
-        status: "received",
+        p_event_id: event.event_id,
+        p_event_type: event.type,
       }),
     },
   )
-  const rows = await readJson<Array<{ event_id: string }>>(response, "Square webhook event claim")
-  return rows.length > 0
+  return readJson<boolean>(response, "Square webhook event claim")
 }
 
 async function markEvent(

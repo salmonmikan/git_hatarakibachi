@@ -49,6 +49,53 @@ create table if not exists public.square_webhook_events (
   processed_at timestamp with time zone
 );
 
+-- Webhookの重複排除と、一時エラー後の再送を原子的に扱う。
+create or replace function public.claim_square_webhook_event(
+  p_event_id text,
+  p_event_type text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_status text;
+  current_received_at timestamp with time zone;
+begin
+  insert into public.square_webhook_events (event_id, event_type, status)
+  values (p_event_id, p_event_type, 'received')
+  on conflict (event_id) do nothing;
+
+  if found then
+    return true;
+  end if;
+
+  select status, received_at
+  into current_status, current_received_at
+  from public.square_webhook_events
+  where event_id = p_event_id
+  for update;
+
+  if current_status = 'error'
+    or (current_status = 'received' and current_received_at < now() - interval '5 minutes') then
+    update public.square_webhook_events
+    set status = 'received',
+        event_type = p_event_type,
+        detail = null,
+        received_at = now(),
+        processed_at = null
+    where event_id = p_event_id;
+    return true;
+  end if;
+
+  return false;
+end;
+$$;
+
+revoke all on function public.claim_square_webhook_event(text, text) from public;
+grant execute on function public.claim_square_webhook_event(text, text) to service_role;
+
 -- 既存団員へ登録トークンを払い出す。
 insert into public.member_billing (member_id)
 select m.id
