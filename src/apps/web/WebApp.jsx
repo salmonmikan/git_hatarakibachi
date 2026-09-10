@@ -9,6 +9,7 @@ import Scenario from "./pages/Scenario.jsx";
 import PostDetail from "./pages/PostDetail.jsx";
 import PerformanceDetail from "./pages/PerformanceDetail.jsx";
 import NewsDetail from "./pages/NewsDetail.jsx";
+import TicketReservation from "./pages/TicketReservation.jsx";
 import ScrollToTop from "@src/components/ScrollToTop.jsx";
 import FloatingLinks from "@src/components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
@@ -24,6 +25,7 @@ function WebApp() {
   const mainRef = useRef(null);
   const lastScrollYRef = useRef(0);
   const [navHidden, setNavHidden] = useState(false);
+  const [reservationTransaction, setReservationTransaction] = useState(null);
 
   useEffect(() => {
     function onScroll() {
@@ -51,6 +53,16 @@ function WebApp() {
       title: document.title,
     });
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (reservationTransaction?.status !== 'pending') return undefined;
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [reservationTransaction]);
 
   return (
     <div className="web-shell">
@@ -110,6 +122,16 @@ function WebApp() {
             <Route path="post/:slug" element={<PostDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="performance/:slug" element={<PerformanceDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="news/:slug" element={<NewsDetail onEntered={() => mainRef.current?.focus()} />} />
+            <Route
+              path="tickets/:slug"
+              element={(
+                <TicketReservation
+                  onEntered={() => mainRef.current?.focus()}
+                  reservationTransaction={reservationTransaction}
+                  onReservationTransactionChange={setReservationTransaction}
+                />
+              )}
+            />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
