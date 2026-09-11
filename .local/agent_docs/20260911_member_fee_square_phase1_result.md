@@ -16,6 +16,7 @@
 - 全額・一部返金ではOrder / Paymentを取得し、`Payment.refunded_money` から返金後の純入金額を月別台帳へ反映するようにした。
 - Checkoutごとに `registration_attempt_token` を生成し、Square Checkoutの `payment_note` へ埋め込むことで、決済画面上でメールアドレスが変更されても初回Paymentから団員を一意に紐付けられるようにした。
 - `PENDING` 中は新しいPayment Linkを発行せず、既存リンクを返すようにして二重Subscription作成を防止した。
+- 登録開始はDB Functionで行ロックを取り原子的にclaimし、同時POSTは同じattempt token / Square idempotency keyへ収束させるようにした。
 - 同一Webhookが処理中に再送された場合は2xxを返さず、Squareの再送を継続させるようにした。
 - `CANCELED` / `COMPLETED` は登録リンクから再登録可能とし、`DEACTIVATED` は既存Subscriptionの再開対象として新規登録を禁止した。
 - 公開サイトへ団員専用登録画面・完了画面を追加した。グローバルナビには追加していない。
@@ -43,20 +44,22 @@ PR #57 のCodexレビューを都度再評価した。
 - stale期限前のWebhook再送を200で止める: 妥当。処理中イベントは `busy` として503を返すよう修正した。
 - 返金が月別台帳へ反映されない: 妥当。`invoice.refunded` を処理し、Paymentの返金額を台帳へ反映するよう修正した。
 
+### 最終再レビュー
+
+- 同一登録URLへの並行POSTで複数Payment Linkを発行できる: 妥当。Square呼び出し前に `claim_member_fee_registration_attempt` でDB行をロックしてPENDING/attempt tokenを原子的に確定し、並行リクエストを同一attemptへ収束させるよう修正した。Square API失敗やDBへのPayment Link ID保存失敗後も同じidempotency keyで安全に再開できる。
+
 ## 検証結果
 
-初回実装および初回レビュー対応後のPR CIは成功済み。
+各レビュー対応ごとにPR CIで以下を確認する。
 
-- ESLint: success
-- Vite build: success
-- Cloudflare Pages Functions build: success
-- Sanity Studio build: success
-- Migration filename validation: success
-- Local Supabase起動: success
-- 全Migration再適用: success
-- Local Supabase停止: success
-
-再レビュー対応後の最終HEADについても同じPR CIを再実行して確認する。
+- ESLint
+- Vite build
+- Cloudflare Pages Functions build
+- Sanity Studio build
+- Migration filename validation
+- Local Supabase起動
+- 全Migration再適用
+- Local Supabase停止
 
 ## 未実施 / マージ後に必要な確認
 
@@ -66,6 +69,7 @@ PR #57 のCodexレビューを都度再評価した。
 - Square Developer ConsoleへのWebhook登録（`invoice.refunded` を含む）
 - Square Sandboxを使った実カード相当のSubscription Checkout E2E確認
 - Checkout上でメールアドレスを変更した場合のattempt token紐付け確認
+- 同一登録URLへ並行POSTした場合に同一Payment Linkへ収束することのSandbox E2E確認
 - 全額 / 一部返金WebhookのSandbox E2E確認
 - Staging / Production SupabaseへのMigration適用
 - Productionでの実決済確認

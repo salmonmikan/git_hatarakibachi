@@ -102,6 +102,89 @@ $$;
 revoke all on function public.claim_square_webhook_event(text, text) from public;
 grant execute on function public.claim_square_webhook_event(text, text) to service_role;
 
+-- Checkout発行前にDB行をロックし、同一団員の並行POSTを同じattemptへ束ねる。
+-- Square API呼び出しが途中で失敗しても、次回POSTは同じattempt token / idempotency keyで再開する。
+create or replace function public.claim_member_fee_registration_attempt(
+  p_billing_id bigint,
+  p_email text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  billing_row public.member_billing%rowtype;
+  normalized_email text;
+  new_attempt_token uuid;
+begin
+  select *
+  into billing_row
+  from public.member_billing
+  where id = p_billing_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('result', 'not_found');
+  end if;
+
+  if billing_row.subscription_status = 'PENDING'
+    and billing_row.registration_attempt_token is not null then
+    return jsonb_build_object(
+      'result', 'pending',
+      'attempt_token', billing_row.registration_attempt_token,
+      'billing_email', billing_row.billing_email,
+      'payment_link_id', billing_row.square_payment_link_id
+    );
+  end if;
+
+  if billing_row.square_subscription_id is not null
+    and billing_row.subscription_status not in ('CANCELED', 'COMPLETED') then
+    return jsonb_build_object(
+      'result', 'registered',
+      'subscription_status', billing_row.subscription_status
+    );
+  end if;
+
+  normalized_email := lower(btrim(coalesce(p_email, '')));
+  if normalized_email = '' then
+    return jsonb_build_object('result', 'invalid_email');
+  end if;
+
+  if exists (
+    select 1
+    from public.member_billing other
+    where other.id <> p_billing_id
+      and other.billing_email is not null
+      and lower(other.billing_email) = normalized_email
+  ) then
+    return jsonb_build_object('result', 'email_conflict');
+  end if;
+
+  new_attempt_token := gen_random_uuid();
+
+  update public.member_billing
+  set billing_email = normalized_email,
+      registration_attempt_token = new_attempt_token,
+      square_subscription_id = null,
+      square_payment_link_id = null,
+      subscription_status = 'PENDING',
+      registration_started_at = now(),
+      updated_at = now()
+  where id = p_billing_id;
+
+  return jsonb_build_object(
+    'result', 'claimed',
+    'attempt_token', new_attempt_token,
+    'billing_email', normalized_email,
+    'payment_link_id', null
+  );
+end;
+$$;
+
+revoke all on function public.claim_member_fee_registration_attempt(bigint, text) from public;
+grant execute on function public.claim_member_fee_registration_attempt(bigint, text) to service_role;
+
 -- 既存団員へ登録トークンを払い出す。
 insert into public.member_billing (member_id)
 select m.id
