@@ -1,0 +1,98 @@
+.member-fees-admin {
+    display: grid;
+    gap: 20px;
+}
+
+.member-fees-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.member-fees-summary > div {
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-bg);
+}
+
+.member-fees-summary span {
+    font-size: 0.85rem;
+}
+
+.member-fees-summary strong {
+    font-size: 1.6rem;
+}
+
+.member-fees-alert,
+.member-fees-issues {
+    padding: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-bg);
+}
+
+.member-fees-issues h2 {
+    margin-top: 0;
+    font-size: 1rem;
+}
+
+.member-fees-issues ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.member-fees-issues li {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) auto minmax(220px, 2fr) auto;
+    gap: 12px;
+    align-items: start;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+}
+
+.member-fees-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.member-fees-table {
+    width: 100%;
+    min-width: 860px;
+    border-collapse: collapse;
+    background: var(--color-bg);
+}
+
+.member-fees-table th,
+.member-fees-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.member-fees-table th {
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.member-fees-table__member {
+    font-weight: 700;
+}
+
+.member-fees-table .admin-view__button:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+@media (max-width: 760px) {
+    .member-fees-issues li {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+}
