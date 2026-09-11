@@ -17,7 +17,9 @@ type BillingRow = {
   member_id: number
   billing_email: string | null
   registration_token: string
+  registration_attempt_token: string | null
   square_subscription_id: string | null
+  square_payment_link_id: string | null
   subscription_status: string
   member: {
     id: number
@@ -26,16 +28,19 @@ type BillingRow = {
   } | null
 }
 
-type CreatePaymentLinkResponse = {
+type PaymentLinkResponse = {
   payment_link?: {
     id?: string
     url?: string
   }
 }
 
+const REREGISTERABLE_STATUSES = new Set(["CANCELED", "COMPLETED"])
+const PAYMENT_NOTE_PREFIX = "hatarakibachi-member-fee:"
+
 function registrationParams(token: string) {
   const params = new URLSearchParams({
-    select: "id,member_id,billing_email,registration_token,square_subscription_id,subscription_status,member:members(id,name,deleted_at)",
+    select: "id,member_id,billing_email,registration_token,registration_attempt_token,square_subscription_id,square_payment_link_id,subscription_status,member:members(id,name,deleted_at)",
     registration_token: `eq.${token}`,
     limit: "1",
   })
@@ -58,6 +63,19 @@ function validateAvailableBilling(row: BillingRow | null) {
   return null
 }
 
+function isRegistered(row: BillingRow) {
+  return Boolean(row.square_subscription_id) && !REREGISTERABLE_STATUSES.has(row.subscription_status)
+}
+
+async function retrievePaymentLink(env: MemberFeeEnv, paymentLinkId: string) {
+  const response = await squareRequest(
+    env,
+    `/v2/online-checkout/payment-links/${encodeURIComponent(paymentLinkId)}`,
+  )
+  const body = await readJson<PaymentLinkResponse>(response, "Square payment link retrieval")
+  return body.payment_link?.url ?? null
+}
+
 export const onRequestGet = async ({ request, env }: FunctionContext<MemberFeeEnv>) => {
   try {
     const token = new URL(request.url).searchParams.get("token")?.trim() ?? ""
@@ -70,7 +88,8 @@ export const onRequestGet = async ({ request, env }: FunctionContext<MemberFeeEn
     return jsonResponse({
       memberName: row!.member!.name,
       status: row!.subscription_status,
-      registered: Boolean(row!.square_subscription_id),
+      registered: isRegistered(row!),
+      pending: row!.subscription_status === "PENDING" && Boolean(row!.square_payment_link_id),
     })
   } catch (error) {
     console.error("member fee registration lookup failed", error)
@@ -80,23 +99,34 @@ export const onRequestGet = async ({ request, env }: FunctionContext<MemberFeeEn
 
 export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeEnv>) => {
   try {
-    if (!env.SQUARE_LOCATION_ID || !env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
+    if (!env.SQUARE_ACCESS_TOKEN || !env.SQUARE_LOCATION_ID || !env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
       return jsonResponse({ error: "団員費の決済設定が完了していません。" }, 503)
     }
 
     const body = await request.json().catch(() => null) as { token?: unknown; email?: unknown } | null
     const token = typeof body?.token === "string" ? body.token.trim() : ""
-    const email = normalizeEmail(body?.email)
-
     if (!token) return jsonResponse({ error: "登録トークンがありません。" }, 400)
-    if (!isValidEmail(email)) return jsonResponse({ error: "メールアドレスを確認してください。" }, 400)
 
     const row = await getBillingByToken(env, token)
     const invalid = validateAvailableBilling(row)
     if (invalid) return invalid
-    if (row!.square_subscription_id) {
-      return jsonResponse({ error: "この団員はすでに団員費の定期決済へ登録されています。" }, 409)
+
+    // Checkout完了前の再送では新しいリンクを発行せず、既存リンクを返す。
+    if (row!.subscription_status === "PENDING" && row!.square_payment_link_id) {
+      const existingUrl = await retrievePaymentLink(env, row!.square_payment_link_id)
+      if (!existingUrl) throw new Error("Existing Square payment link is unavailable")
+      return jsonResponse({ url: existingUrl, existing: true })
     }
+
+    if (row!.square_subscription_id && !REREGISTERABLE_STATUSES.has(row!.subscription_status)) {
+      const message = row!.subscription_status === "DEACTIVATED"
+        ? "この定期決済はSquare側で無効化されています。劇団運営へ再開をご相談ください。"
+        : "この団員はすでに団員費の定期決済へ登録されています。"
+      return jsonResponse({ error: message }, 409)
+    }
+
+    const email = normalizeEmail(body?.email)
+    if (!isValidEmail(email)) return jsonResponse({ error: "メールアドレスを確認してください。" }, 400)
 
     const duplicateParams = new URLSearchParams({
       select: "id",
@@ -113,13 +143,15 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
       return jsonResponse({ error: "このメールアドレスは別の団員に登録済みです。" }, 409)
     }
 
-    const idempotencyHash = await sha256Hex(`${token}:${email}`)
+    const attemptToken = crypto.randomUUID()
+    const idempotencyHash = await sha256Hex(`${row!.id}:${attemptToken}`)
     const origin = new URL(request.url).origin
     const squareResponse = await squareRequest(env, "/v2/online-checkout/payment-links", {
       method: "POST",
       body: JSON.stringify({
         idempotency_key: `member-fee-${idempotencyHash}`,
         description: "劇団はたらきばち 団員費",
+        payment_note: `${PAYMENT_NOTE_PREFIX}${attemptToken}`,
         quick_pay: {
           name: "劇団はたらきばち 団員費",
           price_money: {
@@ -137,7 +169,7 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
         },
       }),
     })
-    const squareBody = await readJson<CreatePaymentLinkResponse>(squareResponse, "Square payment link creation")
+    const squareBody = await readJson<PaymentLinkResponse>(squareResponse, "Square payment link creation")
     const paymentLinkId = squareBody.payment_link?.id
     const paymentLinkUrl = squareBody.payment_link?.url
     if (!paymentLinkId || !paymentLinkUrl) {
@@ -153,6 +185,8 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
         headers: { Prefer: "return=minimal" },
         body: JSON.stringify({
           billing_email: email,
+          registration_attempt_token: attemptToken,
+          square_subscription_id: null,
           square_payment_link_id: paymentLinkId,
           subscription_status: "PENDING",
           registration_started_at: new Date().toISOString(),

@@ -10,13 +10,18 @@ const SUBSCRIPTION_STATUS_LABELS = {
     PAUSED: "休止中",
     CANCELED: "解約済み",
     DEACTIVATED: "無効",
+    COMPLETED: "完了",
 };
 
 const PAYMENT_STATUS_LABELS = {
     PAID: "入金済",
     PARTIAL: "一部入金",
     FAILED: "決済失敗",
+    REFUNDED: "全額返金",
+    PARTIALLY_REFUNDED: "一部返金",
 };
+
+const REREGISTERABLE_STATUSES = new Set(["CANCELED", "COMPLETED"]);
 
 function getCurrentMonth() {
     const parts = new Intl.DateTimeFormat("en-US", {
@@ -50,6 +55,10 @@ function getPublicSiteOrigin() {
         url.hostname = url.hostname.slice("admin-".length);
     }
     return url.origin;
+}
+
+function isRegistered(row) {
+    return Boolean(row.square_subscription_id) && !REREGISTERABLE_STATUSES.has(row.subscription_status);
 }
 
 export default function AdminMemberFees() {
@@ -114,10 +123,10 @@ export default function AdminMemberFees() {
         return map;
     }, [payments]);
 
-    const lastPaidPaymentByMember = useMemo(() => {
+    const lastPaymentByMember = useMemo(() => {
         const map = new Map();
         for (const payment of payments) {
-            if (payment.status === "PAID" && !map.has(payment.member_id)) {
+            if (payment.paid_at && !map.has(payment.member_id)) {
                 map.set(payment.member_id, payment);
             }
         }
@@ -128,7 +137,7 @@ export default function AdminMemberFees() {
         const active = billingRows.filter((row) => row.subscription_status === "ACTIVE").length;
         const paid = billingRows.filter((row) => paymentByMemberAndMonth.get(`${row.member_id}:${currentMonth}`)?.status === "PAID").length;
         const failed = billingRows.filter((row) => paymentByMemberAndMonth.get(`${row.member_id}:${currentMonth}`)?.status === "FAILED").length;
-        const waiting = billingRows.filter((row) => !row.square_subscription_id).length;
+        const waiting = billingRows.filter((row) => !isRegistered(row)).length;
         return { active, paid, failed, waiting };
     }, [billingRows, currentMonth, paymentByMemberAndMonth]);
 
@@ -206,19 +215,20 @@ export default function AdminMemberFees() {
                     <tbody>
                         {billingRows.map((row) => {
                             const currentPayment = paymentByMemberAndMonth.get(`${row.member_id}:${currentMonth}`);
-                            const lastPaidPayment = lastPaidPaymentByMember.get(row.member_id);
+                            const lastPayment = lastPaymentByMember.get(row.member_id);
                             const subscriptionLabel = SUBSCRIPTION_STATUS_LABELS[row.subscription_status] ?? row.subscription_status;
+                            const registered = isRegistered(row);
                             const paymentLabel = currentPayment
                                 ? PAYMENT_STATUS_LABELS[currentPayment.status] ?? currentPayment.status
-                                : row.square_subscription_id ? "未入金" : "未登録";
-                            const registered = Boolean(row.square_subscription_id);
+                                : registered ? "未入金" : "未登録";
+                            const deactivated = row.subscription_status === "DEACTIVATED";
 
                             return (
                                 <tr key={row.id}>
                                     <td className="member-fees-table__member">{row.member.name}</td>
                                     <td>{subscriptionLabel}</td>
                                     <td>{paymentLabel}</td>
-                                    <td>{formatDate(lastPaidPayment?.paid_at)}</td>
+                                    <td>{formatDate(lastPayment?.paid_at)}</td>
                                     <td>{row.billing_email || "-"}</td>
                                     <td>
                                         <button
@@ -226,11 +236,15 @@ export default function AdminMemberFees() {
                                             type="button"
                                             onClick={() => copyRegistrationLink(row)}
                                             disabled={registered}
-                                            title={registered ? "すでにSquareへ登録済みです" : "団員専用の登録URLをコピー"}
+                                            title={deactivated
+                                                ? "Square側で既存Subscriptionを再開してください"
+                                                : registered ? "すでにSquareへ登録済みです" : "団員専用の登録URLをコピー"}
                                         >
-                                            {registered
-                                                ? "登録済み"
-                                                : copiedMemberId === row.member_id ? "コピー済み" : "登録リンクをコピー"}
+                                            {deactivated
+                                                ? "要再開"
+                                                : registered
+                                                    ? "登録済み"
+                                                    : copiedMemberId === row.member_id ? "コピー済み" : "登録リンクをコピー"}
                                         </button>
                                     </td>
                                 </tr>

@@ -51,8 +51,11 @@ https://<公開サイト>/api/square/webhook
 - `subscription.updated`
 - `invoice.payment_made`
 - `invoice.scheduled_charge_failed`
+- `invoice.refunded`
 
 Developer Consoleに表示されるSignature Keyを `SQUARE_WEBHOOK_SIGNATURE_KEY` に設定し、Developer Consoleへ登録したNotification URLを文字列どおり `SQUARE_WEBHOOK_NOTIFICATION_URL` に設定します。
+
+Webhook payloadは配送順を保証しない前提で処理します。Subscription / Invoiceイベント受信時はSquare APIから現在のリソースを再取得し、その状態を正としてSupabaseへ同期します。処理中の同一イベント再送には2xxを返さず、Square側の再送を継続させます。
 
 ## 4. DB Migration
 
@@ -62,6 +65,8 @@ Developer Consoleに表示されるSignature Keyを `SQUARE_WEBHOOK_SIGNATURE_KE
 - `member_fee_payments`: 月別の団員費入金台帳
 - `square_webhook_events`: Webhookの重複処理防止・連携エラー監視
 
+`member_billing.registration_attempt_token` は、各Checkout発行時に生成する変更不能な内部識別子です。Checkout APIの `payment_note` にこの値を埋め込み、Square Checkout上で購入者がメールアドレスを変更しても、初回Paymentから正しい団員へ紐付けられるようにします。メールアドレスは連絡・表示用であり、契約紐付けの主キーには使用しません。
+
 既存団員にはMigration時に `member_billing` を自動作成し、新規団員にはDB Triggerで自動作成します。
 
 ## 5. 運用開始
@@ -70,7 +75,15 @@ Developer Consoleに表示されるSignature Keyを `SQUARE_WEBHOOK_SIGNATURE_KE
 2. 未登録団員の「登録リンクをコピー」を押す。
 3. 本人へURLを共有する。
 4. 本人がメールアドレスを入力してSquareへ遷移し、定期決済を登録する。
-5. Square Webhook受信後、Adminの団員費管理へ契約状態・月別入金状況が反映される。
+5. 登録途中で同じURLを再度開いた場合は、新しいCheckoutを発行せず既存のSquare決済ページを再利用する。
+6. Square Webhook受信後、Adminの団員費管理へ契約状態・月別入金状況が反映される。
+7. Squareで全額・一部返金を行った場合も `invoice.refunded` を受けて台帳へ反映する。
+
+## 契約終了後の扱い
+
+- `CANCELED` / `COMPLETED`: 登録リンクから新しいSubscriptionを作成できます。
+- `DEACTIVATED`: Square側で既存Subscriptionを再開できる状態として扱い、このPhaseでは新規Subscriptionを作りません。管理画面では「要再開」と表示します。
+- Pause / Resume / CancelのWeb管理画面からの自動操作はPhase 1対象外です。
 
 ## Phase 1で行わないこと
 

@@ -5,6 +5,7 @@ create table if not exists public.member_billing (
   member_id bigint not null unique references public.members(id) on update cascade on delete cascade,
   billing_email text,
   registration_token uuid not null default gen_random_uuid() unique,
+  registration_attempt_token uuid unique,
   square_customer_id text unique,
   square_subscription_id text unique,
   square_payment_link_id text,
@@ -50,11 +51,12 @@ create table if not exists public.square_webhook_events (
 );
 
 -- Webhookの重複排除と、一時エラー後の再送を原子的に扱う。
+-- claimed: このリクエストが処理権を取得、busy: 別リクエストが処理中、completed: 処理済み。
 create or replace function public.claim_square_webhook_event(
   p_event_id text,
   p_event_type text
 )
-returns boolean
+returns text
 language plpgsql
 security definer
 set search_path = public
@@ -68,7 +70,7 @@ begin
   on conflict (event_id) do nothing;
 
   if found then
-    return true;
+    return 'claimed';
   end if;
 
   select status, received_at
@@ -86,10 +88,14 @@ begin
         received_at = now(),
         processed_at = null
     where event_id = p_event_id;
-    return true;
+    return 'claimed';
   end if;
 
-  return false;
+  if current_status = 'received' then
+    return 'busy';
+  end if;
+
+  return 'completed';
 end;
 $$;
 

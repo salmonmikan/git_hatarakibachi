@@ -57,8 +57,7 @@ export default function MemberFeeRegistration({ onEntered }) {
         };
     }, [token]);
 
-    const onSubmit = async (event) => {
-        event.preventDefault();
+    const openSquare = async (payload) => {
         if (submitting) return;
 
         setSubmitting(true);
@@ -67,7 +66,7 @@ export default function MemberFeeRegistration({ onEntered }) {
             const response = await fetch("/api/member-fee/registration", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Accept: "application/json" },
-                body: JSON.stringify({ token, email }),
+                body: JSON.stringify(payload),
             });
             const body = await response.json();
             if (!response.ok) throw new Error(body.error || "決済ページを作成できませんでした。");
@@ -77,6 +76,15 @@ export default function MemberFeeRegistration({ onEntered }) {
             setError(submitError instanceof Error ? submitError.message : "決済ページを作成できませんでした。");
             setSubmitting(false);
         }
+    };
+
+    const onSubmit = async (event) => {
+        event.preventDefault();
+        await openSquare({ token, email });
+    };
+
+    const onContinue = async () => {
+        await openSquare({ token });
     };
 
     return (
@@ -101,8 +109,21 @@ export default function MemberFeeRegistration({ onEntered }) {
                             </div>
                         </dl>
 
-                        {registration.registered ? (
+                        {registration.status === "DEACTIVATED" ? (
+                            <p className="member-fee-notice">
+                                Square側で定期決済が無効化されています。劇団運営へ再開をご相談ください。
+                            </p>
+                        ) : registration.registered ? (
                             <p className="member-fee-notice">この団員はすでに定期決済へ登録されています。</p>
+                        ) : registration.pending ? (
+                            <div className="member-fee-form">
+                                <p className="member-fee-notice">
+                                    登録手続きの途中です。発行済みのSquare決済ページから続きを行えます。
+                                </p>
+                                <button type="button" onClick={onContinue} disabled={submitting}>
+                                    {submitting ? "決済ページを確認中..." : "Squareの登録を続ける"}
+                                </button>
+                            </div>
                         ) : (
                             <form className="member-fee-form" onSubmit={onSubmit}>
                                 <label htmlFor="member-fee-email">決済に使用するメールアドレス</label>

@@ -2,7 +2,6 @@ import type { FunctionContext } from "../../_types"
 import {
   firstDayOfMonth,
   jsonResponse,
-  normalizeEmail,
   readJson,
   squareRequest,
   supabaseRequest,
@@ -31,13 +30,24 @@ type SquareInvoicePaymentRequest = {
 type SquareInvoice = {
   id?: string
   subscription_id?: string
+  order_id?: string
   status?: string
   sale_or_service_date?: string
+  updated_at?: string
   primary_recipient?: {
     customer_id?: string
     email_address?: string
   }
   payment_requests?: SquareInvoicePaymentRequest[]
+}
+
+type SquarePayment = {
+  id?: string
+  customer_id?: string
+  note?: string
+  amount_money?: Money
+  refunded_money?: Money
+  created_at?: string
 }
 
 type SquareWebhookEvent = {
@@ -56,28 +66,54 @@ type BillingRow = {
   id: number
   member_id: number
   billing_email: string | null
+  registration_attempt_token: string | null
   square_customer_id: string | null
   square_subscription_id: string | null
+  square_payment_link_id: string | null
   subscription_status: string
   started_at: string | null
 }
 
-type SquareCustomerResponse = {
-  customer?: {
-    id?: string
-    email_address?: string
-  }
+type PaymentRow = {
+  member_id: number
+  target_month: string
+  amount: number
+  status: string
+  paid_at: string | null
+  square_invoice_id: string
 }
 
 type SquareSubscriptionResponse = {
   subscription?: SquareSubscription
 }
 
+type SquareInvoiceResponse = {
+  invoice?: SquareInvoice
+}
+
+type SquareOrderResponse = {
+  order?: {
+    tenders?: Array<{
+      id?: string
+      payment_id?: string
+    }>
+  }
+}
+
+type SquarePaymentResponse = {
+  payment?: SquarePayment
+}
+
+type ClaimResult = "claimed" | "busy" | "completed"
+
+const PAYMENT_NOTE_PREFIX = "hatarakibachi-member-fee:"
+const REREGISTERABLE_STATUSES = new Set(["CANCELED", "COMPLETED"])
 const SUPPORTED_EVENTS = new Set([
   "subscription.created",
   "subscription.updated",
   "invoice.payment_made",
   "invoice.scheduled_charge_failed",
+  "invoice.refunded",
 ])
 
 async function verifySquareSignature(
@@ -114,7 +150,7 @@ async function claimEvent(env: MemberFeeEnv, event: SquareWebhookEvent) {
       }),
     },
   )
-  return readJson<boolean>(response, "Square webhook event claim")
+  return readJson<ClaimResult>(response, "Square webhook event claim")
 }
 
 async function markEvent(
@@ -142,35 +178,13 @@ async function markEvent(
 
 async function selectBilling(env: MemberFeeEnv, filterName: string, value: string) {
   const params = new URLSearchParams({
-    select: "id,member_id,billing_email,square_customer_id,square_subscription_id,subscription_status,started_at",
+    select: "id,member_id,billing_email,registration_attempt_token,square_customer_id,square_subscription_id,square_payment_link_id,subscription_status,started_at",
     [filterName]: `eq.${value}`,
     limit: "1",
   })
   const response = await supabaseRequest(env, `/rest/v1/member_billing?${params.toString()}`)
   const rows = await readJson<BillingRow[]>(response, "member billing lookup")
   return rows[0] ?? null
-}
-
-async function findBilling(
-  env: MemberFeeEnv,
-  subscriptionId?: string,
-  customerId?: string,
-  email?: string,
-) {
-  if (subscriptionId) {
-    const row = await selectBilling(env, "square_subscription_id", subscriptionId)
-    if (row) return row
-  }
-  if (customerId) {
-    const row = await selectBilling(env, "square_customer_id", customerId)
-    if (row) return row
-  }
-  const normalizedEmail = normalizeEmail(email)
-  if (normalizedEmail) {
-    const row = await selectBilling(env, "billing_email", normalizedEmail)
-    if (row) return row
-  }
-  return null
 }
 
 async function updateBilling(env: MemberFeeEnv, billingId: number, payload: Record<string, unknown>) {
@@ -187,80 +201,77 @@ async function updateBilling(env: MemberFeeEnv, billingId: number, payload: Reco
   if (!response.ok) await readJson(response, "member billing update")
 }
 
-async function retrieveCustomerEmail(env: MemberFeeEnv, customerId: string) {
-  const response = await squareRequest(env, `/v2/customers/${encodeURIComponent(customerId)}`)
-  const body = await readJson<SquareCustomerResponse>(response, "Square customer retrieval")
-  return normalizeEmail(body.customer?.email_address)
-}
-
 async function retrieveSubscription(env: MemberFeeEnv, subscriptionId: string) {
   const response = await squareRequest(env, `/v2/subscriptions/${encodeURIComponent(subscriptionId)}`)
   const body = await readJson<SquareSubscriptionResponse>(response, "Square subscription retrieval")
   return body.subscription ?? null
 }
 
-async function unlinkIfDifferentPlan(
-  env: MemberFeeEnv,
-  subscriptionId: string,
-  customerId?: string,
-) {
-  const billing = await findBilling(env, subscriptionId, customerId)
-  if (!billing || billing.square_subscription_id !== subscriptionId) return
-
-  await updateBilling(env, billing.id, {
-    square_subscription_id: null,
-    subscription_status: "NOT_REGISTERED",
-  })
+async function retrieveInvoice(env: MemberFeeEnv, invoiceId: string) {
+  const response = await squareRequest(env, `/v2/invoices/${encodeURIComponent(invoiceId)}`)
+  const body = await readJson<SquareInvoiceResponse>(response, "Square invoice retrieval")
+  return body.invoice ?? null
 }
 
-async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookEvent) {
-  const webhookSubscription = event.data?.object?.subscription
-  if (!webhookSubscription?.id) {
-    throw new Error("Subscription webhook does not contain a subscription ID")
-  }
+async function retrieveOrderPayments(env: MemberFeeEnv, orderId?: string) {
+  if (!orderId) return []
 
-  // Webhookの配送順には依存せず、Square上の現在状態を正として同期する。
-  const subscription = await retrieveSubscription(env, webhookSubscription.id)
-  if (!subscription?.id || !subscription.customer_id) {
-    throw new Error("Current Square subscription does not contain required identifiers")
-  }
-  if (subscription.plan_variation_id !== env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
-    await unlinkIfDifferentPlan(env, subscription.id, subscription.customer_id)
-    return { status: "ignored" as const, detail: "Subscription currently uses another plan variation" }
-  }
+  const orderResponse = await squareRequest(env, `/v2/orders/${encodeURIComponent(orderId)}`)
+  const orderBody = await readJson<SquareOrderResponse>(orderResponse, "Square order retrieval")
+  const paymentIds = Array.from(new Set(
+    (orderBody.order?.tenders ?? [])
+      .map((tender) => tender.payment_id || tender.id)
+      .filter((id): id is string => Boolean(id)),
+  ))
 
-  let billing = await findBilling(env, subscription.id, subscription.customer_id)
-  if (!billing) {
-    const customerEmail = await retrieveCustomerEmail(env, subscription.customer_id)
-    billing = await findBilling(env, subscription.id, subscription.customer_id, customerEmail)
-  }
-  if (!billing) {
-    return { status: "unmatched" as const, detail: `Subscription ${subscription.id} could not be linked to a member` }
-  }
+  const payments = await Promise.all(paymentIds.map(async (paymentId) => {
+    const paymentResponse = await squareRequest(env, `/v2/payments/${encodeURIComponent(paymentId)}`)
+    const paymentBody = await readJson<SquarePaymentResponse>(paymentResponse, "Square payment retrieval")
+    return paymentBody.payment ?? null
+  }))
 
-  await updateBilling(env, billing.id, {
-    square_customer_id: subscription.customer_id,
-    square_subscription_id: subscription.id,
-    subscription_status: subscription.status || "UNKNOWN",
-    started_at: billing.started_at || subscription.start_date || event.created_at || null,
-  })
-  return { status: "processed" as const }
+  return payments.filter((payment): payment is SquarePayment => Boolean(payment))
 }
 
-function paymentRequestForInvoice(invoice: SquareInvoice) {
-  return invoice.payment_requests?.[0] ?? null
+function attemptTokenFromPaymentNote(note?: string) {
+  if (!note?.startsWith(PAYMENT_NOTE_PREFIX)) return null
+  const token = note.slice(PAYMENT_NOTE_PREFIX.length).trim()
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token)
+    ? token
+    : null
 }
 
-async function getExistingPaymentStatus(env: MemberFeeEnv, memberId: number, targetMonth: string) {
+async function findBillingFromPayments(env: MemberFeeEnv, payments: SquarePayment[]) {
+  for (const payment of payments) {
+    const attemptToken = attemptTokenFromPaymentNote(payment.note)
+    if (!attemptToken) continue
+    const billing = await selectBilling(env, "registration_attempt_token", attemptToken)
+    if (billing) return billing
+  }
+  return null
+}
+
+async function getPaymentByInvoiceId(env: MemberFeeEnv, invoiceId: string) {
   const params = new URLSearchParams({
-    select: "status",
+    select: "member_id,target_month,amount,status,paid_at,square_invoice_id",
+    square_invoice_id: `eq.${invoiceId}`,
+    limit: "1",
+  })
+  const response = await supabaseRequest(env, `/rest/v1/member_fee_payments?${params.toString()}`)
+  const rows = await readJson<PaymentRow[]>(response, "member fee payment invoice lookup")
+  return rows[0] ?? null
+}
+
+async function getPaymentByMemberMonth(env: MemberFeeEnv, memberId: number, targetMonth: string) {
+  const params = new URLSearchParams({
+    select: "member_id,target_month,amount,status,paid_at,square_invoice_id",
     member_id: `eq.${memberId}`,
     target_month: `eq.${targetMonth}`,
     limit: "1",
   })
   const response = await supabaseRequest(env, `/rest/v1/member_fee_payments?${params.toString()}`)
-  const rows = await readJson<Array<{ status: string }>>(response, "member fee payment lookup")
-  return rows[0]?.status ?? null
+  const rows = await readJson<PaymentRow[]>(response, "member fee payment month lookup")
+  return rows[0] ?? null
 }
 
 async function upsertPayment(
@@ -288,37 +299,127 @@ async function upsertPayment(
   if (!response.ok) await readJson(response, "member fee payment upsert")
 }
 
+async function unlinkIfDifferentPlan(env: MemberFeeEnv, subscriptionId: string) {
+  const billing = await selectBilling(env, "square_subscription_id", subscriptionId)
+  if (!billing) return
+
+  await updateBilling(env, billing.id, {
+    registration_attempt_token: null,
+    square_subscription_id: null,
+    square_payment_link_id: null,
+    subscription_status: "NOT_REGISTERED",
+  })
+}
+
+async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookEvent) {
+  const webhookSubscription = event.data?.object?.subscription
+  if (!webhookSubscription?.id) {
+    throw new Error("Subscription webhook does not contain a subscription ID")
+  }
+
+  // Webhookの配送順には依存せず、Square上の現在状態を正として同期する。
+  const subscription = await retrieveSubscription(env, webhookSubscription.id)
+  if (!subscription?.id || !subscription.customer_id) {
+    throw new Error("Current Square subscription does not contain required identifiers")
+  }
+  if (subscription.plan_variation_id !== env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
+    await unlinkIfDifferentPlan(env, subscription.id)
+    return { status: "ignored" as const, detail: "Subscription currently uses another plan variation" }
+  }
+
+  const billing = await selectBilling(env, "square_subscription_id", subscription.id)
+
+  if (REREGISTERABLE_STATUSES.has(subscription.status || "")) {
+    // 現在このSubscriptionを保持している団員だけ終了状態へ更新する。
+    // 再登録後に遅れて届いた旧Subscriptionイベントは無視する。
+    if (!billing) {
+      return { status: "ignored" as const, detail: "Historical terminal subscription event" }
+    }
+    await updateBilling(env, billing.id, {
+      subscription_status: subscription.status,
+      square_payment_link_id: null,
+    })
+    return { status: "processed" as const }
+  }
+
+  if (!billing) {
+    // 初回Checkoutではメールアドレスを識別子に使わず、初回Invoice/Paymentの固定noteで紐付ける。
+    return { status: "ignored" as const, detail: "Subscription is awaiting immutable checkout linkage" }
+  }
+
+  await updateBilling(env, billing.id, {
+    square_customer_id: subscription.customer_id,
+    square_subscription_id: subscription.id,
+    square_payment_link_id: null,
+    subscription_status: subscription.status || "UNKNOWN",
+    started_at: billing.started_at || subscription.start_date || event.created_at || null,
+  })
+  return { status: "processed" as const }
+}
+
+function paymentRequestForInvoice(invoice: SquareInvoice) {
+  return invoice.payment_requests?.[0] ?? null
+}
+
+function latestPaymentTimestamp(payments: SquarePayment[]) {
+  return payments
+    .map((payment) => payment.created_at)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1) ?? null
+}
+
+function totalRefundedAmount(payments: SquarePayment[]) {
+  return payments.reduce((total, payment) => total + (payment.refunded_money?.amount ?? 0), 0)
+}
+
+function shouldLinkSubscription(billing: BillingRow, subscriptionId: string) {
+  if (!billing.square_subscription_id) return true
+  if (billing.square_subscription_id === subscriptionId) return true
+  return billing.subscription_status === "NOT_REGISTERED"
+    || billing.subscription_status === "PENDING"
+    || REREGISTERABLE_STATUSES.has(billing.subscription_status)
+}
+
 async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent) {
-  const invoice = event.data?.object?.invoice
+  const webhookInvoice = event.data?.object?.invoice
+  if (!webhookInvoice?.id) {
+    return { status: "ignored" as const, detail: "Invoice ID is missing" }
+  }
+
+  // Invoiceイベントもpayloadの到着順に依存せず、Square上の現在Invoiceを正として扱う。
+  const invoice = await retrieveInvoice(env, webhookInvoice.id)
   if (!invoice?.id || !invoice.subscription_id) {
     return { status: "ignored" as const, detail: "Invoice is not a subscription billing invoice" }
   }
 
-  // 既に紐付いているSubscriptionでも、現在のPlan Variationを毎回確認する。
+  const existingInvoicePayment = await getPaymentByInvoiceId(env, invoice.id)
   const subscription = await retrieveSubscription(env, invoice.subscription_id)
-  if (!subscription || subscription.plan_variation_id !== env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
-    await unlinkIfDifferentPlan(env, invoice.subscription_id, subscription?.customer_id)
+  if (!subscription) throw new Error("Current Square subscription could not be retrieved")
+
+  const isMemberFeePlan = subscription.plan_variation_id === env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID
+  if (!isMemberFeePlan && !existingInvoicePayment) {
+    await unlinkIfDifferentPlan(env, invoice.subscription_id)
     return { status: "ignored" as const, detail: "Invoice belongs to another subscription plan" }
   }
 
-  let billing = await findBilling(
-    env,
-    subscription.id || invoice.subscription_id,
-    subscription.customer_id || invoice.primary_recipient?.customer_id,
-    invoice.primary_recipient?.email_address,
-  )
-  if (!billing && subscription.customer_id) {
-    const customerEmail = await retrieveCustomerEmail(env, subscription.customer_id)
-    billing = await findBilling(
-      env,
-      subscription.id || invoice.subscription_id,
-      subscription.customer_id,
-      customerEmail,
-    )
+  let billing = existingInvoicePayment
+    ? await selectBilling(env, "member_id", String(existingInvoicePayment.member_id))
+    : await selectBilling(env, "square_subscription_id", invoice.subscription_id)
+
+  let payments: SquarePayment[] = []
+  if (!billing) {
+    payments = await retrieveOrderPayments(env, invoice.order_id)
+    billing = await findBillingFromPayments(env, payments)
   }
 
   if (!billing) {
     return { status: "unmatched" as const, detail: `Invoice ${invoice.id} could not be linked to a member` }
+  }
+
+  const canLinkSubscription = isMemberFeePlan && shouldLinkSubscription(billing, invoice.subscription_id)
+  if (!canLinkSubscription && !existingInvoicePayment && billing.square_subscription_id !== invoice.subscription_id) {
+    return { status: "ignored" as const, detail: "Invoice belongs to a historical subscription" }
   }
 
   const paymentRequest = paymentRequestForInvoice(invoice)
@@ -329,47 +430,64 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
   const currency = paymentRequest?.computed_amount_money?.currency
     || paymentRequest?.total_completed_amount_money?.currency
     || "JPY"
+  const existingMonthPayment = existingInvoicePayment
+    || await getPaymentByMemberMonth(env, billing.member_id, targetMonth)
 
-  if (event.type === "invoice.payment_made") {
-    const fullyPaid = invoice.status === "PAID" || (computedAmount > 0 && completedAmount >= computedAmount)
-    const paymentStatus = fullyPaid ? "PAID" : "PARTIAL"
-    await upsertPayment(env, {
-      member_id: billing.member_id,
-      target_month: targetMonth,
-      amount: completedAmount || computedAmount,
-      currency,
-      square_invoice_id: invoice.id,
-      status: paymentStatus,
-      paid_at: event.created_at || new Date().toISOString(),
-    })
-    await updateBilling(env, billing.id, {
-      square_customer_id: billing.square_customer_id || subscription.customer_id || invoice.primary_recipient?.customer_id || null,
-      square_subscription_id: subscription.id || invoice.subscription_id,
-      subscription_status: subscription.status || billing.subscription_status,
-      last_payment_at: event.created_at || new Date().toISOString(),
-      last_payment_status: paymentStatus,
-    })
-    return { status: "processed" as const }
+  if ((invoice.status === "REFUNDED" || invoice.status === "PARTIALLY_REFUNDED") && payments.length === 0) {
+    payments = await retrieveOrderPayments(env, invoice.order_id)
   }
 
-  const existingStatus = await getExistingPaymentStatus(env, billing.member_id, targetMonth)
-  if (existingStatus !== "PAID") {
-    await upsertPayment(env, {
-      member_id: billing.member_id,
-      target_month: targetMonth,
-      amount: computedAmount,
-      currency,
-      square_invoice_id: invoice.id,
-      status: "FAILED",
-      paid_at: null,
-    })
-    await updateBilling(env, billing.id, {
-      square_customer_id: billing.square_customer_id || subscription.customer_id || invoice.primary_recipient?.customer_id || null,
-      square_subscription_id: subscription.id || invoice.subscription_id,
-      subscription_status: subscription.status || billing.subscription_status,
-      last_payment_status: "FAILED",
-    })
+  let paymentStatus: "PAID" | "PARTIAL" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | null = null
+  let amount = completedAmount || computedAmount
+  let paidAt = existingMonthPayment?.paid_at ?? null
+
+  if (invoice.status === "REFUNDED" || invoice.status === "PARTIALLY_REFUNDED") {
+    const refundedAmount = totalRefundedAmount(payments)
+    amount = Math.max(0, completedAmount - refundedAmount)
+    paymentStatus = invoice.status === "REFUNDED" || amount === 0 ? "REFUNDED" : "PARTIALLY_REFUNDED"
+  } else if (invoice.status === "PAID" || (computedAmount > 0 && completedAmount >= computedAmount)) {
+    paymentStatus = "PAID"
+    amount = completedAmount || computedAmount
+    paidAt = paidAt || latestPaymentTimestamp(payments) || invoice.updated_at || event.created_at || new Date().toISOString()
+  } else if (invoice.status === "PARTIALLY_PAID" || completedAmount > 0) {
+    paymentStatus = "PARTIAL"
+    amount = completedAmount
+    paidAt = paidAt || latestPaymentTimestamp(payments) || invoice.updated_at || event.created_at || new Date().toISOString()
+  } else if (event.type === "invoice.scheduled_charge_failed") {
+    paymentStatus = "FAILED"
+    amount = computedAmount
+    paidAt = null
   }
+
+  if (!paymentStatus) {
+    return { status: "processed" as const, detail: `No ledger change required for invoice status ${invoice.status || "UNKNOWN"}` }
+  }
+
+  await upsertPayment(env, {
+    member_id: billing.member_id,
+    target_month: targetMonth,
+    amount,
+    currency,
+    square_invoice_id: invoice.id,
+    status: paymentStatus,
+    paid_at: paidAt,
+  })
+
+  const billingUpdate: Record<string, unknown> = {
+    last_payment_status: paymentStatus,
+  }
+  if (paymentStatus === "PAID" || paymentStatus === "PARTIAL") {
+    billingUpdate.last_payment_at = paidAt
+  }
+  if (canLinkSubscription) {
+    billingUpdate.square_customer_id = subscription.customer_id || invoice.primary_recipient?.customer_id || null
+    billingUpdate.square_subscription_id = subscription.id || invoice.subscription_id
+    billingUpdate.square_payment_link_id = null
+    billingUpdate.subscription_status = subscription.status || billing.subscription_status
+    billingUpdate.started_at = billing.started_at || subscription.start_date || event.created_at || null
+  }
+  await updateBilling(env, billing.id, billingUpdate)
+
   return { status: "processed" as const }
 }
 
@@ -403,8 +521,17 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
   }
 
   try {
-    const claimed = await claimEvent(env, event)
-    if (!claimed) return jsonResponse({ ok: true, duplicate: true })
+    const claimResult = await claimEvent(env, event)
+    if (claimResult === "busy") {
+      // 2xxを返すとSquareが再送を止めるため、処理中は明示的に再送を継続させる。
+      return jsonResponse({ error: "Webhook event is already being processed" }, 503)
+    }
+    if (claimResult === "completed") {
+      return jsonResponse({ ok: true, duplicate: true })
+    }
+    if (claimResult !== "claimed") {
+      throw new Error(`Unknown webhook claim result: ${String(claimResult)}`)
+    }
 
     if (!SUPPORTED_EVENTS.has(event.type)) {
       await markEvent(env, event.event_id, "ignored", `Unsupported event type: ${event.type}`)
