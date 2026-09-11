@@ -199,13 +199,34 @@ async function retrieveSubscription(env: MemberFeeEnv, subscriptionId: string) {
   return body.subscription ?? null
 }
 
+async function unlinkIfDifferentPlan(
+  env: MemberFeeEnv,
+  subscriptionId: string,
+  customerId?: string,
+) {
+  const billing = await findBilling(env, subscriptionId, customerId)
+  if (!billing || billing.square_subscription_id !== subscriptionId) return
+
+  await updateBilling(env, billing.id, {
+    square_subscription_id: null,
+    subscription_status: "NOT_REGISTERED",
+  })
+}
+
 async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookEvent) {
-  const subscription = event.data?.object?.subscription
+  const webhookSubscription = event.data?.object?.subscription
+  if (!webhookSubscription?.id) {
+    throw new Error("Subscription webhook does not contain a subscription ID")
+  }
+
+  // Webhookの配送順には依存せず、Square上の現在状態を正として同期する。
+  const subscription = await retrieveSubscription(env, webhookSubscription.id)
   if (!subscription?.id || !subscription.customer_id) {
-    throw new Error("Subscription webhook does not contain required identifiers")
+    throw new Error("Current Square subscription does not contain required identifiers")
   }
   if (subscription.plan_variation_id !== env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
-    return { status: "ignored" as const, detail: "Subscription uses another plan variation" }
+    await unlinkIfDifferentPlan(env, subscription.id, subscription.customer_id)
+    return { status: "ignored" as const, detail: "Subscription currently uses another plan variation" }
   }
 
   let billing = await findBilling(env, subscription.id, subscription.customer_id)
@@ -273,21 +294,26 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
     return { status: "ignored" as const, detail: "Invoice is not a subscription billing invoice" }
   }
 
-  // 既に団員費Subscriptionとして紐付いたID以外は、SquareからPlan Variationを確認してから
-  // customer/emailによる紐付けへ進む。別用途のSquare Subscriptionを誤計上しないため。
-  let billing = await findBilling(env, invoice.subscription_id)
-  let subscription: SquareSubscription | null = null
-  if (!billing) {
-    subscription = await retrieveSubscription(env, invoice.subscription_id)
-    if (!subscription || subscription.plan_variation_id !== env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
-      return { status: "ignored" as const, detail: "Invoice belongs to another subscription plan" }
-    }
+  // 既に紐付いているSubscriptionでも、現在のPlan Variationを毎回確認する。
+  const subscription = await retrieveSubscription(env, invoice.subscription_id)
+  if (!subscription || subscription.plan_variation_id !== env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
+    await unlinkIfDifferentPlan(env, invoice.subscription_id, subscription?.customer_id)
+    return { status: "ignored" as const, detail: "Invoice belongs to another subscription plan" }
+  }
 
+  let billing = await findBilling(
+    env,
+    subscription.id || invoice.subscription_id,
+    subscription.customer_id || invoice.primary_recipient?.customer_id,
+    invoice.primary_recipient?.email_address,
+  )
+  if (!billing && subscription.customer_id) {
+    const customerEmail = await retrieveCustomerEmail(env, subscription.customer_id)
     billing = await findBilling(
       env,
-      subscription.id,
-      subscription.customer_id || invoice.primary_recipient?.customer_id,
-      invoice.primary_recipient?.email_address,
+      subscription.id || invoice.subscription_id,
+      subscription.customer_id,
+      customerEmail,
     )
   }
 
@@ -317,9 +343,9 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
       paid_at: event.created_at || new Date().toISOString(),
     })
     await updateBilling(env, billing.id, {
-      square_customer_id: billing.square_customer_id || subscription?.customer_id || invoice.primary_recipient?.customer_id || null,
-      square_subscription_id: invoice.subscription_id,
-      subscription_status: subscription?.status || billing.subscription_status,
+      square_customer_id: billing.square_customer_id || subscription.customer_id || invoice.primary_recipient?.customer_id || null,
+      square_subscription_id: subscription.id || invoice.subscription_id,
+      subscription_status: subscription.status || billing.subscription_status,
       last_payment_at: event.created_at || new Date().toISOString(),
       last_payment_status: paymentStatus,
     })
@@ -338,9 +364,9 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
       paid_at: null,
     })
     await updateBilling(env, billing.id, {
-      square_customer_id: billing.square_customer_id || subscription?.customer_id || invoice.primary_recipient?.customer_id || null,
-      square_subscription_id: invoice.subscription_id,
-      subscription_status: subscription?.status || billing.subscription_status,
+      square_customer_id: billing.square_customer_id || subscription.customer_id || invoice.primary_recipient?.customer_id || null,
+      square_subscription_id: subscription.id || invoice.subscription_id,
+      subscription_status: subscription.status || billing.subscription_status,
       last_payment_status: "FAILED",
     })
   }
