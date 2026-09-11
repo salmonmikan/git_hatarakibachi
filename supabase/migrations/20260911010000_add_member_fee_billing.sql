@@ -34,12 +34,14 @@ create table if not exists public.member_fee_payments (
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now(),
   constraint member_fee_payments_target_month_check
-    check (target_month = date_trunc('month', target_month)::date),
-  constraint member_fee_payments_member_month_key unique (member_id, target_month)
+    check (target_month = date_trunc('month', target_month)::date)
 );
 
 create index if not exists member_fee_payments_target_month_idx
   on public.member_fee_payments (target_month desc, member_id);
+
+create index if not exists member_fee_payments_member_month_idx
+  on public.member_fee_payments (member_id, target_month);
 
 create table if not exists public.square_webhook_events (
   event_id text primary key,

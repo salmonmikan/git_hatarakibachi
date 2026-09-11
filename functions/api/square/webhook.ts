@@ -262,18 +262,6 @@ async function getPaymentByInvoiceId(env: MemberFeeEnv, invoiceId: string) {
   return rows[0] ?? null
 }
 
-async function getPaymentByMemberMonth(env: MemberFeeEnv, memberId: number, targetMonth: string) {
-  const params = new URLSearchParams({
-    select: "member_id,target_month,amount,status,paid_at,square_invoice_id",
-    member_id: `eq.${memberId}`,
-    target_month: `eq.${targetMonth}`,
-    limit: "1",
-  })
-  const response = await supabaseRequest(env, `/rest/v1/member_fee_payments?${params.toString()}`)
-  const rows = await readJson<PaymentRow[]>(response, "member fee payment month lookup")
-  return rows[0] ?? null
-}
-
 async function upsertPayment(
   env: MemberFeeEnv,
   payload: {
@@ -286,7 +274,7 @@ async function upsertPayment(
     paid_at: string | null
   },
 ) {
-  const params = new URLSearchParams({ on_conflict: "member_id,target_month" })
+  const params = new URLSearchParams({ on_conflict: "square_invoice_id" })
   const response = await supabaseRequest(
     env,
     `/rest/v1/member_fee_payments?${params.toString()}`,
@@ -417,8 +405,14 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
     return { status: "unmatched" as const, detail: `Invoice ${invoice.id} could not be linked to a member` }
   }
 
-  const canLinkSubscription = isMemberFeePlan && shouldLinkSubscription(billing, invoice.subscription_id)
-  if (!canLinkSubscription && !existingInvoicePayment && billing.square_subscription_id !== invoice.subscription_id) {
+  // 既存台帳行がある履歴Invoiceは、そのInvoice自身の金額/返金だけ更新し、
+  // 再登録中のPENDING行へ古いSubscription IDを戻さない。
+  const sameSubscription = billing.square_subscription_id === invoice.subscription_id
+  const canLinkSubscription = isMemberFeePlan && (
+    sameSubscription
+    || (!existingInvoicePayment && shouldLinkSubscription(billing, invoice.subscription_id))
+  )
+  if (!canLinkSubscription && !existingInvoicePayment && !sameSubscription) {
     return { status: "ignored" as const, detail: "Invoice belongs to a historical subscription" }
   }
 
@@ -430,8 +424,6 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
   const currency = paymentRequest?.computed_amount_money?.currency
     || paymentRequest?.total_completed_amount_money?.currency
     || "JPY"
-  const existingMonthPayment = existingInvoicePayment
-    || await getPaymentByMemberMonth(env, billing.member_id, targetMonth)
 
   if ((invoice.status === "REFUNDED" || invoice.status === "PARTIALLY_REFUNDED") && payments.length === 0) {
     payments = await retrieveOrderPayments(env, invoice.order_id)
@@ -439,7 +431,7 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
 
   let paymentStatus: "PAID" | "PARTIAL" | "FAILED" | "REFUNDED" | "PARTIALLY_REFUNDED" | null = null
   let amount = completedAmount || computedAmount
-  let paidAt = existingMonthPayment?.paid_at ?? null
+  let paidAt = existingInvoicePayment?.paid_at ?? null
 
   if (invoice.status === "REFUNDED" || invoice.status === "PARTIALLY_REFUNDED") {
     const refundedAmount = totalRefundedAmount(payments)
@@ -473,20 +465,21 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
     paid_at: paidAt,
   })
 
-  const billingUpdate: Record<string, unknown> = {
-    last_payment_status: paymentStatus,
-  }
-  if (paymentStatus === "PAID" || paymentStatus === "PARTIAL") {
-    billingUpdate.last_payment_at = paidAt
-  }
+  // 履歴Invoiceは月別台帳のみ更新し、現在契約のサマリー状態を上書きしない。
   if (canLinkSubscription) {
-    billingUpdate.square_customer_id = subscription.customer_id || invoice.primary_recipient?.customer_id || null
-    billingUpdate.square_subscription_id = subscription.id || invoice.subscription_id
-    billingUpdate.square_payment_link_id = null
-    billingUpdate.subscription_status = subscription.status || billing.subscription_status
-    billingUpdate.started_at = billing.started_at || subscription.start_date || event.created_at || null
+    const billingUpdate: Record<string, unknown> = {
+      last_payment_status: paymentStatus,
+      square_customer_id: subscription.customer_id || invoice.primary_recipient?.customer_id || null,
+      square_subscription_id: subscription.id || invoice.subscription_id,
+      square_payment_link_id: null,
+      subscription_status: subscription.status || billing.subscription_status,
+      started_at: billing.started_at || subscription.start_date || event.created_at || null,
+    }
+    if (paymentStatus === "PAID" || paymentStatus === "PARTIAL") {
+      billingUpdate.last_payment_at = paidAt
+    }
+    await updateBilling(env, billing.id, billingUpdate)
   }
-  await updateBilling(env, billing.id, billingUpdate)
 
   return { status: "processed" as const }
 }

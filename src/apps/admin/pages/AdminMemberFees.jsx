@@ -22,6 +22,7 @@ const PAYMENT_STATUS_LABELS = {
 };
 
 const REREGISTERABLE_STATUSES = new Set(["CANCELED", "COMPLETED"]);
+const MEMBER_FEE_AMOUNT = 1000;
 
 function getCurrentMonth() {
     const parts = new Intl.DateTimeFormat("en-US", {
@@ -59,6 +60,63 @@ function getPublicSiteOrigin() {
 
 function isRegistered(row) {
     return Boolean(row.square_subscription_id) && !REREGISTERABLE_STATUSES.has(row.subscription_status);
+}
+
+function hasOutstandingBilling(row) {
+    return row.subscription_status === "PENDING"
+        || Boolean(row.square_payment_link_id)
+        || isRegistered(row);
+}
+
+function summarizeMonthPayments(rows) {
+    if (!rows?.length) return null;
+
+    const collectedAmount = rows.reduce((total, payment) => {
+        if (["PAID", "PARTIAL", "PARTIALLY_REFUNDED"].includes(payment.status)) {
+            return total + Number(payment.amount || 0);
+        }
+        return total;
+    }, 0);
+    const hasFailed = rows.some((payment) => payment.status === "FAILED");
+    const allRefunded = rows.every((payment) => payment.status === "REFUNDED");
+    const hasRefund = rows.some((payment) => ["REFUNDED", "PARTIALLY_REFUNDED"].includes(payment.status));
+    const count = rows.length;
+
+    let label;
+    if (collectedAmount > MEMBER_FEE_AMOUNT) {
+        label = `過入金 ${collectedAmount.toLocaleString("ja-JP")}円（請求${count}件）`;
+    } else if (collectedAmount === MEMBER_FEE_AMOUNT) {
+        if (hasFailed) {
+            label = `入金済 / 別請求失敗あり（請求${count}件）`;
+        } else if (count > 1) {
+            label = `入金済（請求${count}件）`;
+        } else {
+            label = "入金済";
+        }
+    } else if (collectedAmount > 0) {
+        if (hasFailed) {
+            label = `一部入金 ${collectedAmount.toLocaleString("ja-JP")}円 / 決済失敗あり`;
+        } else if (hasRefund) {
+            label = `返金後 ${collectedAmount.toLocaleString("ja-JP")}円`;
+        } else {
+            label = `一部入金 ${collectedAmount.toLocaleString("ja-JP")}円`;
+        }
+    } else if (allRefunded) {
+        label = count > 1 ? `全額返金（請求${count}件）` : "全額返金";
+    } else if (hasFailed) {
+        label = count > 1 ? `決済失敗（請求${count}件）` : "決済失敗";
+    } else {
+        const status = rows[0]?.status;
+        label = PAYMENT_STATUS_LABELS[status] ?? status ?? "未入金";
+    }
+
+    return {
+        collectedAmount,
+        count,
+        hasFailed,
+        isPaid: collectedAmount >= MEMBER_FEE_AMOUNT,
+        label,
+    };
 }
 
 export default function AdminMemberFees() {
@@ -103,7 +161,9 @@ export default function AdminMemberFees() {
                 return;
             }
 
-            setBillingRows((billingResult.data ?? []).filter((row) => row.member && !row.member.deleted_at));
+            setBillingRows((billingResult.data ?? []).filter((row) => (
+                row.member && (!row.member.deleted_at || hasOutstandingBilling(row))
+            )));
             setPayments(paymentsResult.data ?? []);
             setWebhookIssues(webhookResult.data ?? []);
             setLoading(false);
@@ -115,12 +175,20 @@ export default function AdminMemberFees() {
         };
     }, []);
 
-    const paymentByMemberAndMonth = useMemo(() => {
-        const map = new Map();
+    const paymentSummaryByMemberAndMonth = useMemo(() => {
+        const groups = new Map();
         for (const payment of payments) {
-            map.set(`${payment.member_id}:${payment.target_month}`, payment);
+            const key = `${payment.member_id}:${payment.target_month}`;
+            const group = groups.get(key) ?? [];
+            group.push(payment);
+            groups.set(key, group);
         }
-        return map;
+
+        const summaries = new Map();
+        for (const [key, rows] of groups.entries()) {
+            summaries.set(key, summarizeMonthPayments(rows));
+        }
+        return summaries;
     }, [payments]);
 
     const lastPaymentByMember = useMemo(() => {
@@ -135,11 +203,11 @@ export default function AdminMemberFees() {
 
     const summary = useMemo(() => {
         const active = billingRows.filter((row) => row.subscription_status === "ACTIVE").length;
-        const paid = billingRows.filter((row) => paymentByMemberAndMonth.get(`${row.member_id}:${currentMonth}`)?.status === "PAID").length;
-        const failed = billingRows.filter((row) => paymentByMemberAndMonth.get(`${row.member_id}:${currentMonth}`)?.status === "FAILED").length;
+        const paid = billingRows.filter((row) => paymentSummaryByMemberAndMonth.get(`${row.member_id}:${currentMonth}`)?.isPaid).length;
+        const failed = billingRows.filter((row) => paymentSummaryByMemberAndMonth.get(`${row.member_id}:${currentMonth}`)?.hasFailed).length;
         const waiting = billingRows.filter((row) => !isRegistered(row)).length;
         return { active, paid, failed, waiting };
-    }, [billingRows, currentMonth, paymentByMemberAndMonth]);
+    }, [billingRows, currentMonth, paymentSummaryByMemberAndMonth]);
 
     const copyRegistrationLink = async (row) => {
         const link = `${getPublicSiteOrigin()}/member-fee/register/${row.registration_token}`;
@@ -214,18 +282,20 @@ export default function AdminMemberFees() {
                     </thead>
                     <tbody>
                         {billingRows.map((row) => {
-                            const currentPayment = paymentByMemberAndMonth.get(`${row.member_id}:${currentMonth}`);
+                            const currentPaymentSummary = paymentSummaryByMemberAndMonth.get(`${row.member_id}:${currentMonth}`);
                             const lastPayment = lastPaymentByMember.get(row.member_id);
                             const subscriptionLabel = SUBSCRIPTION_STATUS_LABELS[row.subscription_status] ?? row.subscription_status;
                             const registered = isRegistered(row);
-                            const paymentLabel = currentPayment
-                                ? PAYMENT_STATUS_LABELS[currentPayment.status] ?? currentPayment.status
-                                : registered ? "未入金" : "未登録";
+                            const paymentLabel = currentPaymentSummary?.label
+                                ?? (registered ? "未入金" : "未登録");
                             const deactivated = row.subscription_status === "DEACTIVATED";
+                            const memberName = row.member.deleted_at
+                                ? `${row.member.name}（退団済み）`
+                                : row.member.name;
 
                             return (
                                 <tr key={row.id}>
-                                    <td className="member-fees-table__member">{row.member.name}</td>
+                                    <td className="member-fees-table__member">{memberName}</td>
                                     <td>{subscriptionLabel}</td>
                                     <td>{paymentLabel}</td>
                                     <td>{formatDate(lastPayment?.paid_at)}</td>
