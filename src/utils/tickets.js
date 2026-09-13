@@ -1,4 +1,8 @@
 import supabase from '@src/utils/supabase.ts';
+import {
+  requestTicketReservationChallenge,
+  resetTicketReservationChallenge,
+} from '@src/utils/turnstile.js';
 
 export const TICKET_STATUS_LABEL = {
   draft: '下書き',
@@ -18,20 +22,77 @@ export async function fetchPublishedTicketEvent(slug) {
 }
 
 export async function createTicketReservation(payload) {
-  const res = await supabase
-    .rpc('create_ticket_reservation', {
-      p_event_id: payload.event_id,
-      p_window_id: payload.window_id ?? null,
-      p_customer_name: payload.customer_name,
-      p_customer_email: payload.customer_email,
-      p_quantity: payload.quantity,
-      p_note: payload.note ?? null,
-      p_request_id: payload.request_id,
-    })
-    .single();
+  let challengeToken;
+  try {
+    challengeToken = await requestTicketReservationChallenge();
+  } catch (error) {
+    return {
+      data: null,
+      error: {
+        message: error instanceof Error ? error.message : 'セキュリティ確認に失敗しました。',
+        code: typeof error?.code === 'string' ? error.code : 'TURNSTILE_FAILED',
+      },
+    };
+  }
 
-  if (res.error) return { data: null, error: res.error };
-  return { data: res.data, error: null };
+  try {
+    const response = await fetch('/api/tickets/reservations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        ...payload,
+        turnstile_token: challengeToken,
+      }),
+    });
+
+    let body = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+
+    if (!response.ok) {
+      const serverCode = typeof body?.code === 'string' ? body.code.trim() : '';
+      const definitiveCode = serverCode
+        || (response.status >= 400 && response.status < 500 ? `HTTP_${response.status}` : '');
+      const fallbackMessage = response.status === 429
+        ? '短時間に予約操作が集中しています。少し時間を置いてから再度お試しください。'
+        : '予約を受け付けられませんでした。';
+      return {
+        data: null,
+        error: {
+          message: body?.error || fallbackMessage,
+          code: definitiveCode,
+        },
+      };
+    }
+
+    if (!body?.reservation_code) {
+      return {
+        data: null,
+        error: {
+          message: '予約結果を確認できませんでした。再確認してください。',
+          code: '',
+        },
+      };
+    }
+
+    return { data: body, error: null };
+  } catch {
+    return {
+      data: null,
+      error: {
+        message: '予約結果を確認できませんでした。通信状態を確認して再度お試しください。',
+        code: '',
+      },
+    };
+  } finally {
+    await resetTicketReservationChallenge();
+  }
 }
 
 export async function cancelTicketReservation(reservationId) {
