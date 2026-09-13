@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(13);
+select plan(16);
 
 select ok(
   not has_function_privilege('anon', 'public.claim_square_webhook_event(text,text)', 'EXECUTE'),
@@ -28,6 +28,19 @@ select ok(
 select ok(
   has_function_privilege('service_role', 'public.claim_member_fee_registration_attempt(bigint,text)', 'EXECUTE'),
   'service role can claim member fee registration attempts'
+);
+
+select ok(
+  not has_function_privilege('anon', 'public.get_member_fee_registration(uuid)', 'EXECUTE'),
+  'anon cannot look up member fee registration capabilities'
+);
+select ok(
+  not has_function_privilege('authenticated', 'public.get_member_fee_registration(uuid)', 'EXECUTE'),
+  'authenticated cannot look up member fee registration capabilities'
+);
+select ok(
+  has_function_privilege('service_role', 'public.get_member_fee_registration(uuid)', 'EXECUTE'),
+  'service role can look up member fee registration capabilities'
 );
 
 select ok(
