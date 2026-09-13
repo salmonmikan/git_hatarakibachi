@@ -2,12 +2,27 @@
 <html lang="ja-JP">
 
 <head>
+  <meta name="referrer" content="same-origin" />
+  <script>
+  (function(w){
+    var prefix='#token=';
+    if(w.location.pathname!=='/member-fee/register'||!w.location.hash.startsWith(prefix))return;
+    var token=w.location.hash.slice(prefix.length).trim();
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token))return;
+    try{
+      w.sessionStorage.setItem('hatarakibachi.memberFeeRegistrationToken',token);
+      w.history.replaceState(w.history.state,'','/member-fee/register');
+    }catch(_error){
+      w.__HATARAKIBACHI_SKIP_ANALYTICS__=true;
+    }
+  })(window);
+  </script>
   <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  <script>if(!window.__HATARAKIBACHI_SKIP_ANALYTICS__){(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
   j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-KTHSJ4L3');</script>
+  })(window,document,'script','dataLayer','GTM-KTHSJ4L3');}</script>
   <!-- End Google Tag Manager -->
   <!-- font awesome -->
   <script src="https://kit.fontawesome.com/125df029ec.js" crossorigin="anonymous"></script>
