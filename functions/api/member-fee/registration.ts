@@ -19,7 +19,6 @@ type BillingRow = {
   id: number
   member_id: number
   billing_email: string | null
-  registration_token: string
   registration_attempt_token: string | null
   square_subscription_id: string | null
   square_payment_link_id: string | null
@@ -46,26 +45,27 @@ type RegistrationAttemptClaim = {
   subscription_status?: string | null
 }
 
+type RegistrationRequest = {
+  action?: unknown
+  token?: unknown
+  email?: unknown
+}
+
 const REREGISTERABLE_STATUSES = new Set(["CANCELED", "COMPLETED"])
 const PAYMENT_NOTE_PREFIX = "hatarakibachi-member-fee:"
 const MAX_REGISTRATION_REQUEST_BYTES = 8192
-
-function registrationParams(token: string) {
-  const params = new URLSearchParams({
-    select: "id,member_id,billing_email,registration_token,registration_attempt_token,square_subscription_id,square_payment_link_id,subscription_status,member:members(id,name,deleted_at)",
-    registration_token: `eq.${token}`,
-    limit: "1",
-  })
-  return params.toString()
-}
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 async function getBillingByToken(env: MemberFeeEnv, token: string) {
   const response = await supabaseRequest(
     env,
-    `/rest/v1/member_billing?${registrationParams(token)}`,
+    "/rest/v1/rpc/get_member_fee_registration",
+    {
+      method: "POST",
+      body: JSON.stringify({ p_token: token }),
+    },
   )
-  const rows = await readJson<BillingRow[]>(response, "member billing lookup")
-  return rows[0] ?? null
+  return readJson<BillingRow | null>(response, "member billing lookup")
 }
 
 function validateAvailableBilling(row: BillingRow | null) {
@@ -103,36 +103,11 @@ async function claimRegistrationAttempt(env: MemberFeeEnv, billingId: number, em
   return readJson<RegistrationAttemptClaim>(response, "member fee registration attempt claim")
 }
 
-export const onRequestGet = async ({ request, env }: FunctionContext<MemberFeeEnv>) => {
-  try {
-    const token = new URL(request.url).searchParams.get("token")?.trim() ?? ""
-    if (!token) return jsonResponse({ error: "登録トークンがありません。" }, 400)
-
-    const row = await getBillingByToken(env, token)
-    const invalid = validateAvailableBilling(row)
-    if (invalid) return invalid
-
-    return jsonResponse({
-      memberName: row!.member!.name,
-      status: row!.subscription_status,
-      registered: isRegistered(row!),
-      pending: row!.subscription_status === "PENDING" && Boolean(row!.registration_attempt_token),
-    })
-  } catch (error) {
-    console.error("member fee registration lookup failed", error)
-    return jsonResponse({ error: "登録情報を確認できませんでした。" }, 500)
-  }
-}
-
 export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeEnv>) => {
   try {
-    if (!env.SQUARE_ACCESS_TOKEN || !env.SQUARE_LOCATION_ID || !env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
-      return jsonResponse({ error: "団員費の決済設定が完了していません。" }, 503)
-    }
-
-    let body: { token?: unknown; email?: unknown } | null = null
+    let body: RegistrationRequest | null = null
     try {
-      body = await readRequestJsonWithLimit<{ token?: unknown; email?: unknown }>(
+      body = await readRequestJsonWithLimit<RegistrationRequest>(
         request,
         MAX_REGISTRATION_REQUEST_BYTES,
       )
@@ -143,15 +118,30 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
       return jsonResponse({ error: "送信内容を確認してください。" }, 400)
     }
 
+    const action = body?.action === "lookup" || body?.action === "start" ? body.action : ""
     const token = typeof body?.token === "string" ? body.token.trim() : ""
     const email = normalizeEmail(body?.email)
 
-    if (!token) return jsonResponse({ error: "登録トークンがありません。" }, 400)
+    if (!action) return jsonResponse({ error: "登録操作を確認してください。" }, 400)
+    if (!UUID_PATTERN.test(token)) return jsonResponse({ error: "登録トークンを確認してください。" }, 400)
     if (email && !isValidEmail(email)) return jsonResponse({ error: "メールアドレスを確認してください。" }, 400)
 
     const row = await getBillingByToken(env, token)
     const invalid = validateAvailableBilling(row)
     if (invalid) return invalid
+
+    if (action === "lookup") {
+      return jsonResponse({
+        memberName: row!.member!.name,
+        status: row!.subscription_status,
+        registered: isRegistered(row!),
+        pending: row!.subscription_status === "PENDING" && Boolean(row!.registration_attempt_token),
+      })
+    }
+
+    if (!env.SQUARE_ACCESS_TOKEN || !env.SQUARE_LOCATION_ID || !env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
+      return jsonResponse({ error: "団員費の決済設定が完了していません。" }, 503)
+    }
 
     const claim = await claimRegistrationAttempt(env, row!.id, email)
 
@@ -238,6 +228,6 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
     return jsonResponse({ url: paymentLinkUrl })
   } catch (error) {
     console.error("member fee registration failed", error)
-    return jsonResponse({ error: "決済ページを作成できませんでした。管理者へお問い合わせください。" }, 500)
+    return jsonResponse({ error: "登録処理を完了できませんでした。管理者へお問い合わせください。" }, 500)
   }
 }
