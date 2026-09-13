@@ -26,6 +26,7 @@ export async function createTicketReservation(payload) {
   try {
     challengeToken = await requestTicketReservationChallenge();
   } catch (error) {
+    await resetTicketReservationChallenge();
     return {
       data: null,
       error: {
