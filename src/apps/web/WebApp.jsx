@@ -21,21 +21,16 @@ import { trackPageView } from '@src/utils/analytics.js';
 // import supabase from './utils/supabase.ts'
 
 const RESERVATION_PENDING_STORAGE_KEY = 'hatarakibachi.ticketReservation.pending';
-const RESERVATION_PENDING_TTL_MS = 30 * 60 * 1000;
 
 function restorePendingReservationTransaction() {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.sessionStorage.getItem(RESERVATION_PENDING_STORAGE_KEY);
     if (!raw) return null;
-    const stored = JSON.parse(raw);
-    const transaction = stored?.transaction;
-    const expiresAt = Number(stored?.expires_at);
+    const transaction = JSON.parse(raw);
     const valid = transaction?.status === 'pending'
       && typeof transaction.slug === 'string'
-      && typeof transaction.payload?.request_id === 'string'
-      && Number.isFinite(expiresAt)
-      && expiresAt > Date.now();
+      && typeof transaction.payload?.request_id === 'string';
     if (!valid) {
       window.sessionStorage.removeItem(RESERVATION_PENDING_STORAGE_KEY);
       return null;
@@ -83,10 +78,10 @@ function WebApp() {
   useEffect(() => {
     try {
       if (reservationTransaction?.status === 'pending') {
-        window.sessionStorage.setItem(RESERVATION_PENDING_STORAGE_KEY, JSON.stringify({
-          transaction: reservationTransaction,
-          expires_at: Date.now() + RESERVATION_PENDING_TTL_MS,
-        }));
+        window.sessionStorage.setItem(
+          RESERVATION_PENDING_STORAGE_KEY,
+          JSON.stringify(reservationTransaction),
+        );
       } else {
         window.sessionStorage.removeItem(RESERVATION_PENDING_STORAGE_KEY);
       }
