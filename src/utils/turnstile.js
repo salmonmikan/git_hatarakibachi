@@ -1,6 +1,7 @@
 const TURNSTILE_SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 const TURNSTILE_CONTAINER_ID = "ticket-reservation-turnstile";
 const TURNSTILE_ACTION = "ticket_reservation";
+const TURNSTILE_SCRIPT_TIMEOUT_MS = 10000;
 
 let scriptPromise = null;
 let widgetId = null;
@@ -36,29 +37,46 @@ function loadTurnstile() {
   if (window.turnstile) return Promise.resolve(window.turnstile);
   if (scriptPromise) return scriptPromise;
 
-  scriptPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${TURNSTILE_SCRIPT_URL}"]`);
-    const script = existing ?? document.createElement("script");
+  // scriptPromiseがないのにSDKも存在しない場合、既存scriptは過去の失敗・
+  // 不完全ロードとみなす。errorイベントは再発火しないため新しい要素で再試行する。
+  document.querySelector(`script[src="${TURNSTILE_SCRIPT_URL}"]`)?.remove();
 
+  scriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    let timeoutId = 0;
+
+    const cleanup = () => {
+      script.removeEventListener("load", onLoad);
+      script.removeEventListener("error", onError);
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+    const fail = (error) => {
+      cleanup();
+      script.remove();
+      reject(error);
+    };
     const onLoad = () => {
+      cleanup();
       if (window.turnstile) {
         resolve(window.turnstile);
       } else {
+        script.remove();
         reject(turnstileError("セキュリティ確認を初期化できませんでした。", "TURNSTILE_UNAVAILABLE"));
       }
     };
-    const onError = () => reject(
+    const onError = () => fail(
       turnstileError("セキュリティ確認を読み込めませんでした。", "TURNSTILE_UNAVAILABLE"),
     );
 
     script.addEventListener("load", onLoad, { once: true });
     script.addEventListener("error", onError, { once: true });
-    if (!existing) {
-      script.src = TURNSTILE_SCRIPT_URL;
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-    }
+    script.src = TURNSTILE_SCRIPT_URL;
+    script.async = true;
+    script.defer = true;
+    timeoutId = window.setTimeout(() => {
+      fail(turnstileError("セキュリティ確認の読み込みがタイムアウトしました。", "TURNSTILE_UNAVAILABLE"));
+    }, TURNSTILE_SCRIPT_TIMEOUT_MS);
+    document.head.appendChild(script);
   }).catch((error) => {
     scriptPromise = null;
     throw error;
