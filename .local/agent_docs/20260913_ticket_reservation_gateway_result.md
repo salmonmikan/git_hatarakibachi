@@ -9,7 +9,7 @@ Implemented a server-side reservation write boundary on top of the existing tick
 - Kept the existing Supabase reservation RPC as the authority for availability, time boundaries, locking, and request-ID idempotency.
 - Changed the browser reservation client so public reads remain direct Supabase reads while reservation writes use the protected API.
 - Added an explicit Turnstile helper that resets the widget after each attempt so retries receive a fresh single-use token.
-- Restricted direct execution of `create_ticket_reservation` to `service_role`; `anon` and `authenticated` cannot bypass the Cloudflare entry point. Because the ticket feature is still unreleased, this final permission state is defined directly in the initial ticket migration rather than a later hardening migration.
+- Restricted direct execution of `create_ticket_reservation` to `service_role`; `anon` and `authenticated` cannot bypass the Cloudflare entry point. Fresh environments get this final permission state directly from the initial ticket migration. A forward hardening migration reasserts the same state for any environment that may already have recorded the earlier ticket migration.
 - Added ordered pgTAP setup/teardown permission tests (`000` setup, existing reservation domain tests, `zzz` teardown) so the production permission boundary is asserted while the existing 80 domain tests continue to exercise the RPC under browser roles in the ephemeral test DB only.
 - Documented required Turnstile, Pages Function, Supabase server credential, and Cloudflare Rate Limiting Rule settings.
 
