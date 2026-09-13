@@ -66,9 +66,9 @@ export default function TicketReservation({
 }) {
   const { slug } = useParams();
   const reduce = useReducedMotion();
-  const initialTransactionRef = useRef(
-    reservationTransaction?.slug === slug ? reservationTransaction : null
-  );
+  const reservationTransactionRef = useRef(reservationTransaction);
+  reservationTransactionRef.current = reservationTransaction;
+
   const [event, setEvent] = useState(null);
   const [selectedWindowId, setSelectedWindowId] = useState('');
   const [form, setForm] = useState(initialForm);
@@ -76,23 +76,40 @@ export default function TicketReservation({
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [error, setError] = useState(null);
-  const [reservationCode, setReservationCode] = useState(null);
-  const [reservationRequestId, setReservationRequestId] = useState(null);
   const [availabilityStale, setAvailabilityStale] = useState(false);
   const [clockTick, setClockTick] = useState(0);
 
   const matchingTransaction = reservationTransaction?.slug === slug ? reservationTransaction : null;
   const matchingPendingTransaction = matchingTransaction?.status === 'pending' ? matchingTransaction : null;
   const matchingSucceededTransaction = matchingTransaction?.status === 'succeeded' ? matchingTransaction : null;
+  const reservationRequestId = matchingPendingTransaction?.payload?.request_id ?? null;
+  const reservationCode = matchingSucceededTransaction?.reservation_code ?? null;
   const hasOtherPendingTransaction = Boolean(
     reservationTransaction?.status === 'pending' && reservationTransaction.slug !== slug
   );
   const hasRecoverableTransaction = Boolean(matchingPendingTransaction || matchingSucceededTransaction);
 
+  const currentTransactionMatches = (requestId) => {
+    const current = reservationTransactionRef.current;
+    return current?.slug === slug && current?.payload?.request_id === requestId;
+  };
+
+  const replaceTransactionIfCurrent = (requestId, nextTransaction) => {
+    if (typeof onReservationTransactionChange !== 'function') return;
+    onReservationTransactionChange((current) => {
+      if (current?.slug !== slug || current?.payload?.request_id !== requestId) {
+        return current;
+      }
+      reservationTransactionRef.current = nextTransaction;
+      return nextTransaction;
+    });
+  };
+
   useEffect(() => {
-    const restoredTransaction = initialTransactionRef.current;
+    const restoredTransaction = reservationTransactionRef.current?.slug === slug
+      ? reservationTransactionRef.current
+      : null;
     const restoredPending = restoredTransaction?.status === 'pending' ? restoredTransaction : null;
-    const restoredSucceeded = restoredTransaction?.status === 'succeeded' ? restoredTransaction : null;
 
     setEvent(null);
     setSelectedWindowId(restoredPending?.payload?.window_id != null
@@ -102,8 +119,6 @@ export default function TicketReservation({
     setSaving(false);
     setLoadError(null);
     setError(null);
-    setReservationCode(restoredSucceeded?.reservation_code ?? null);
-    setReservationRequestId(restoredPending?.payload?.request_id ?? null);
     setAvailabilityStale(false);
     setClockTick(0);
 
@@ -133,12 +148,8 @@ export default function TicketReservation({
             ? String(restoredPending.payload.window_id)
             : '');
           setForm(formFromReservationTransaction(restoredPending));
-          setReservationRequestId(restoredPending.payload.request_id);
         } else {
           setSelectedWindowId(findSelectableWindowId(res.data.windows ?? []));
-        }
-        if (restoredSucceeded) {
-          setReservationCode(restoredSucceeded.reservation_code ?? null);
         }
         setAvailabilityStale(false);
       }
@@ -149,7 +160,15 @@ export default function TicketReservation({
     return () => {
       alive = false;
     };
+    // transactionの状態遷移は上のderived stateで追従し、slug変更時だけ画面データを再初期化する。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  useEffect(() => {
+    if (!matchingSucceededTransaction) return;
+    setForm(initialForm);
+    setSaving(false);
+  }, [matchingSucceededTransaction?.payload?.request_id, matchingSucceededTransaction?.reservation_code]);
 
   useEffect(() => {
     const nextWindowStart = (event?.windows ?? [])
@@ -203,9 +222,10 @@ export default function TicketReservation({
   }, [maxQuantity, retryLocked]);
 
   const clearSucceededTransaction = () => {
-    if (matchingSucceededTransaction && typeof onReservationTransactionChange === 'function') {
-      onReservationTransactionChange(null);
-    }
+    if (!matchingSucceededTransaction || typeof onReservationTransactionChange !== 'function') return;
+    const requestId = matchingSucceededTransaction.payload?.request_id;
+    if (!requestId) return;
+    replaceTransactionIfCurrent(requestId, null);
   };
 
   const onChange = (e) => {
@@ -213,7 +233,6 @@ export default function TicketReservation({
     const { name, value } = e.target;
     clearSucceededTransaction();
     setForm((prev) => ({ ...prev, [name]: value }));
-    setReservationCode(null);
     setError(null);
   };
 
@@ -263,27 +282,26 @@ export default function TicketReservation({
 
     setSaving(true);
     setError(null);
-    if (!retryingRequest) {
-      setReservationCode(null);
-      clearSucceededTransaction();
-    }
-    setReservationRequestId(requestId);
+    const pendingTransaction = {
+      status: 'pending',
+      slug,
+      payload,
+    };
+    reservationTransactionRef.current = pendingTransaction;
     if (typeof onReservationTransactionChange === 'function') {
-      onReservationTransactionChange({
-        status: 'pending',
-        slug,
-        payload,
-      });
+      onReservationTransactionChange(pendingTransaction);
     }
 
     const res = await createTicketReservation(payload);
+    if (!currentTransactionMatches(requestId)) {
+      setSaving(false);
+      return;
+    }
+
     if (res.error) {
       setError(res.error.message);
       if (isDefinitiveReservationFailure(res.error)) {
-        setReservationRequestId(null);
-        if (typeof onReservationTransactionChange === 'function') {
-          onReservationTransactionChange(null);
-        }
+        replaceTransactionIfCurrent(requestId, null);
         const refreshed = await fetchPublishedTicketEvent(slug);
         if (refreshed.error || !refreshed.data) {
           setAvailabilityStale(true);
@@ -299,16 +317,13 @@ export default function TicketReservation({
     }
 
     const nextReservationCode = res.data.reservation_code;
-    setReservationCode(nextReservationCode);
-    setReservationRequestId(null);
-    if (typeof onReservationTransactionChange === 'function') {
-      onReservationTransactionChange({
-        status: 'succeeded',
-        slug,
-        payload,
-        reservation_code: nextReservationCode,
-      });
-    }
+    const succeededTransaction = {
+      status: 'succeeded',
+      slug,
+      payload,
+      reservation_code: nextReservationCode,
+    };
+    replaceTransactionIfCurrent(requestId, succeededTransaction);
     setForm(initialForm);
 
     const refreshed = await fetchPublishedTicketEvent(slug);
@@ -390,7 +405,6 @@ export default function TicketReservation({
                     if (reservationRequestId) return;
                     clearSucceededTransaction();
                     setSelectedWindowId(e.target.value);
-                    setReservationCode(null);
                     setError(null);
                   }}
                   disabled={saving || retryLocked || hasOtherPendingTransaction || availabilityStale || !eventIsPublished || !hasWindowCapacity(windowItem)}
