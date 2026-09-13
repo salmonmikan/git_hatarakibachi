@@ -25,6 +25,21 @@ If there are conflicting rules in codex/AGENTS.md, the rules in codex/AGENTS.md 
 - 既存の未コミット変更はユーザーの作業として扱い、勝手に戻さない。
 - Treat existing uncommitted changes as the user's work and never revert them without permission.
 
+## レビュー方針
+
+- PRレビューで指摘を出す前に、同じPRの既存レビュー、解決済みスレッド、対応コミット、現在の実装を確認し、同趣旨の指摘が既に議論・対応されていないか確認する。
+- Before raising a PR review finding, inspect prior reviews, resolved threads, fix commits, and the current implementation in the same PR to determine whether the same concern has already been discussed or addressed.
+- 過去のレビュー結論やResolve状態は文脈として必ず考慮するが、それ自体を正しさの根拠とはしない。現在のコードと事実を再検証すること。
+- Treat prior review conclusions and resolved state as required context, not as proof of correctness. Re-validate them against the current code and facts.
+- 既存のレビュー結論と矛盾する指摘、または一度非該当・誤検知と判断された指摘を再度出す場合は、過去の結論がなぜ現在は成立しないのかを示す新しい具体的根拠を確認したうえで、その差分をレビューコメントに明記する。
+- If a new finding contradicts a prior review conclusion, or repeats a concern previously judged non-applicable or a false positive, first verify concrete new evidence showing why the prior conclusion no longer holds, and explicitly state that delta in the review comment.
+- 外部API、Webhookイベント名、ライブラリ仕様、バージョン依存の挙動などを根拠に指摘する場合は、推測や古い知識だけで断定せず、可能な限り対象バージョンの一次情報・公式仕様を確認する。
+- When a finding depends on an external API, webhook event name, library behavior, or version-specific semantics, do not rely only on assumptions or stale knowledge; verify the applicable version against authoritative or official documentation whenever possible.
+- 既に修正済みの問題、過去指摘の単なる言い換え、根拠のない仮説は新規指摘として重複投稿しない。一方、修正後にも残る別経路・競合条件・回帰がある場合は、新しい根拠を具体的に示して指摘してよい。
+- Do not post already-fixed issues, paraphrases of prior findings, or unsupported hypotheticals as new findings. If a distinct path, race condition, or regression remains after the earlier fix, it may be raised when the new evidence is stated concretely.
+- レビューでは最新HEADの実装を基準とし、古いdiffや古いコミットだけを根拠に現在も問題が存在すると判断しない。
+- Review the latest HEAD as the source of truth; do not conclude that an issue still exists solely from an outdated diff or earlier commit.
+
 ## 変更ルール
 
 - 既存ファイルの文字コードや改行コードは維持する。
