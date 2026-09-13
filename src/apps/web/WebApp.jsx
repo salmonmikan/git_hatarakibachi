@@ -20,12 +20,38 @@ import VisualEditing from '@src/components/VisualEditing.jsx';
 import { trackPageView } from '@src/utils/analytics.js';
 // import supabase from './utils/supabase.ts'
 
+const RESERVATION_PENDING_STORAGE_KEY = 'hatarakibachi.ticketReservation.pending';
+const RESERVATION_PENDING_TTL_MS = 30 * 60 * 1000;
+
+function restorePendingReservationTransaction() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(RESERVATION_PENDING_STORAGE_KEY);
+    if (!raw) return null;
+    const stored = JSON.parse(raw);
+    const transaction = stored?.transaction;
+    const expiresAt = Number(stored?.expires_at);
+    const valid = transaction?.status === 'pending'
+      && typeof transaction.slug === 'string'
+      && typeof transaction.payload?.request_id === 'string'
+      && Number.isFinite(expiresAt)
+      && expiresAt > Date.now();
+    if (!valid) {
+      window.sessionStorage.removeItem(RESERVATION_PENDING_STORAGE_KEY);
+      return null;
+    }
+    return transaction;
+  } catch {
+    return null;
+  }
+}
+
 function WebApp() {
   const location = useLocation();
   const mainRef = useRef(null);
   const lastScrollYRef = useRef(0);
   const [navHidden, setNavHidden] = useState(false);
-  const [reservationTransaction, setReservationTransaction] = useState(null);
+  const [reservationTransaction, setReservationTransaction] = useState(restorePendingReservationTransaction);
 
   useEffect(() => {
     function onScroll() {
@@ -53,6 +79,21 @@ function WebApp() {
       title: document.title,
     });
   }, [location.pathname]);
+
+  useEffect(() => {
+    try {
+      if (reservationTransaction?.status === 'pending') {
+        window.sessionStorage.setItem(RESERVATION_PENDING_STORAGE_KEY, JSON.stringify({
+          transaction: reservationTransaction,
+          expires_at: Date.now() + RESERVATION_PENDING_TTL_MS,
+        }));
+      } else {
+        window.sessionStorage.removeItem(RESERVATION_PENDING_STORAGE_KEY);
+      }
+    } catch {
+      // Storageが使えない環境では従来どおりメモリ保持とbeforeunload警告へフォールバックする。
+    }
+  }, [reservationTransaction]);
 
   useEffect(() => {
     if (reservationTransaction?.status !== 'pending') return undefined;
