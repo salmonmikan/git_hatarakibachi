@@ -72,6 +72,7 @@ type BillingRow = {
   square_payment_link_id: string | null
   subscription_status: string
   started_at: string | null
+  last_payment_at: string | null
 }
 
 type PaymentRow = {
@@ -178,7 +179,7 @@ async function markEvent(
 
 async function selectBilling(env: MemberFeeEnv, filterName: string, value: string) {
   const params = new URLSearchParams({
-    select: "id,member_id,billing_email,registration_attempt_token,square_customer_id,square_subscription_id,square_payment_link_id,subscription_status,started_at",
+    select: "id,member_id,billing_email,registration_attempt_token,square_customer_id,square_subscription_id,square_payment_link_id,subscription_status,started_at,last_payment_at",
     [filterName]: `eq.${value}`,
     limit: "1",
   })
@@ -187,22 +188,14 @@ async function selectBilling(env: MemberFeeEnv, filterName: string, value: strin
   return rows[0] ?? null
 }
 
-async function updateBilling(env: MemberFeeEnv, billingId: number, payload: Record<string, unknown>) {
-  const params = new URLSearchParams({ id: `eq.${billingId}` })
-  const response = await supabaseRequest(
-    env,
-    `/rest/v1/member_billing?${params.toString()}`,
-    {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() }),
-    },
-  )
-  if (!response.ok) await readJson(response, "member billing update")
-}
-
 function addNullableSnapshotFilter(params: URLSearchParams, column: string, value: string | null) {
   params.set(column, value === null ? "is.null" : `eq.${value}`)
+}
+
+async function isBillingEmailUniqueConflict(response: Response) {
+  if (response.status !== 409) return false
+  const detail = await response.clone().text()
+  return detail.includes("23505") && detail.includes("member_billing_billing_email_unique_idx")
 }
 
 async function updateBillingIfUnchanged(
@@ -216,16 +209,29 @@ async function updateBillingIfUnchanged(
   })
   addNullableSnapshotFilter(params, "registration_attempt_token", billing.registration_attempt_token)
   addNullableSnapshotFilter(params, "square_subscription_id", billing.square_subscription_id)
+  addNullableSnapshotFilter(params, "square_payment_link_id", billing.square_payment_link_id)
+  addNullableSnapshotFilter(params, "last_payment_at", billing.last_payment_at)
 
-  const response = await supabaseRequest(
+  const patch = (nextPayload: Record<string, unknown>) => supabaseRequest(
     env,
     `/rest/v1/member_billing?${params.toString()}`,
     {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() }),
+      body: JSON.stringify({ ...nextPayload, updated_at: new Date().toISOString() }),
     },
   )
+
+  let response = await patch(payload)
+
+  // Square Checkoutで確定したメールが他団員と競合しても、契約の紐付け自体は止めない。
+  // メールのunique制約は維持し、該当制約の競合時だけメール同期を省略して同じCAS条件で再試行する。
+  if ("billing_email" in payload && await isBillingEmailUniqueConflict(response)) {
+    const retryPayload = { ...payload }
+    delete retryPayload.billing_email
+    response = await patch(retryPayload)
+  }
+
   const rows = await readJson<Array<{ id: number }>>(response, "conditional member billing update")
   return rows.length > 0
 }
@@ -327,12 +333,15 @@ async function unlinkIfDifferentPlan(env: MemberFeeEnv, subscriptionId: string) 
   const billing = await selectBilling(env, "square_subscription_id", subscriptionId)
   if (!billing) return
 
-  await updateBilling(env, billing.id, {
+  const updated = await updateBillingIfUnchanged(env, billing, {
     registration_attempt_token: null,
     square_subscription_id: null,
     square_payment_link_id: null,
     subscription_status: "NOT_REGISTERED",
   })
+  if (!updated) {
+    throw new Error("Member billing changed during subscription plan unlink; retry with current state")
+  }
 }
 
 async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookEvent) {
@@ -359,10 +368,13 @@ async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookE
     if (!billing) {
       return { status: "ignored" as const, detail: "Historical terminal subscription event" }
     }
-    await updateBilling(env, billing.id, {
+    const updated = await updateBillingIfUnchanged(env, billing, {
       subscription_status: subscription.status,
       square_payment_link_id: null,
     })
+    if (!updated) {
+      throw new Error("Member billing changed during terminal subscription sync; retry with current state")
+    }
     return { status: "processed" as const }
   }
 
@@ -371,13 +383,16 @@ async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookE
     return { status: "ignored" as const, detail: "Subscription is awaiting immutable checkout linkage" }
   }
 
-  await updateBilling(env, billing.id, {
+  const updated = await updateBillingIfUnchanged(env, billing, {
     square_customer_id: subscription.customer_id,
     square_subscription_id: subscription.id,
     square_payment_link_id: null,
     subscription_status: subscription.status || "UNKNOWN",
     started_at: billing.started_at || subscription.start_date || event.created_at || null,
   })
+  if (!updated) {
+    throw new Error("Member billing changed during subscription sync; retry with current state")
+  }
   return { status: "processed" as const }
 }
 
@@ -545,7 +560,7 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
       billingUpdate.billing_email = confirmedBillingEmail
     }
     if (paymentStatus === "PAID" || paymentStatus === "PARTIAL") {
-      billingUpdate.last_payment_at = paidAt
+      billingUpdate.last_payment_at = latestTimestamp(billing.last_payment_at, paidAt)
     }
 
     // Invoice取得後に再登録claimや別Webhookで現在契約が変わった場合は、
