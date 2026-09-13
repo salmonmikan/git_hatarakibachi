@@ -77,8 +77,10 @@ export default function MemberFeeRegistration({ onEntered }) {
                 return;
             }
             try {
-                const response = await fetch(`/api/member-fee/registration?token=${encodeURIComponent(token)}`, {
-                    headers: { Accept: "application/json" },
+                const response = await fetch("/api/member-fee/registration", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Accept: "application/json" },
+                    body: JSON.stringify({ action: "lookup", token }),
                 });
                 const body = await response.json();
                 if (!response.ok) throw new Error(body.error || "登録情報を確認できませんでした。");
@@ -106,7 +108,7 @@ export default function MemberFeeRegistration({ onEntered }) {
             const response = await fetch("/api/member-fee/registration", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Accept: "application/json" },
-                body: JSON.stringify(payload),
+                body: JSON.stringify({ action: "start", ...payload }),
             });
             const body = await response.json();
             if (!response.ok) throw new Error(body.error || "決済ページを作成できませんでした。");
