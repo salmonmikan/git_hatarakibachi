@@ -8,6 +8,7 @@ import AdminCredits from "./pages/AdminCredits.jsx";
 import CreditEditModal from "./components/Modal/CreditEditModal.jsx";
 import AdminUpdateInfo from "./pages/AdminUpdateInfo.jsx";
 import UpdateInfoEditModal from "./components/Modal/UpdateInfoEditModal.jsx";
+import AdminMemberFees from "./pages/AdminMemberFees.jsx";
 
 import RequireAuth from "./components/RequireAuth";
 import NotFound from '@src/components/NotFound.jsx';
@@ -32,6 +33,7 @@ export default function AdminApp() {
           <Route path="update-info" element={<AdminUpdateInfo />}>
             <Route path=":id" element={<UpdateInfoEditModal />} />
           </Route>
+          <Route path="member-fees" element={<AdminMemberFees />} />
           <Route path="analytics" element={<AnalyticsEmbed />} />
         </Route>
       </Route>

@@ -9,6 +9,7 @@ import Scenario from "./pages/Scenario.jsx";
 import PostDetail from "./pages/PostDetail.jsx";
 import PerformanceDetail from "./pages/PerformanceDetail.jsx";
 import NewsDetail from "./pages/NewsDetail.jsx";
+import MemberFeeRegistration, { MemberFeeComplete } from "./pages/MemberFeeRegistration.jsx";
 import ScrollToTop from "@src/components/ScrollToTop.jsx";
 import FloatingLinks from "@src/components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
@@ -110,6 +111,8 @@ function WebApp() {
             <Route path="post/:slug" element={<PostDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="performance/:slug" element={<PerformanceDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="news/:slug" element={<NewsDetail onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="member-fee/register/:token" element={<MemberFeeRegistration onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="member-fee/complete" element={<MemberFeeComplete onEntered={() => mainRef.current?.focus()} />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
