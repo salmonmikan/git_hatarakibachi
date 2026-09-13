@@ -201,6 +201,35 @@ async function updateBilling(env: MemberFeeEnv, billingId: number, payload: Reco
   if (!response.ok) await readJson(response, "member billing update")
 }
 
+function addNullableSnapshotFilter(params: URLSearchParams, column: string, value: string | null) {
+  params.set(column, value === null ? "is.null" : `eq.${value}`)
+}
+
+async function updateBillingIfUnchanged(
+  env: MemberFeeEnv,
+  billing: BillingRow,
+  payload: Record<string, unknown>,
+) {
+  const params = new URLSearchParams({
+    id: `eq.${billing.id}`,
+    subscription_status: `eq.${billing.subscription_status}`,
+  })
+  addNullableSnapshotFilter(params, "registration_attempt_token", billing.registration_attempt_token)
+  addNullableSnapshotFilter(params, "square_subscription_id", billing.square_subscription_id)
+
+  const response = await supabaseRequest(
+    env,
+    `/rest/v1/member_billing?${params.toString()}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() }),
+    },
+  )
+  const rows = await readJson<Array<{ id: number }>>(response, "conditional member billing update")
+  return rows.length > 0
+}
+
 async function retrieveSubscription(env: MemberFeeEnv, subscriptionId: string) {
   const response = await squareRequest(env, `/v2/subscriptions/${encodeURIComponent(subscriptionId)}`)
   const body = await readJson<SquareSubscriptionResponse>(response, "Square subscription retrieval")
@@ -364,6 +393,13 @@ function latestPaymentTimestamp(payments: SquarePayment[]) {
     .at(-1) ?? null
 }
 
+function latestTimestamp(...values: Array<string | null | undefined>) {
+  return values
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1) ?? null
+}
+
 function totalRefundedAmount(payments: SquarePayment[]) {
   return payments.reduce((total, payment) => total + (payment.refunded_money?.amount ?? 0), 0)
 }
@@ -447,7 +483,12 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
     || paymentRequest?.total_completed_amount_money?.currency
     || "JPY"
 
-  if ((invoice.status === "REFUNDED" || invoice.status === "PARTIALLY_REFUNDED") && payments.length === 0) {
+  const needsPaymentDetails = invoice.status === "REFUNDED"
+    || invoice.status === "PARTIALLY_REFUNDED"
+    || invoice.status === "PAID"
+    || invoice.status === "PARTIALLY_PAID"
+    || completedAmount > 0
+  if (needsPaymentDetails && payments.length === 0) {
     payments = await retrieveOrderPayments(env, invoice.order_id)
   }
 
@@ -462,11 +503,13 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
   } else if (invoice.status === "PAID" || (computedAmount > 0 && completedAmount >= computedAmount)) {
     paymentStatus = "PAID"
     amount = completedAmount || computedAmount
-    paidAt = paidAt || latestPaymentTimestamp(payments) || invoice.updated_at || event.created_at || new Date().toISOString()
+    const observedPaidAt = latestPaymentTimestamp(payments) || invoice.updated_at || event.created_at || new Date().toISOString()
+    paidAt = latestTimestamp(existingInvoicePayment?.paid_at, observedPaidAt) || observedPaidAt
   } else if (invoice.status === "PARTIALLY_PAID" || completedAmount > 0) {
     paymentStatus = "PARTIAL"
     amount = completedAmount
-    paidAt = paidAt || latestPaymentTimestamp(payments) || invoice.updated_at || event.created_at || new Date().toISOString()
+    const observedPaidAt = latestPaymentTimestamp(payments) || invoice.updated_at || event.created_at || new Date().toISOString()
+    paidAt = latestTimestamp(existingInvoicePayment?.paid_at, observedPaidAt) || observedPaidAt
   } else if (event.type === "invoice.scheduled_charge_failed") {
     paymentStatus = "FAILED"
     amount = computedAmount
@@ -497,10 +540,20 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
       subscription_status: subscription.status || billing.subscription_status,
       started_at: billing.started_at || subscription.start_date || event.created_at || null,
     }
+    const confirmedBillingEmail = invoice.primary_recipient?.email_address?.trim().toLowerCase()
+    if (confirmedBillingEmail) {
+      billingUpdate.billing_email = confirmedBillingEmail
+    }
     if (paymentStatus === "PAID" || paymentStatus === "PARTIAL") {
       billingUpdate.last_payment_at = paidAt
     }
-    await updateBilling(env, billing.id, billingUpdate)
+
+    // Invoice取得後に再登録claimや別Webhookで現在契約が変わった場合は、
+    // 古いスナップショットで上書きせず503へ落として再送時に新状態で再判定する。
+    const updated = await updateBillingIfUnchanged(env, billing, billingUpdate)
+    if (!updated) {
+      throw new Error("Member billing changed during invoice processing; retry with current state")
+    }
   }
 
   return { status: "processed" as const }
