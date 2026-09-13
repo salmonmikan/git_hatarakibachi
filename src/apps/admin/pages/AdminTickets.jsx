@@ -23,6 +23,30 @@ const eventDefaults = {
 
 const RESERVATIONS_PAGE_SIZE = 200;
 
+function formFromEvent(event) {
+  if (!event) return eventDefaults;
+  return {
+    slug: event.slug ?? '',
+    title: event.title ?? '',
+    description: event.description ?? '',
+    venue: event.venue ?? '',
+    opens_at: toDatetimeLocal(event.opens_at),
+    closes_at: toDatetimeLocal(event.closes_at),
+    sanity_performance_id: event.sanity_performance_id ?? '',
+    status: event.status ?? 'draft',
+  };
+}
+
+function windowFormsFromEvent(event) {
+  return Object.fromEntries(
+    (event?.windows ?? []).map((item) => [item.id, {
+      label: item.label ?? '',
+      starts_at: toDatetimeLocal(item.starts_at),
+      capacity: String(item.capacity ?? 0),
+    }])
+  );
+}
+
 export default function AdminTickets() {
   const [events, setEvents] = useState([]);
   const [reservations, setReservations] = useState([]);
@@ -88,9 +112,9 @@ export default function AdminTickets() {
       setReservationPage(page);
       setReservationTotal(reservationRes.count ?? 0);
       if (!selectedId && !creatingEvent && nextEvents[0]) setSelectedId(nextEvents[0].id);
+      setLoading(false);
+      return nextEvents;
     }
-    setLoading(false);
-    return true;
   };
 
   const loadReservations = async (page) => {
@@ -135,23 +159,8 @@ export default function AdminTickets() {
       setWindowForms({});
       return;
     }
-    setForm({
-      slug: selectedEvent.slug ?? '',
-      title: selectedEvent.title ?? '',
-      description: selectedEvent.description ?? '',
-      venue: selectedEvent.venue ?? '',
-      opens_at: toDatetimeLocal(selectedEvent.opens_at),
-      closes_at: toDatetimeLocal(selectedEvent.closes_at),
-      sanity_performance_id: selectedEvent.sanity_performance_id ?? '',
-      status: selectedEvent.status ?? 'draft',
-    });
-    setWindowForms(Object.fromEntries(
-      (selectedEvent.windows ?? []).map((item) => [item.id, {
-        label: item.label ?? '',
-        starts_at: toDatetimeLocal(item.starts_at),
-        capacity: String(item.capacity ?? 0),
-      }])
-    ));
+    setForm(formFromEvent(selectedEvent));
+    setWindowForms(windowFormsFromEvent(selectedEvent));
   // Keep editing forms intact when a background refresh replaces the selected event object.
   // A different selected event still initializes all forms from the database.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -246,8 +255,14 @@ export default function AdminTickets() {
       if (res.error) {
         setError(res.error.message);
       } else if (selectedEvent && !res.data) {
-        setError('この販売ページは別の操作で更新されています。最新状態を再読み込みしてからもう一度保存してください。');
-        await load(reservationPage);
+        const refreshedEvents = await load(reservationPage);
+        const latestEvent = refreshedEvents && refreshedEvents.find((eventItem) => eventItem.id === selectedEvent.id);
+        if (latestEvent) {
+          setForm(formFromEvent(latestEvent));
+          setWindowForms(windowFormsFromEvent(latestEvent));
+          setWindowForm({ label: '', starts_at: '', capacity: '0' });
+        }
+        setError('この販売ページは別の操作で更新されています。最新状態を読み込みました。内容を確認してからもう一度編集してください。');
       } else {
         if (selectedEvent) {
           setEvents((currentEvents) => currentEvents.map((eventItem) => (
@@ -346,11 +361,20 @@ export default function AdminTickets() {
         })
         .eq('id', windowId)
         .eq('event_id', selectedEvent.id)
+        .eq('updated_at', currentWindow.updated_at)
         .is('deleted_at', null)
         .select('id')
-        .single();
-      if (res.error) setError(res.error.message);
-      else {
+        .maybeSingle();
+      if (res.error) {
+        setError(res.error.message);
+      } else if (!res.data) {
+        const refreshedEvents = await load(reservationPage);
+        const latestEvent = refreshedEvents && refreshedEvents.find((eventItem) => eventItem.id === selectedEvent.id);
+        if (latestEvent) {
+          setWindowForms(windowFormsFromEvent(latestEvent));
+        }
+        setError('この予約枠は別の操作で更新されています。最新状態を読み込みました。内容を確認してからもう一度編集してください。');
+      } else {
         setEvents((currentEvents) => currentEvents.map((eventItem) => (
           eventItem.id === selectedEvent.id
             ? {
