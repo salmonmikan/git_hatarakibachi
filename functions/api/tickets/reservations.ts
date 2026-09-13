@@ -215,17 +215,26 @@ export const onRequestPost = async ({ request, env }: FunctionContext<TicketRese
     const result = await createReservation(env, payload)
     if ("error" in result) {
       const upstreamCode = result.error.code?.trim() ?? ""
-      const businessFailure = result.response.status >= 400 && result.response.status < 500
-      console.warn("ticket reservation rejected by Supabase", {
+      // private.create_ticket_reservation が意図的に返す P0001 だけを
+      // 「RPCが実行され、予約不成立が確定した業務エラー」と扱う。
+      // 認証失敗・PGRSTルーティング・設定不備などは、前回送信の結果を
+      // 否定できないため結果不明の上流障害として扱う。
+      const businessFailure = upstreamCode === "P0001"
+      console.warn("ticket reservation Supabase RPC failed", {
         requestId: payload.request_id,
         status: result.response.status,
         code: upstreamCode || undefined,
+        businessFailure,
       })
       return jsonResponse(
-        {
-          error: result.error.message || "予約を受け付けられませんでした。",
-          ...(businessFailure ? { code: upstreamCode || "RESERVATION_REJECTED" } : {}),
-        },
+        businessFailure
+          ? {
+              error: result.error.message || "予約を受け付けられませんでした。",
+              code: upstreamCode,
+            }
+          : {
+              error: "予約結果を確認できませんでした。再確認してください。",
+            },
         businessFailure ? 422 : 502,
       )
     }
