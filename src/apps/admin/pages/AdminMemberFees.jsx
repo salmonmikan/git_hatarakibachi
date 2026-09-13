@@ -234,7 +234,7 @@ export default function AdminMemberFees() {
     }, [billingRows, currentMonth, paymentSummaryByMemberAndMonth]);
 
     const copyRegistrationLink = async (row) => {
-        const link = `${getPublicSiteOrigin()}/member-fee/register/${row.registration_token}`;
+        const link = `${getPublicSiteOrigin()}/member-fee/register#token=${row.registration_token}`;
         try {
             await navigator.clipboard.writeText(link);
             setCopiedMemberId(row.member_id);
