@@ -1,8 +1,42 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
 import { motion, useReducedMotion } from "motion/react";
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 import "./MemberFeeRegistration.scss";
+
+const REGISTRATION_STORAGE_KEY = "hatarakibachi.memberFeeRegistrationToken";
+const REGISTRATION_PATH = "/member-fee/register";
+const TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function tokenFromHash() {
+    const prefix = "#token=";
+    const hash = window.location.hash || "";
+    if (!hash.startsWith(prefix)) return "";
+    const token = hash.slice(prefix.length).trim();
+    return TOKEN_PATTERN.test(token) ? token : "";
+}
+
+function readRegistrationToken() {
+    try {
+        const stored = window.sessionStorage.getItem(REGISTRATION_STORAGE_KEY)?.trim() ?? "";
+        if (TOKEN_PATTERN.test(stored)) return stored;
+    } catch {
+        // storageが利用できない場合はfragmentを直接利用する。
+    }
+
+    const fragmentToken = tokenFromHash();
+    if (fragmentToken && window.location.hash) {
+        window.history.replaceState(window.history.state, "", REGISTRATION_PATH);
+    }
+    return fragmentToken;
+}
+
+function clearRegistrationToken() {
+    try {
+        window.sessionStorage.removeItem(REGISTRATION_STORAGE_KEY);
+    } catch {
+        // storageが利用できない場合は削除不要。
+    }
+}
 
 function PageMotion({ children, onEntered }) {
     const reduce = useReducedMotion();
@@ -24,7 +58,7 @@ function PageMotion({ children, onEntered }) {
 }
 
 export default function MemberFeeRegistration({ onEntered }) {
-    const { token = "" } = useParams();
+    const [token] = useState(readRegistrationToken);
     const [registration, setRegistration] = useState(null);
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(true);
@@ -37,12 +71,18 @@ export default function MemberFeeRegistration({ onEntered }) {
         const load = async () => {
             setLoading(true);
             setError("");
+            if (!token) {
+                setError("登録トークンを確認できませんでした。劇団運営から届いた登録URLを開き直してください。");
+                setLoading(false);
+                return;
+            }
             try {
                 const response = await fetch(`/api/member-fee/registration?token=${encodeURIComponent(token)}`, {
                     headers: { Accept: "application/json" },
                 });
                 const body = await response.json();
                 if (!response.ok) throw new Error(body.error || "登録情報を確認できませんでした。");
+                if (body.registered) clearRegistrationToken();
                 if (alive) setRegistration(body);
             } catch (loadError) {
                 if (alive) setError(loadError instanceof Error ? loadError.message : "登録情報を確認できませんでした。");
@@ -71,6 +111,7 @@ export default function MemberFeeRegistration({ onEntered }) {
             const body = await response.json();
             if (!response.ok) throw new Error(body.error || "決済ページを作成できませんでした。");
             if (!body.url) throw new Error("決済ページのURLを取得できませんでした。");
+            clearRegistrationToken();
             window.location.assign(body.url);
         } catch (submitError) {
             setError(submitError instanceof Error ? submitError.message : "決済ページを作成できませんでした。");
