@@ -60,53 +60,34 @@ export default function AdminTickets() {
     setError(null);
     const reservationFrom = page * RESERVATIONS_PAGE_SIZE;
     const reservationTo = reservationFrom + RESERVATIONS_PAGE_SIZE - 1;
-    const [eventRes, reservationRes, reservationTotalsRes] = await Promise.all([
-      supabase
-        .from('ticket_events')
-        .select('*, windows:ticket_windows(*)')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .order('sort_order', { foreignTable: 'windows', ascending: true }),
+    const [eventRes, reservationRes] = await Promise.all([
+      supabase.rpc('get_admin_ticket_events'),
       supabase
         .from('ticket_reservations')
         .select('*, event:ticket_events(title), window:ticket_windows(label)', { count: 'exact' })
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .range(reservationFrom, reservationTo),
-      supabase.rpc('get_ticket_window_reservation_totals'),
     ]);
     const sanityPerformanceRes = await getTicketPerformanceOptions();
 
-    if (eventRes.error || reservationRes.error || reservationTotalsRes.error) {
-      setError(eventRes.error?.message ?? reservationRes.error?.message ?? reservationTotalsRes.error?.message);
+    if (eventRes.error || reservationRes.error) {
+      setError(eventRes.error?.message ?? reservationRes.error?.message);
       setLoading(false);
       return false;
     } else {
-      const reservedByWindowId = reservationTotalsRes.data ?? {};
-      const eventsWithAvailability = (eventRes.data ?? []).map((event) => ({
-        ...event,
-        windows: (event.windows ?? []).map((windowItem) => {
-          const reservedQuantity = Number(reservedByWindowId[String(windowItem.id)] ?? 0);
-          return {
-            ...windowItem,
-            reserved_quantity: reservedQuantity,
-            remaining_quantity: windowItem.capacity > 0
-              ? Math.max(Number(windowItem.capacity) - reservedQuantity, 0)
-              : null,
-          };
-        }),
-      }));
-      setEvents(eventsWithAvailability);
-      if (selectedId && !eventsWithAvailability.some((event) => event.id === selectedId)) {
+      const nextEvents = Array.isArray(eventRes.data) ? eventRes.data : [];
+      setEvents(nextEvents);
+      if (selectedId && !nextEvents.some((event) => event.id === selectedId)) {
         setCreatingEvent(false);
-        setSelectedId(eventsWithAvailability[0]?.id ?? null);
+        setSelectedId(nextEvents[0]?.id ?? null);
       }
       setReservations(reservationRes.data ?? []);
       setSanityPerformances(Array.isArray(sanityPerformanceRes) ? sanityPerformanceRes : []);
       setSanityPerformanceLoadError(sanityPerformanceRes === null);
       setReservationPage(page);
       setReservationTotal(reservationRes.count ?? 0);
-      if (!selectedId && !creatingEvent && eventRes.data?.[0]) setSelectedId(eventRes.data[0].id);
+      if (!selectedId && !creatingEvent && nextEvents[0]) setSelectedId(nextEvents[0].id);
     }
     setLoading(false);
     return true;
@@ -253,11 +234,21 @@ export default function AdminTickets() {
       }
 
       const res = selectedEvent
-        ? await supabase.from('ticket_events').update(payload).eq('id', selectedEvent.id).select('*').single()
+        ? await supabase
+            .from('ticket_events')
+            .update(payload)
+            .eq('id', selectedEvent.id)
+            .eq('updated_at', selectedEvent.updated_at)
+            .select('*')
+            .maybeSingle()
         : await supabase.from('ticket_events').insert(payload).select('*').single();
 
-      if (res.error) setError(res.error.message);
-      else {
+      if (res.error) {
+        setError(res.error.message);
+      } else if (selectedEvent && !res.data) {
+        setError('この販売ページは別の操作で更新されています。最新状態を再読み込みしてからもう一度保存してください。');
+        await load(reservationPage);
+      } else {
         if (selectedEvent) {
           setEvents((currentEvents) => currentEvents.map((eventItem) => (
             eventItem.id === selectedEvent.id ? { ...eventItem, ...res.data } : eventItem
