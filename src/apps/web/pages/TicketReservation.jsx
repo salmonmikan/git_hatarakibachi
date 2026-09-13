@@ -44,8 +44,18 @@ function findSelectableWindowId(windowItems, preferredId = '') {
   return nextWindow ? String(nextWindow.id) : '';
 }
 
-function isDefinitiveReservationFailure(error) {
-  return typeof error?.code === 'string' && error.code.trim() !== '';
+function isDefinitiveReservationFailure(error, retryingRequest) {
+  const code = typeof error?.code === 'string' ? error.code.trim() : '';
+  if (!code) return false;
+  if (!retryingRequest) return true;
+
+  // 再確認中のTurnstile / WAF / request validation失敗は「今回の再送がDBへ届かなかった」
+  // ことしか確定しない。前回送信のDB結果は依然不明なのでpendingを維持する。
+  return !(
+    code.startsWith('TURNSTILE_')
+    || code === 'INVALID_REQUEST'
+    || code.startsWith('HTTP_')
+  );
 }
 
 function formFromReservationTransaction(transaction) {
@@ -279,7 +289,7 @@ export default function TicketReservation({
     const res = await createTicketReservation(payload);
     if (res.error) {
       setError(res.error.message);
-      if (isDefinitiveReservationFailure(res.error)) {
+      if (isDefinitiveReservationFailure(res.error, retryingRequest)) {
         setReservationRequestId(null);
         if (typeof onReservationTransactionChange === 'function') {
           onReservationTransactionChange(null);
