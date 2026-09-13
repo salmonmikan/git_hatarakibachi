@@ -9,6 +9,7 @@ import Scenario from "./pages/Scenario.jsx";
 import PostDetail from "./pages/PostDetail.jsx";
 import PerformanceDetail from "./pages/PerformanceDetail.jsx";
 import NewsDetail from "./pages/NewsDetail.jsx";
+import TicketReservation from "./pages/TicketReservation.jsx";
 import ScrollToTop from "@src/components/ScrollToTop.jsx";
 import FloatingLinks from "@src/components/FloatingLinks.jsx";
 import { AnimatePresence } from "framer-motion";
@@ -19,11 +20,33 @@ import VisualEditing from '@src/components/VisualEditing.jsx';
 import { trackPageView } from '@src/utils/analytics.js';
 // import supabase from './utils/supabase.ts'
 
+const RESERVATION_PENDING_STORAGE_KEY = 'hatarakibachi.ticketReservation.pending';
+
+function restorePendingReservationTransaction() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.sessionStorage.getItem(RESERVATION_PENDING_STORAGE_KEY);
+    if (!raw) return null;
+    const transaction = JSON.parse(raw);
+    const valid = transaction?.status === 'pending'
+      && typeof transaction.slug === 'string'
+      && typeof transaction.payload?.request_id === 'string';
+    if (!valid) {
+      window.sessionStorage.removeItem(RESERVATION_PENDING_STORAGE_KEY);
+      return null;
+    }
+    return transaction;
+  } catch {
+    return null;
+  }
+}
+
 function WebApp() {
   const location = useLocation();
   const mainRef = useRef(null);
   const lastScrollYRef = useRef(0);
   const [navHidden, setNavHidden] = useState(false);
+  const [reservationTransaction, setReservationTransaction] = useState(restorePendingReservationTransaction);
 
   useEffect(() => {
     function onScroll() {
@@ -51,6 +74,31 @@ function WebApp() {
       title: document.title,
     });
   }, [location.pathname]);
+
+  useEffect(() => {
+    try {
+      if (reservationTransaction?.status === 'pending') {
+        window.sessionStorage.setItem(
+          RESERVATION_PENDING_STORAGE_KEY,
+          JSON.stringify(reservationTransaction),
+        );
+      } else {
+        window.sessionStorage.removeItem(RESERVATION_PENDING_STORAGE_KEY);
+      }
+    } catch {
+      // Storageが使えない環境では従来どおりメモリ保持とbeforeunload警告へフォールバックする。
+    }
+  }, [reservationTransaction]);
+
+  useEffect(() => {
+    if (reservationTransaction?.status !== 'pending') return undefined;
+    const onBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [reservationTransaction]);
 
   return (
     <div className="web-shell">
@@ -110,6 +158,16 @@ function WebApp() {
             <Route path="post/:slug" element={<PostDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="performance/:slug" element={<PerformanceDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="news/:slug" element={<NewsDetail onEntered={() => mainRef.current?.focus()} />} />
+            <Route
+              path="tickets/:slug"
+              element={(
+                <TicketReservation
+                  onEntered={() => mainRef.current?.focus()}
+                  reservationTransaction={reservationTransaction}
+                  onReservationTransactionChange={setReservationTransaction}
+                />
+              )}
+            />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

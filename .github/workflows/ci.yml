@@ -80,6 +80,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Test
+        run: npm test --if-present
+
       - name: Build
         run: npm run build
 
@@ -144,10 +147,13 @@ jobs:
       - name: Reapply all migrations
         run: npx --no-install supabase db reset --local --no-seed
 
+      - name: Run database tests
+        run: npx --no-install supabase test db --local
+
       - name: Stop local Supabase database
         if: ${{ always() }}
         run: npx --no-install supabase stop --no-backup
 
       - name: Database検証失敗時の案内
         if: ${{ failure() }}
-        run: echo "::error::Supabase migrationの命名またはローカル再適用に失敗しました。上記ログを確認してください。"
+        run: echo "::error::Supabase migrationの命名、ローカル再適用、またはpgTAPテストに失敗しました。上記ログを確認してください。"
