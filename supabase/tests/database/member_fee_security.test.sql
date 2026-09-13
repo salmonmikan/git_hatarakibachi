@@ -61,8 +61,8 @@ select ok(
   'trigger helper is not exposed through the Data API roles'
 );
 
-insert into public.members (name, hurigana)
-values ('member-fee-pgtap', 'member-fee-pgtap');
+insert into public.members (name, hurigana, affiliation_code)
+values ('member-fee-pgtap', 'member-fee-pgtap', 'associate');
 
 select ok(
   public.apply_member_fee_invoice_projection(
