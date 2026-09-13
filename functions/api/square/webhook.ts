@@ -7,6 +7,10 @@ import {
   supabaseRequest,
   type MemberFeeEnv,
 } from "../../_memberFee"
+import {
+  RequestBodyTooLargeError,
+  readRequestTextWithLimit,
+} from "../../_requestBody"
 
 type Money = {
   amount?: number
@@ -29,6 +33,7 @@ type SquareInvoicePaymentRequest = {
 
 type SquareInvoice = {
   id?: string
+  version?: number
   subscription_id?: string
   order_id?: string
   status?: string
@@ -82,6 +87,7 @@ type PaymentRow = {
   status: string
   paid_at: string | null
   square_invoice_id: string
+  square_invoice_version: number
 }
 
 type SquareSubscriptionResponse = {
@@ -109,6 +115,7 @@ type ClaimResult = "claimed" | "busy" | "completed"
 
 const PAYMENT_NOTE_PREFIX = "hatarakibachi-member-fee:"
 const REREGISTERABLE_STATUSES = new Set(["CANCELED", "COMPLETED"])
+const MAX_WEBHOOK_REQUEST_BYTES = 262144
 const SUPPORTED_EVENTS = new Set([
   "subscription.created",
   "subscription.updated",
@@ -192,12 +199,6 @@ function addNullableSnapshotFilter(params: URLSearchParams, column: string, valu
   params.set(column, value === null ? "is.null" : `eq.${value}`)
 }
 
-async function isBillingEmailUniqueConflict(response: Response) {
-  if (response.status !== 409) return false
-  const detail = await response.clone().text()
-  return detail.includes("23505") && detail.includes("member_billing_billing_email_unique_idx")
-}
-
 async function updateBillingIfUnchanged(
   env: MemberFeeEnv,
   billing: BillingRow,
@@ -212,25 +213,15 @@ async function updateBillingIfUnchanged(
   addNullableSnapshotFilter(params, "square_payment_link_id", billing.square_payment_link_id)
   addNullableSnapshotFilter(params, "last_payment_at", billing.last_payment_at)
 
-  const patch = (nextPayload: Record<string, unknown>) => supabaseRequest(
+  const response = await supabaseRequest(
     env,
     `/rest/v1/member_billing?${params.toString()}`,
     {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ ...nextPayload, updated_at: new Date().toISOString() }),
+      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() }),
     },
   )
-
-  let response = await patch(payload)
-
-  // Square Checkoutで確定したメールが他団員と競合しても、契約の紐付け自体は止めない。
-  // メールのunique制約は維持し、該当制約の競合時だけメール同期を省略して同じCAS条件で再試行する。
-  if ("billing_email" in payload && await isBillingEmailUniqueConflict(response)) {
-    const retryPayload = { ...payload }
-    delete retryPayload.billing_email
-    response = await patch(retryPayload)
-  }
 
   const rows = await readJson<Array<{ id: number }>>(response, "conditional member billing update")
   return rows.length > 0
@@ -295,7 +286,7 @@ function paymentsMatchRegistrationAttempt(payments: SquarePayment[], billing: Bi
 
 async function getPaymentByInvoiceId(env: MemberFeeEnv, invoiceId: string) {
   const params = new URLSearchParams({
-    select: "member_id,target_month,amount,status,paid_at,square_invoice_id",
+    select: "member_id,target_month,amount,status,paid_at,square_invoice_id,square_invoice_version",
     square_invoice_id: `eq.${invoiceId}`,
     limit: "1",
   })
@@ -304,7 +295,7 @@ async function getPaymentByInvoiceId(env: MemberFeeEnv, invoiceId: string) {
   return rows[0] ?? null
 }
 
-async function upsertPayment(
+async function applyInvoiceProjection(
   env: MemberFeeEnv,
   payload: {
     member_id: number
@@ -312,21 +303,29 @@ async function upsertPayment(
     amount: number
     currency: string
     square_invoice_id: string
+    square_invoice_version: number
     status: string
     paid_at: string | null
   },
 ) {
-  const params = new URLSearchParams({ on_conflict: "square_invoice_id" })
   const response = await supabaseRequest(
     env,
-    `/rest/v1/member_fee_payments?${params.toString()}`,
+    "/rest/v1/rpc/apply_member_fee_invoice_projection",
     {
       method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() }),
+      body: JSON.stringify({
+        p_member_id: payload.member_id,
+        p_target_month: payload.target_month,
+        p_amount: payload.amount,
+        p_currency: payload.currency,
+        p_square_invoice_id: payload.square_invoice_id,
+        p_square_invoice_version: payload.square_invoice_version,
+        p_status: payload.status,
+        p_paid_at: payload.paid_at,
+      }),
     },
   )
-  if (!response.ok) await readJson(response, "member fee payment upsert")
+  return readJson<boolean>(response, "member fee invoice projection")
 }
 
 async function unlinkIfDifferentPlan(env: MemberFeeEnv, subscriptionId: string) {
@@ -350,7 +349,6 @@ async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookE
     throw new Error("Subscription webhook does not contain a subscription ID")
   }
 
-  // Webhookの配送順には依存せず、Square上の現在状態を正として同期する。
   const subscription = await retrieveSubscription(env, webhookSubscription.id)
   if (!subscription?.id || !subscription.customer_id) {
     throw new Error("Current Square subscription does not contain required identifiers")
@@ -363,8 +361,6 @@ async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookE
   const billing = await selectBilling(env, "square_subscription_id", subscription.id)
 
   if (REREGISTERABLE_STATUSES.has(subscription.status || "")) {
-    // 現在このSubscriptionを保持している団員だけ終了状態へ更新する。
-    // 再登録後に遅れて届いた旧Subscriptionイベントは無視する。
     if (!billing) {
       return { status: "ignored" as const, detail: "Historical terminal subscription event" }
     }
@@ -379,7 +375,6 @@ async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookE
   }
 
   if (!billing) {
-    // 初回Checkoutではメールアドレスを識別子に使わず、初回Invoice/Paymentの固定noteで紐付ける。
     return { status: "ignored" as const, detail: "Subscription is awaiting immutable checkout linkage" }
   }
 
@@ -433,10 +428,9 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
     return { status: "ignored" as const, detail: "Invoice ID is missing" }
   }
 
-  // Invoiceイベントもpayloadの到着順に依存せず、Square上の現在Invoiceを正として扱う。
   const invoice = await retrieveInvoice(env, webhookInvoice.id)
-  if (!invoice?.id || !invoice.subscription_id) {
-    return { status: "ignored" as const, detail: "Invoice is not a subscription billing invoice" }
+  if (!invoice?.id || !invoice.subscription_id || !Number.isInteger(invoice.version) || (invoice.version ?? -1) < 0) {
+    return { status: "ignored" as const, detail: "Invoice is missing required subscription/version data" }
   }
 
   const existingInvoicePayment = await getPaymentByInvoiceId(env, invoice.id)
@@ -463,9 +457,6 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
     return { status: "unmatched" as const, detail: `Invoice ${invoice.id} could not be linked to a member` }
   }
 
-  // 既存台帳行がある場合でも、Payment.note が現在の registration_attempt_token と一致するなら
-  // 初回登録処理の再送なので、member_billing のSubscription紐付けまで再試行する。
-  // 再登録後の旧Invoiceは古いattempt tokenのため一致せず、履歴台帳だけ更新される。
   const sameSubscription = billing.square_subscription_id === invoice.subscription_id
   let matchesCurrentAttempt = false
   if (
@@ -535,17 +526,24 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
     return { status: "processed" as const, detail: `No ledger change required for invoice status ${invoice.status || "UNKNOWN"}` }
   }
 
-  await upsertPayment(env, {
+  const projectionApplied = await applyInvoiceProjection(env, {
     member_id: billing.member_id,
     target_month: targetMonth,
     amount,
     currency,
     square_invoice_id: invoice.id,
+    square_invoice_version: invoice.version!,
     status: paymentStatus,
     paid_at: paidAt,
   })
 
-  // 履歴Invoiceは月別台帳のみ更新し、現在契約のサマリー状態を上書きしない。
+  if (!projectionApplied) {
+    return {
+      status: "processed" as const,
+      detail: `Ignored stale Square invoice version ${invoice.version}`,
+    }
+  }
+
   if (canLinkSubscription) {
     const billingUpdate: Record<string, unknown> = {
       last_payment_status: paymentStatus,
@@ -563,8 +561,6 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
       billingUpdate.last_payment_at = latestTimestamp(billing.last_payment_at, paidAt)
     }
 
-    // Invoice取得後に再登録claimや別Webhookで現在契約が変わった場合は、
-    // 古いスナップショットで上書きせず503へ落として再送時に新状態で再判定する。
     const updated = await updateBillingIfUnchanged(env, billing, billingUpdate)
     if (!updated) {
       throw new Error("Member billing changed during invoice processing; retry with current state")
@@ -579,7 +575,16 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
     return jsonResponse({ error: "Webhook configuration is incomplete" }, 503)
   }
 
-  const rawBody = await request.text()
+  let rawBody = ""
+  try {
+    rawBody = await readRequestTextWithLimit(request, MAX_WEBHOOK_REQUEST_BYTES)
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return jsonResponse({ error: "Webhook payload is too large" }, 413)
+    }
+    throw error
+  }
+
   const signature = request.headers.get("x-square-hmacsha256-signature") ?? ""
   const notificationUrl = env.SQUARE_WEBHOOK_NOTIFICATION_URL || request.url
   const validSignature = await verifySquareSignature(
@@ -606,7 +611,6 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
   try {
     const claimResult = await claimEvent(env, event)
     if (claimResult === "busy") {
-      // 2xxを返すとSquareが再送を止めるため、処理中は明示的に再送を継続させる。
       return jsonResponse({ error: "Webhook event is already being processed" }, 503)
     }
     if (claimResult === "completed") {
