@@ -10,6 +10,10 @@ import {
   supabaseRequest,
   type MemberFeeEnv,
 } from "../../_memberFee"
+import {
+  RequestBodyTooLargeError,
+  readRequestJsonWithLimit,
+} from "../../_requestBody"
 
 type BillingRow = {
   id: number
@@ -35,7 +39,7 @@ type PaymentLinkResponse = {
 }
 
 type RegistrationAttemptClaim = {
-  result?: "claimed" | "pending" | "registered" | "email_conflict" | "invalid_email" | "not_found"
+  result?: "claimed" | "pending" | "registered" | "invalid_email" | "not_found"
   attempt_token?: string | null
   billing_email?: string | null
   payment_link_id?: string | null
@@ -44,6 +48,7 @@ type RegistrationAttemptClaim = {
 
 const REREGISTERABLE_STATUSES = new Set(["CANCELED", "COMPLETED"])
 const PAYMENT_NOTE_PREFIX = "hatarakibachi-member-fee:"
+const MAX_REGISTRATION_REQUEST_BYTES = 8192
 
 function registrationParams(token: string) {
   const params = new URLSearchParams({
@@ -125,7 +130,19 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
       return jsonResponse({ error: "団員費の決済設定が完了していません。" }, 503)
     }
 
-    const body = await request.json().catch(() => null) as { token?: unknown; email?: unknown } | null
+    let body: { token?: unknown; email?: unknown } | null = null
+    try {
+      body = await readRequestJsonWithLimit<{ token?: unknown; email?: unknown }>(
+        request,
+        MAX_REGISTRATION_REQUEST_BYTES,
+      )
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return jsonResponse({ error: "送信内容が大きすぎます。" }, 413)
+      }
+      return jsonResponse({ error: "送信内容を確認してください。" }, 400)
+    }
+
     const token = typeof body?.token === "string" ? body.token.trim() : ""
     const email = normalizeEmail(body?.email)
 
@@ -136,8 +153,6 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
     const invalid = validateAvailableBilling(row)
     if (invalid) return invalid
 
-    // DB行ロック内でPENDING化してattemptを確保する。
-    // 同時POSTは同じattemptを受け取るため、Square側でも同じidempotency keyへ収束する。
     const claim = await claimRegistrationAttempt(env, row!.id, email)
 
     if (claim.result === "not_found") {
@@ -145,9 +160,6 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
     }
     if (claim.result === "invalid_email") {
       return jsonResponse({ error: "メールアドレスを確認してください。" }, 400)
-    }
-    if (claim.result === "email_conflict") {
-      return jsonResponse({ error: "このメールアドレスは別の団員に登録済みです。" }, 409)
     }
     if (claim.result === "registered") {
       const message = claim.subscription_status === "DEACTIVATED"
@@ -202,8 +214,6 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
       throw new Error("Square payment link response is incomplete")
     }
 
-    // attempt tokenを条件にして、現在のclaimにだけPayment Link IDを保存する。
-    // DB更新に失敗しても次回POSTは同じattempt/idempotency keyでSquare応答を復元できる。
     const updateParams = new URLSearchParams({
       id: `eq.${row!.id}`,
       registration_attempt_token: `eq.${attemptToken}`,
