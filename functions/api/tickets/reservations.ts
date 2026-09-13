@@ -1,4 +1,8 @@
 import type { FunctionContext } from "../../_types"
+import {
+  RequestBodyTooLargeError,
+  readRequestTextWithLimit,
+} from "../../_requestBody"
 
 type TicketReservationEnv = {
   SUPABASE_URL: string
@@ -176,14 +180,14 @@ export const onRequestPost = async ({ request, env }: FunctionContext<TicketRese
     return jsonResponse({ error: "JSON形式で送信してください。", code: "INVALID_REQUEST" }, 415)
   }
 
-  const declaredLength = Number(request.headers.get("content-length"))
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
-    return jsonResponse({ error: "送信内容が大きすぎます。", code: "INVALID_REQUEST" }, 413)
-  }
-
-  const rawBody = await request.text()
-  if (new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BYTES) {
-    return jsonResponse({ error: "送信内容が大きすぎます。", code: "INVALID_REQUEST" }, 413)
+  let rawBody = ""
+  try {
+    rawBody = await readRequestTextWithLimit(request, MAX_REQUEST_BYTES)
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return jsonResponse({ error: "送信内容が大きすぎます。", code: "INVALID_REQUEST" }, 413)
+    }
+    throw error
   }
 
   let parsed: ReservationRequest | null = null
@@ -215,10 +219,6 @@ export const onRequestPost = async ({ request, env }: FunctionContext<TicketRese
     const result = await createReservation(env, payload)
     if ("error" in result) {
       const upstreamCode = result.error.code?.trim() ?? ""
-      // private.create_ticket_reservation が意図的に返す P0001 だけを
-      // 「RPCが実行され、予約不成立が確定した業務エラー」と扱う。
-      // 認証失敗・PGRSTルーティング・設定不備などは、前回送信の結果を
-      // 否定できないため結果不明の上流障害として扱う。
       const businessFailure = upstreamCode === "P0001"
       console.warn("ticket reservation Supabase RPC failed", {
         requestId: payload.request_id,
