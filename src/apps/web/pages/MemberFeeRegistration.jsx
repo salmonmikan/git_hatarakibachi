@@ -4,6 +4,38 @@ import { motion, useReducedMotion } from "motion/react";
 import { pageVariants, pageTransition } from "@src/assets/_pageVariants.js";
 import "./MemberFeeRegistration.scss";
 
+const REGISTRATION_STORAGE_KEY = "hatarakibachi.memberFeeRegistrationToken";
+const REGISTRATION_PATH = "/member-fee/register";
+
+function readRegistrationToken(routeToken) {
+    const normalizedRouteToken = typeof routeToken === "string" ? routeToken.trim() : "";
+    if (normalizedRouteToken) {
+        try {
+            window.sessionStorage.setItem(REGISTRATION_STORAGE_KEY, normalizedRouteToken);
+        } catch {
+            // sessionStorageが利用できなくても、現在のURLに含まれるtokenで処理を継続する。
+        }
+        if (window.location.pathname !== REGISTRATION_PATH) {
+            window.history.replaceState(window.history.state, "", REGISTRATION_PATH);
+        }
+        return normalizedRouteToken;
+    }
+
+    try {
+        return window.sessionStorage.getItem(REGISTRATION_STORAGE_KEY)?.trim() ?? "";
+    } catch {
+        return "";
+    }
+}
+
+function clearRegistrationToken() {
+    try {
+        window.sessionStorage.removeItem(REGISTRATION_STORAGE_KEY);
+    } catch {
+        // 既にstorageが利用できない場合は削除不要。
+    }
+}
+
 function PageMotion({ children, onEntered }) {
     const reduce = useReducedMotion();
     return (
@@ -24,7 +56,8 @@ function PageMotion({ children, onEntered }) {
 }
 
 export default function MemberFeeRegistration({ onEntered }) {
-    const { token = "" } = useParams();
+    const { token: routeToken = "" } = useParams();
+    const [token] = useState(() => readRegistrationToken(routeToken));
     const [registration, setRegistration] = useState(null);
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(true);
@@ -43,6 +76,7 @@ export default function MemberFeeRegistration({ onEntered }) {
                 });
                 const body = await response.json();
                 if (!response.ok) throw new Error(body.error || "登録情報を確認できませんでした。");
+                if (body.registered) clearRegistrationToken();
                 if (alive) setRegistration(body);
             } catch (loadError) {
                 if (alive) setError(loadError instanceof Error ? loadError.message : "登録情報を確認できませんでした。");
@@ -71,6 +105,7 @@ export default function MemberFeeRegistration({ onEntered }) {
             const body = await response.json();
             if (!response.ok) throw new Error(body.error || "決済ページを作成できませんでした。");
             if (!body.url) throw new Error("決済ページのURLを取得できませんでした。");
+            clearRegistrationToken();
             window.location.assign(body.url);
         } catch (submitError) {
             setError(submitError instanceof Error ? submitError.message : "決済ページを作成できませんでした。");

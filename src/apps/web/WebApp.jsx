@@ -111,6 +111,7 @@ function WebApp() {
             <Route path="post/:slug" element={<PostDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="performance/:slug" element={<PerformanceDetail onEntered={() => mainRef.current?.focus()} />} />
             <Route path="news/:slug" element={<NewsDetail onEntered={() => mainRef.current?.focus()} />} />
+            <Route path="member-fee/register" element={<MemberFeeRegistration onEntered={() => mainRef.current?.focus()} />} />
             <Route path="member-fee/register/:token" element={<MemberFeeRegistration onEntered={() => mainRef.current?.focus()} />} />
             <Route path="member-fee/complete" element={<MemberFeeComplete onEntered={() => mainRef.current?.focus()} />} />
             
