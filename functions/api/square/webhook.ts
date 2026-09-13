@@ -251,6 +251,13 @@ async function findBillingFromPayments(env: MemberFeeEnv, payments: SquarePaymen
   return null
 }
 
+function paymentsMatchRegistrationAttempt(payments: SquarePayment[], billing: BillingRow) {
+  if (!billing.registration_attempt_token) return false
+  return payments.some(
+    (payment) => attemptTokenFromPaymentNote(payment.note) === billing.registration_attempt_token,
+  )
+}
+
 async function getPaymentByInvoiceId(env: MemberFeeEnv, invoiceId: string) {
   const params = new URLSearchParams({
     select: "member_id,target_month,amount,status,paid_at,square_invoice_id",
@@ -405,11 +412,26 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
     return { status: "unmatched" as const, detail: `Invoice ${invoice.id} could not be linked to a member` }
   }
 
-  // 既存台帳行がある履歴Invoiceは、そのInvoice自身の金額/返金だけ更新し、
-  // 再登録中のPENDING行へ古いSubscription IDを戻さない。
+  // 既存台帳行がある場合でも、Payment.note が現在の registration_attempt_token と一致するなら
+  // 初回登録処理の再送なので、member_billing のSubscription紐付けまで再試行する。
+  // 再登録後の旧Invoiceは古いattempt tokenのため一致せず、履歴台帳だけ更新される。
   const sameSubscription = billing.square_subscription_id === invoice.subscription_id
+  let matchesCurrentAttempt = false
+  if (
+    existingInvoicePayment
+    && !sameSubscription
+    && billing.subscription_status === "PENDING"
+    && billing.registration_attempt_token
+  ) {
+    if (payments.length === 0) {
+      payments = await retrieveOrderPayments(env, invoice.order_id)
+    }
+    matchesCurrentAttempt = paymentsMatchRegistrationAttempt(payments, billing)
+  }
+
   const canLinkSubscription = isMemberFeePlan && (
     sameSubscription
+    || matchesCurrentAttempt
     || (!existingInvoicePayment && shouldLinkSubscription(billing, invoice.subscription_id))
   )
   if (!canLinkSubscription && !existingInvoicePayment && !sameSubscription) {
