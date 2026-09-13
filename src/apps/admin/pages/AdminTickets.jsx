@@ -43,6 +43,7 @@ function windowFormsFromEvent(event) {
       label: item.label ?? '',
       starts_at: toDatetimeLocal(item.starts_at),
       capacity: String(item.capacity ?? 0),
+      updated_at: item.updated_at ?? null,
     }])
   );
 }
@@ -53,6 +54,7 @@ export default function AdminTickets() {
   const [selectedId, setSelectedId] = useState(null);
   const [creatingEvent, setCreatingEvent] = useState(false);
   const [form, setForm] = useState(eventDefaults);
+  const [eventFormVersion, setEventFormVersion] = useState(null);
   const [windowForm, setWindowForm] = useState({ label: '', starts_at: '', capacity: '0' });
   const [windowForms, setWindowForms] = useState({});
   const [sanityPerformances, setSanityPerformances] = useState([]);
@@ -99,22 +101,22 @@ export default function AdminTickets() {
       setError(eventRes.error?.message ?? reservationRes.error?.message);
       setLoading(false);
       return false;
-    } else {
-      const nextEvents = Array.isArray(eventRes.data) ? eventRes.data : [];
-      setEvents(nextEvents);
-      if (selectedId && !nextEvents.some((event) => event.id === selectedId)) {
-        setCreatingEvent(false);
-        setSelectedId(nextEvents[0]?.id ?? null);
-      }
-      setReservations(reservationRes.data ?? []);
-      setSanityPerformances(Array.isArray(sanityPerformanceRes) ? sanityPerformanceRes : []);
-      setSanityPerformanceLoadError(sanityPerformanceRes === null);
-      setReservationPage(page);
-      setReservationTotal(reservationRes.count ?? 0);
-      if (!selectedId && !creatingEvent && nextEvents[0]) setSelectedId(nextEvents[0].id);
-      setLoading(false);
-      return nextEvents;
     }
+
+    const nextEvents = Array.isArray(eventRes.data) ? eventRes.data : [];
+    setEvents(nextEvents);
+    if (selectedId && !nextEvents.some((event) => event.id === selectedId)) {
+      setCreatingEvent(false);
+      setSelectedId(nextEvents[0]?.id ?? null);
+    }
+    setReservations(reservationRes.data ?? []);
+    setSanityPerformances(Array.isArray(sanityPerformanceRes) ? sanityPerformanceRes : []);
+    setSanityPerformanceLoadError(sanityPerformanceRes === null);
+    setReservationPage(page);
+    setReservationTotal(reservationRes.count ?? 0);
+    if (!selectedId && !creatingEvent && nextEvents[0]) setSelectedId(nextEvents[0].id);
+    setLoading(false);
+    return nextEvents;
   };
 
   const loadReservations = async (page) => {
@@ -156,13 +158,15 @@ export default function AdminTickets() {
     setWindowForm({ label: '', starts_at: '', capacity: '0' });
     if (!selectedEvent) {
       setForm(eventDefaults);
+      setEventFormVersion(null);
       setWindowForms({});
       return;
     }
     setForm(formFromEvent(selectedEvent));
+    setEventFormVersion(selectedEvent.updated_at ?? null);
     setWindowForms(windowFormsFromEvent(selectedEvent));
-  // Keep editing forms intact when a background refresh replaces the selected event object.
-  // A different selected event still initializes all forms from the database.
+  // Background refreshes may replace selectedEvent, but the form + version must stay one snapshot.
+  // A different selected event initializes the editor from that event's current database snapshot.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
@@ -183,6 +187,7 @@ export default function AdminTickets() {
     setCreatingEvent(true);
     setSelectedId(null);
     setForm(eventDefaults);
+    setEventFormVersion(null);
     setWindowForm({ label: '', starts_at: '', capacity: '0' });
     setWindowForms({});
   };
@@ -247,7 +252,7 @@ export default function AdminTickets() {
             .from('ticket_events')
             .update(payload)
             .eq('id', selectedEvent.id)
-            .eq('updated_at', selectedEvent.updated_at)
+            .eq('updated_at', eventFormVersion)
             .select('*')
             .maybeSingle()
         : await supabase.from('ticket_events').insert(payload).select('*').single();
@@ -259,11 +264,13 @@ export default function AdminTickets() {
         const latestEvent = refreshedEvents && refreshedEvents.find((eventItem) => eventItem.id === selectedEvent.id);
         if (latestEvent) {
           setForm(formFromEvent(latestEvent));
+          setEventFormVersion(latestEvent.updated_at ?? null);
           setWindowForms(windowFormsFromEvent(latestEvent));
           setWindowForm({ label: '', starts_at: '', capacity: '0' });
         }
         setError('この販売ページは別の操作で更新されています。最新状態を読み込みました。内容を確認してからもう一度編集してください。');
       } else {
+        setEventFormVersion(res.data.updated_at ?? null);
         if (selectedEvent) {
           setEvents((currentEvents) => currentEvents.map((eventItem) => (
             eventItem.id === selectedEvent.id ? { ...eventItem, ...res.data } : eventItem
@@ -327,6 +334,7 @@ export default function AdminTickets() {
         label: currentWindow?.label ?? '',
         starts_at: toDatetimeLocal(currentWindow?.starts_at),
         capacity: String(currentWindow?.capacity ?? 0),
+        updated_at: currentWindow?.updated_at ?? null,
         ...prev[windowId],
         [field]: value,
       },
@@ -361,9 +369,9 @@ export default function AdminTickets() {
         })
         .eq('id', windowId)
         .eq('event_id', selectedEvent.id)
-        .eq('updated_at', currentWindow.updated_at)
+        .eq('updated_at', values.updated_at)
         .is('deleted_at', null)
-        .select('id')
+        .select('id,updated_at')
         .maybeSingle();
       if (res.error) {
         setError(res.error.message);
@@ -375,6 +383,13 @@ export default function AdminTickets() {
         }
         setError('この予約枠は別の操作で更新されています。最新状態を読み込みました。内容を確認してからもう一度編集してください。');
       } else {
+        setWindowForms((currentForms) => ({
+          ...currentForms,
+          [windowId]: {
+            ...currentForms[windowId],
+            updated_at: res.data.updated_at ?? currentForms[windowId]?.updated_at ?? null,
+          },
+        }));
         setEvents((currentEvents) => currentEvents.map((eventItem) => (
           eventItem.id === selectedEvent.id
             ? {
@@ -386,6 +401,7 @@ export default function AdminTickets() {
                         label,
                         starts_at: startsAt,
                         capacity,
+                        updated_at: res.data.updated_at ?? item.updated_at,
                         availability_stale: true,
                       }
                     : item
@@ -558,7 +574,12 @@ export default function AdminTickets() {
                 <h3>予約枠一覧</h3>
               <ul>
                 {(selectedEvent.windows ?? []).filter((item) => !item.deleted_at).map((item) => {
-                  const values = windowForms[item.id] ?? { label: item.label ?? '', starts_at: toDatetimeLocal(item.starts_at), capacity: String(item.capacity ?? 0) };
+                  const values = windowForms[item.id] ?? {
+                    label: item.label ?? '',
+                    starts_at: toDatetimeLocal(item.starts_at),
+                    capacity: String(item.capacity ?? 0),
+                    updated_at: item.updated_at ?? null,
+                  };
                   const activeWindowMutation = windowMutation?.windowId === item.id ? windowMutation.type : null;
                   return (
                     <li key={item.id}>
