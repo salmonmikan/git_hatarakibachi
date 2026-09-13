@@ -23,6 +23,7 @@ const PAYMENT_STATUS_LABELS = {
 
 const REREGISTERABLE_STATUSES = new Set(["CANCELED", "COMPLETED"]);
 const MEMBER_FEE_AMOUNT = 1000;
+const PAYMENT_PAGE_SIZE = 1000;
 
 function getCurrentMonth() {
     const parts = new Intl.DateTimeFormat("en-US", {
@@ -119,6 +120,30 @@ function summarizeMonthPayments(rows) {
     };
 }
 
+async function fetchAllPayments() {
+    const rows = [];
+    let from = 0;
+
+    while (true) {
+        const { data, error } = await supabase
+            .from("member_fee_payments")
+            .select("*")
+            .order("target_month", { ascending: false })
+            .order("paid_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, from + PAYMENT_PAGE_SIZE - 1);
+
+        if (error) return { data: null, error };
+
+        const page = data ?? [];
+        rows.push(...page);
+        if (page.length < PAYMENT_PAGE_SIZE) break;
+        from += PAYMENT_PAGE_SIZE;
+    }
+
+    return { data: rows, error: null };
+}
+
 export default function AdminMemberFees() {
     const [billingRows, setBillingRows] = useState([]);
     const [payments, setPayments] = useState([]);
@@ -140,11 +165,7 @@ export default function AdminMemberFees() {
                     .from("member_billing")
                     .select("*, member:members(id,name,deleted_at)")
                     .order("member_id", { ascending: true }),
-                supabase
-                    .from("member_fee_payments")
-                    .select("*")
-                    .order("target_month", { ascending: false })
-                    .order("paid_at", { ascending: false }),
+                fetchAllPayments(),
                 supabase
                     .from("square_webhook_events")
                     .select("event_id,event_type,status,detail,received_at")
@@ -194,7 +215,10 @@ export default function AdminMemberFees() {
     const lastPaymentByMember = useMemo(() => {
         const map = new Map();
         for (const payment of payments) {
-            if (payment.paid_at && !map.has(payment.member_id)) {
+            if (!payment.paid_at) continue;
+
+            const current = map.get(payment.member_id);
+            if (!current || Date.parse(payment.paid_at) > Date.parse(current.paid_at)) {
                 map.set(payment.member_id, payment);
             }
         }
