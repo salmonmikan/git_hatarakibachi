@@ -32,7 +32,7 @@ select ok(
 select * from finish();
 
 -- 既存の予約ドメインテストはanon/authenticatedとしてRPC本体を検証するため、
--- このローカルテストDB内だけ一時的に実行権限を付与する。999テストで必ず戻す。
+-- このローカルテストDB内だけ一時的に実行権限を付与する。zzzテストで必ず戻す。
 grant execute on function public.create_ticket_reservation(
   bigint, bigint, text, text, integer, text, uuid
 ) to anon, authenticated;
