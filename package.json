@@ -14,7 +14,10 @@
     "sb:stop": "supabase stop",
     "sb:reset": "supabase db reset",
     "predev": "node src/assets/gen-logo.mjs",
-    "prebuild": "node src/assets/gen-logo.mjs"
+    "prebuild": "node src/assets/gen-logo.mjs",
+    "dev:worker": "npm run build && wrangler dev",
+    "test": "node --test worker/routes.test.js",
+    "worker:check": "npm run build && wrangler deploy --dry-run --outdir .wrangler/dry-run"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
