@@ -34,6 +34,19 @@ test("maps the optional catch-all image route and decodes segments", () => {
   });
 });
 
+test("accepts trailing slashes for migrated Pages API routes", () => {
+  assert.deepEqual(resolveWorkerRoute("/api/disable-draft/"), {
+    kind: "function",
+    id: "disable-draft",
+    params: {},
+  });
+  assert.deepEqual(resolveWorkerRoute("/api/web-members///"), {
+    kind: "function",
+    id: "web-members",
+    params: {},
+  });
+});
+
 test("keeps unknown API paths out of the SPA fallback", () => {
   assert.deepEqual(resolveWorkerRoute("/api/not-defined"), {
     kind: "api-not-found",
