@@ -80,11 +80,17 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
 
       - name: Build Pages Functions
         run: npx --no-install wrangler pages functions build functions --outfile "$RUNNER_TEMP/pages-functions-worker.js"
+
+      - name: Validate Worker build
+        run: npx --no-install wrangler deploy --dry-run --outdir "$RUNNER_TEMP/worker-build"
 
       - name: Install Studio dependencies
         working-directory: sanity-studio
@@ -96,7 +102,7 @@ jobs:
 
       - name: CI失敗時の案内
         if: ${{ failure() }}
-        run: echo "::error::Frontend、Pages Functions、またはSanity Studioの検証に失敗しました。上記ログで失敗したステップを確認してください。"
+        run: echo "::error::Frontend、Pages Functions、Worker、またはSanity Studioの検証に失敗しました。上記ログで失敗したステップを確認してください。"
 
   database:
     name: Validate database migrations
