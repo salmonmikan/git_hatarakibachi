@@ -180,10 +180,11 @@ jobs:
           SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
           VITE_SANITY_READ_TOKEN: ${{ secrets.VITE_SANITY_READ_TOKEN }}
           IMG_ORIGIN: ${{ vars.IMG_ORIGIN }}
+          IMG_KEY: ${{ secrets.IMG_KEY }}
         shell: bash
         run: |
           missing=0
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SUPABASE_PROJECT_REF SUPABASE_ANON_KEY SANITY_PREVIEW_SECRET VITE_SANITY_READ_TOKEN IMG_ORIGIN; do
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SUPABASE_PROJECT_REF SUPABASE_ANON_KEY SANITY_PREVIEW_SECRET VITE_SANITY_READ_TOKEN IMG_ORIGIN IMG_KEY; do
             if [ -z "${!name}" ]; then
               echo "::error::GitHub Environment $WORKER_ENV に $name が登録されていません。"
               missing=1
@@ -201,6 +202,7 @@ jobs:
       - name: Prepare Worker secrets
         env:
           SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
+          IMG_KEY: ${{ secrets.IMG_KEY }}
           SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
         run: |
           node --input-type=module <<'NODE'
@@ -209,6 +211,7 @@ jobs:
             process.env.SECRETS_FILE,
             JSON.stringify({
               SANITY_PREVIEW_SECRET: process.env.SANITY_PREVIEW_SECRET,
+              IMG_KEY: process.env.IMG_KEY,
             }),
           )
           NODE
