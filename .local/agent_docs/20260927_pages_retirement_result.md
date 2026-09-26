@@ -44,3 +44,12 @@ Deploy workflowはGitHub Environment Secret `IMG_KEY` をWorkerへ同期する�
 4. Pages project削除とCustom Domain化成功
 
 その後に#68をmergeする。
+
+
+## 最終状態
+
+- Worker entrypointは `worker/` 配下のみを参照し、Pages `functions/` 依存なし。
+- `wrangler.jsonc` はProduction/Staging Custom Domainを正とする。
+- CIはWorker buildのみを検証しPages Functions buildを実行しない。
+- `IMG_KEY` をGitHub Environment SecretとしてWorkerへ同期。
+- README / footer / runbookをWorkers運用へ更新。
