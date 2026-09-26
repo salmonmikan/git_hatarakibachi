@@ -141,15 +141,17 @@ jobs:
           echo "復旧方針の決定と対応が完了した後、同じ対象SHAを指定してこのワークフローを再実行してください。"
 
 
-  worker-staging:
-    name: Worker (staging)
+  worker:
+    name: Worker (${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }})
     needs:
       - resolve-target
       - database
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging') || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: staging
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+    env:
+      WORKER_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
     steps:
       - name: Checkout target SHA
         uses: actions/checkout@v4
@@ -183,13 +185,13 @@ jobs:
           missing=0
           for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SUPABASE_PROJECT_REF SUPABASE_ANON_KEY SANITY_PREVIEW_SECRET VITE_SANITY_READ_TOKEN IMG_ORIGIN; do
             if [ -z "${!name}" ]; then
-              echo "::error::GitHub Environment staging に $name が登録されていません。"
+              echo "::error::GitHub Environment $WORKER_ENV に $name が登録されていません。"
               missing=1
             fi
           done
           exit "$missing"
 
-      - name: Build frontend for staging
+      - name: Build frontend
         env:
           VITE_SUPABASE_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -203,13 +205,15 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs'
-          const payload = {
-            SANITY_PREVIEW_SECRET: process.env.SANITY_PREVIEW_SECRET,
-          }
-          fs.writeFileSync(process.env.SECRETS_FILE, JSON.stringify(payload))
+          fs.writeFileSync(
+            process.env.SECRETS_FILE,
+            JSON.stringify({
+              SANITY_PREVIEW_SECRET: process.env.SANITY_PREVIEW_SECRET,
+            }),
+          )
           NODE
 
-      - name: Deploy staging Worker
+      - name: Deploy Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -219,16 +223,21 @@ jobs:
           SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
         run: |
           npx --no-install wrangler deploy \
-            --env staging \
+            --env "$WORKER_ENV" \
             --secrets-file "$SECRETS_FILE" \
             --var "SUPABASE_URL:https://$SUPABASE_PROJECT_REF.supabase.co" \
             --var "SUPABASE_ANON_KEY:$SUPABASE_ANON_KEY" \
             --var "IMG_ORIGIN:$IMG_ORIGIN"
 
-      - name: Smoke test staging Worker
+      - name: Smoke test Worker
         shell: bash
         run: |
-          base_url="https://staging.hatarakibachi.com"
+          if [ "$WORKER_ENV" = "production" ]; then
+            base_url="https://hatarakibachi.com"
+          else
+            base_url="https://staging.hatarakibachi.com"
+          fi
+
           curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/" >/dev/null
           curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/about" >/dev/null
           curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/api/web-members" >/dev/null
@@ -240,8 +249,8 @@ jobs:
       - name: Worker失敗時の案内
         if: ${{ failure() }}
         run: |
-          echo "::error::Staging Workerのbuild/deploy/smoke testに失敗しました。"
-          echo "Pages本番には影響しません。Cloudflare route・GitHub Environment設定・Worker logsを確認してください。"
+          echo "::error::Workerのbuild/deploy/smoke testに失敗しました。"
+          echo "Pages projectは削除していません。Worker Route、GitHub Environment設定、Worker logsを確認してください。"
 
   cms:
     name: Sanity Studio
