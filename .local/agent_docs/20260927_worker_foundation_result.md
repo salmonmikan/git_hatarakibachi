@@ -52,3 +52,14 @@ Codex指摘に対して以下を修正。
 - Cloudflare/GitHub Secrets追加
 - Pages停止/削除
 - Ticket #59 / Square #60のWorker移植
+
+
+## Stack PR CI
+
+後続の #66〜#68 は前段branchをbaseにするStack PRのため、CIの `pull_request.branches` を `main/staging` 限定から全PR対象へ変更した。
+
+- PR: base branchを問わずCI実行
+- push: 従来どおりmain/stagingのみ
+- database change detectionは既存のBASE_SHA / HEAD_SHA判定を維持
+
+これにより、Stack PRでも実装完了後にLint / tests / Worker build / database検証を実行できる。
