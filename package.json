@@ -8,6 +8,7 @@
     "dev:proxy": "wrangler pages dev --local --proxy 5173 -- npm run dev",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test",
     "preview": "vite preview",
     "sb:init": "supabase init",
     "sb:start": "supabase start",
