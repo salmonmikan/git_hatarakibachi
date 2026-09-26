@@ -12,6 +12,7 @@ import UpdateInfoEditModal from "./components/Modal/UpdateInfoEditModal.jsx";
 import RequireAuth from "./components/RequireAuth";
 import NotFound from '@src/components/NotFound.jsx';
 import AnalyticsEmbed from "./components/AnalyticsEmbed.jsx";
+import AdminTickets from "./pages/AdminTickets.jsx";
 
 export default function AdminApp() {
   return (
@@ -33,6 +34,7 @@ export default function AdminApp() {
             <Route path=":id" element={<UpdateInfoEditModal />} />
           </Route>
           <Route path="analytics" element={<AnalyticsEmbed />} />
+          <Route path="tickets" element={<AdminTickets />} />
         </Route>
       </Route>
 

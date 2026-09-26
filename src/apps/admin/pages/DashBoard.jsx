@@ -336,6 +336,25 @@ export default function DashBoard() {
                 </Panel>
 
                 <Panel
+                    kind="tickets"
+                    title="Tickets"
+                    meta="予約ページと予約一覧の管理"
+                >
+                    <div className="adm-cards" data-layout="grid" data-cols="auto-fit">
+                        <Link
+                            to="tickets"
+                            className="adm-card"
+                            data-surface="paper"
+                            data-kind="metric"
+                        >
+                            <div className="adm-card__label" data-color="black">
+                                {`Ticket Manager`}
+                            </div>
+                        </Link>
+                    </div>
+                </Panel>
+
+                <Panel
                     kind="analytics"
                     title="Analytics"
                     meta="サイトアナリティクス"
