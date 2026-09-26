@@ -39,3 +39,13 @@ Pagesを64-4まで残すことで、Worker Routeを外した場合に既存Pages
 - Ticket/Square新機能投入
 
 これらは64-4または後続PRで行う。
+
+
+## Pages retirement preparation
+
+- `wrangler.custom-domain.jsonc` を追加し、Pages削除後のProduction/Staging Custom Domain設定を定義。
+- `.github/workflows/pages-retirement.yml` を追加。
+  - `DELETE_PAGES` 明示確認が必要。
+  - Pages project削除後、Production/Staging WorkerをCustom Domainへ切替。
+  - Production/Staging双方でsmoke test。
+- これにより#68 merge前にPagesを安全に退役できる。
