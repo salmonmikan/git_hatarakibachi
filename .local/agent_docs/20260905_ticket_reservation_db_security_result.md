@@ -1,0 +1,37 @@
+# チケット予約DB・セキュリティ実装結果
+
+## migration整理
+
+- 予約機能のmigration群は `main` に未マージで、本番Supabaseのmigration履歴にも未適用であることを確認した。
+- STG SupabaseはINACTIVEのためmigration履歴取得がタイムアウトした。STGへのrestore/reset/applyは行っていない。
+- レビュー修正で増えていた予約系migrationを `20260614000000_add_ticket_reservation_system.sql` の1本へsquashした。
+- 新規テーブル作成時点から最終constraint、RLS、権限、RPC、必要なtriggerを定義し、後続migrationによる再定義を廃止した。
+
+## DB設計
+
+- 公開予約のwrite boundaryを `public.create_ticket_reservation` RPCへ限定した。
+- 匿名・authenticatedクライアントから `ticket_reservations` への直接INSERT / UPDATE / DELETEを許可しない。
+- 公開予約RPCは公開状態、Sanity連携、受付期間、枠履歴、枠所属、開始時刻、数量、残数、request ID冪等性を検証する。
+- 予約RPCはevent行を先にロックし、必要な場合のみwindow行を続けてロックする。window待機後は `clock_timestamp()` で終了時刻と枠開始時刻を再評価する。
+- 自由席予約後の枠追加は、window追加時にevent行をロックするtriggerで予約RPCと直列化する。
+- 枠定員の縮小、予約済み枠のevent変更は専用triggerで保護する。
+- 行単体の文字数、slug、タイトル、日時順、Sanity連携などは新規テーブルのconstraintとして最初から定義する。
+- 予約番号は10文字仕様を維持し、transaction advisory lockを使って衝突候補を再生成する。
+- 機能は未リリースで外部互換要件がないため、公開予約RPCの互換overloadを削除し、`note` と `request_id` を受けるcanonical RPC 1本へ整理した。`request_id` は必須、`note` はNULL可とする。
+- 公開予約画面向けreadは `public.get_public_ticket_event(text)` 1本へ整理した。イベント本体、予約枠、予約済み枚数、残数、予約枠履歴を同一SQL statementのスナップショットからJSONBで返す。
+- 旧 `get_ticket_window_availability` / `get_ticket_event_window_history` は削除し、複数RPC間の時点差をクライアント側のstale判定で補う設計を廃止した。
+
+## レビュー基準
+
+- `AGENTS.md` にDB migrationのsquash条件とレビュー対象を追記した。
+- さらに、不要な状態・互換経路・ページング・キャッシュ等をレビュー指摘ごとに積み増さず、必要性を確認して単純化を優先する一般ルールを追加した。
+- 未リリース・未適用migrationの試行錯誤prefixを独立した本番状態としてP1/P2評価しない。
+- 既に適用済みのmigration、rolling deploy、非transactional操作など実運用で観測可能な中間状態は引き続きレビュー対象とする。
+
+## 検証
+
+- 本番Supabaseのmigration履歴は2026-04-24までで、予約系migrationが未適用であることを確認した。
+- STG Supabaseには変更を加えていない。
+- canonical write/read RPC契約に合わせてpgTAPテストの呼び出しと権限検査を更新した。
+- GitHub Actionsのdatabase jobでfresh migration再適用後に `supabase test db --local` を実行し、`supabase/tests` 配下のpgTAPを自動検証するようにした。
+- 共有・本番DBには検証目的のapplyを行わない。
