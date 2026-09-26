@@ -89,6 +89,9 @@ jobs:
       - name: Validate Worker build
         run: npx --no-install wrangler deploy --dry-run --outdir "$RUNNER_TEMP/worker-build"
 
+      - name: Validate staging Worker build
+        run: npx --no-install wrangler deploy --env staging --dry-run --outdir "$RUNNER_TEMP/worker-staging-build"
+
       - name: Install Studio dependencies
         working-directory: sanity-studio
         run: npm ci
