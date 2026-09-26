@@ -21,6 +21,16 @@
           "zone_name": "hatarakibachi.com"
         }
       ]
+    },
+    "production": {
+      "workers_dev": true,
+      "preview_urls": true,
+      "routes": [
+        {
+          "pattern": "hatarakibachi.com/*",
+          "zone_name": "hatarakibachi.com"
+        }
+      ]
     }
   }
 }
