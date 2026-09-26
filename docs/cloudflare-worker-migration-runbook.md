@@ -1,27 +1,21 @@
-# Cloudflare Pages → Workers 移行 Runbook
+# Cloudflare Workers 運用 Runbook
 
-## 対象
+## 現行構成
+
+Web/API配信はCloudflare Workers + Static Assetsへ一本化する。
 
 - Production: `https://hatarakibachi.com`
 - Staging: `https://staging.hatarakibachi.com`
+- Worker entrypoint: `worker/index.ts`
+- Static Assets: Vite `dist/`
+- Production/Staging: Worker Custom Domain
+- Deploy: GitHub Actions + Wrangler
 
-## 通常デプロイ
-
-GitHub Actions `Deploy` workflowが以下を実行する。
-
-1. 対象SHAを確定
-2. Supabase migration
-3. Vite build
-4. Worker runtime secretsを一時ファイル化
-5. `wrangler deploy --env <staging|production>`
-6. 公開URL smoke test
-7. Sanity Studio deploy
-
-Worker runtime Variables / SecretsはCloudflare Dashboardへ手入力せず、GitHub Environmentをsource of truthにする。
+Cloudflare Pagesは退役済みを前提とする。
 
 ## GitHub Environment
 
-staging / productionで同じキー名を使用する。
+`staging` / `production` で同じキー名を使用し、値だけ環境別にする。
 
 ### Secrets
 
@@ -29,6 +23,7 @@ staging / productionで同じキー名を使用する。
 - `SUPABASE_ANON_KEY`
 - `SANITY_PREVIEW_SECRET`
 - `VITE_SANITY_READ_TOKEN`
+- `IMG_KEY`
 
 ### Variables
 
@@ -36,67 +31,85 @@ staging / productionで同じキー名を使用する。
 - `SUPABASE_PROJECT_REF`
 - `IMG_ORIGIN`
 
-## Production cutover
+`SUPABASE_URL` は `SUPABASE_PROJECT_REF` からdeploy workflow内で生成する。
 
-64-3ではPages custom domainを削除しない。
+## 通常デプロイ
 
-`hatarakibachi.com/*` のWorker Routeを設定し、既存Pagesの前段でWorkerを実行する。
+GitHub Actions `Deploy` workflow:
 
-Production Worker deploy成功後に次を確認する。
+1. 対象SHAを確定
+2. Supabase migration
+3. Vite build
+4. Worker secretsを一時JSONへ生成
+5. Wrangler deploy
+6. Production/Staging URL smoke test
+7. Sanity Studio deploy
 
-- `/`
-- `/about`
+Worker runtime Variables / SecretsはCloudflare Dashboardへ重複管理せず、GitHub Environmentをsource of truthにする。
+
+## Worker routing
+
+`wrangler.jsonc`:
+
+- staging: `staging.hatarakibachi.com` Custom Domain
+- production: `hatarakibachi.com` Custom Domain
+
+SPA routingは `assets.not_found_handling = single-page-application` で処理する。
+
+Preview cookie利用時はWorker middleware相当処理で:
+
+- `Cache-Control: private, no-store`
+- `X-Robots-Tag: noindex, nofollow`
+
+を付与する。
+
+## API
+
+Worker entrypointが明示routingする。
+
+- `/api/draft`
+- `/api/disable-draft`
 - `/api/web-members`
-- `/api/web-sitenews?limit=1`
-- preview cookie時の `X-Robots-Tag`
-- preview cookie時の `Cache-Control`
-- Admin login
-- GA4/GTM
-- Sanity preview/draft
-- 画像表示
+- `/api/web-sitenews`
+- `/img/*`
+
+未定義の `/api/*` はSPAへfallbackさせず404。
+
+## ローカル確認
+
+```bash
+npm run lint
+npm test
+npm run build
+npm run worker:check
+npm run dev:worker
+```
+
+`dev:proxy` は後方互換のcommand名として `dev:worker` を呼ぶ。
 
 ## Rollback
 
-### アプリコードだけ問題がある場合
+### コード不具合
 
-GitHub Actions `Deploy` を、mainに含まれる直前の正常SHAを指定してproductionへ再実行する。
+GitHub Actions `Deploy` を、対象environment branchに含まれる直前の正常SHAを指定して再実行する。
 
-### Worker自体を経路から外す場合
+### Worker deployment確認
 
-Pages project / Pages custom domainを残している期間は、Production Workerを削除してRouteを外せばPagesへ戻せる。
+Cloudflare Worker deploymentsを確認し、必要に応じて正常versionへ戻す。
 
-Cloudflare認証済みのローカルまたは承認済み運用端末から:
+Pages退役後はPagesへのrollbackは行わない。
 
-```bash
-npx wrangler delete --env production
-```
+## Pages → Workers 一回限りの移行手順
 
-削除前に対象が `hatarakibachi-worker-production` であることを確認する。
+履歴上の移行は以下の順序。
 
-Stagingの場合:
+1. WorkerをPages前段のRouteとしてStagingへ展開
+2. ProductionへRoute展開
+3. 十分な安定確認
+4. #67の `Retire Cloudflare Pages` workflowをmainから手動実行
+5. Pages project削除
+6. Production/StagingをWorker Custom Domain化
+7. smoke test完了
+8. #68をmergeしてPages固有コード/CIをcleanup
 
-```bash
-npx wrangler delete --env staging
-```
-
-## Pages退役前の禁止事項
-
-64-4完了までは以下を行わない。
-
-- Pages project削除
-- Pages custom domain削除
-- Pages DNS record削除
-- Pages Git integrationの解除
-
-これらはWorker RouteからPagesへ戻すrollback経路を失うため。
-
-## Pages退役
-
-安定確認後の64-4で:
-
-1. WorkerをCustom Domainへ変更
-2. Pages projectを削除
-3. Pages Functions / Pages CIを削除
-4. Worker-only構成へ一本化
-
-を行う。
+Pages custom domainにはCNAMEが存在するため、Pages削除前にWorker Custom Domainを作成しない。
