@@ -117,7 +117,7 @@ function WebApp() {
       </main>
       {/* <pre>{JSON.stringify(todos, null, 2)}</pre> */}
       <p className="read-the-docs">
-        {`©2025-2026 hatarakibachi All rights reserved. \n Built with Cloudflare Pages.`}
+        {`©2025-2026 hatarakibachi All rights reserved. \n Built with Cloudflare Workers.`}
       </p>
       <BackToTop />
     </div>
