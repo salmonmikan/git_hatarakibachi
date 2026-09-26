@@ -5,7 +5,7 @@
 ## アーキテクチャ構成
 
 - **フロントエンド**: React + Vite
-- **デプロイ・ホスティング**: Cloudflare Pages
+- **デプロイ・ホスティング**: Cloudflare Workers + Static Assets
 - **CMS (コンテンツ管理)**: Sanity Studio (v3)
 - **データベース / 認証**: Supabase
 - **スタイリング**: Vanilla CSS
