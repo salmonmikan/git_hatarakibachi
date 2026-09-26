@@ -1,22 +1,11 @@
-import { onRequestGet as disableDraft } from "../functions/api/disable-draft";
-import { onRequestGet as draft } from "../functions/api/draft";
-import { onRequestGet as webMembers } from "../functions/api/web-members";
-import { onRequestGet as webSiteNews } from "../functions/api/web-sitenews";
-import { onRequestGet as imageProxy } from "../functions/img/[[path]].js";
-import { hasPreviewCookie, withPreviewHeaders } from "../functions/_preview";
+import { handleDisableDraft } from "./handlers/disable-draft";
+import { handleDraft } from "./handlers/draft";
+import { handleImageProxy } from "./handlers/image-proxy";
+import { handleWebMembers } from "./handlers/web-members";
+import { handleWebSiteNews } from "./handlers/web-sitenews";
+import { hasPreviewCookie, withPreviewHeaders } from "./preview";
 import { isGetLikeMethod, resolveWorkerRoute } from "./routes.js";
-
-type AssetBinding = {
-  fetch(request: Request): Promise<Response>;
-};
-
-type Env = {
-  ASSETS: AssetBinding;
-  IMG_ORIGIN?: string;
-  SANITY_PREVIEW_SECRET?: string;
-  SUPABASE_URL: string;
-  SUPABASE_ANON_KEY: string;
-};
+import type { WorkerEnv } from "./types";
 
 type FunctionRoute = {
   kind: "function";
@@ -45,7 +34,11 @@ function withoutBodyForHead(request: Request, response: Response) {
   });
 }
 
-async function runFunctionRoute(request: Request, env: Env, route: FunctionRoute) {
+async function runFunctionRoute(
+  request: Request,
+  env: WorkerEnv,
+  route: FunctionRoute,
+) {
   if (!isGetLikeMethod(request.method)) {
     return methodNotAllowed();
   }
@@ -54,22 +47,24 @@ async function runFunctionRoute(request: Request, env: Env, route: FunctionRoute
 
   switch (route.id) {
     case "draft":
-      response = await draft({ request, env });
+      response = await handleDraft(request, env);
       break;
     case "disable-draft":
-      response = await disableDraft({ request });
+      response = await handleDisableDraft(request);
       break;
     case "web-members":
-      response = await webMembers({ env });
+      response = await handleWebMembers(env);
       break;
     case "web-sitenews":
-      response = await webSiteNews({ request });
+      response = await handleWebSiteNews(request);
       break;
     case "image-proxy":
-      response = await imageProxy({
+      response = await handleImageProxy(
         env,
-        params: route.params,
-      });
+        Array.isArray(route.params.path)
+          ? route.params.path.filter((item): item is string => typeof item === "string")
+          : [],
+      );
       break;
     case "img-url-disabled":
       response = apiNotFound();
@@ -94,7 +89,7 @@ function applyPreviewMiddleware(request: Request, response: Response) {
   });
 }
 
-async function handleRequest(request: Request, env: Env) {
+async function handleRequest(request: Request, env: WorkerEnv) {
   const url = new URL(request.url);
   const route = resolveWorkerRoute(url.pathname);
 
@@ -110,7 +105,7 @@ async function handleRequest(request: Request, env: Env) {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: WorkerEnv): Promise<Response> {
     const response = await handleRequest(request, env);
     return applyPreviewMiddleware(request, response);
   },
