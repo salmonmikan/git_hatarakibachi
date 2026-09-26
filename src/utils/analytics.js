@@ -10,6 +10,7 @@ export function resolvePageType(pathname = "/") {
     if (pathname.startsWith("/post/")) return "post_detail";
     if (pathname.startsWith("/performance/")) return "performance_detail";
     if (pathname.startsWith("/news/")) return "news_detail";
+    if (pathname.startsWith("/tickets/")) return "ticket_reservation";
     return "not_found";
 }
 
