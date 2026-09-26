@@ -17,8 +17,8 @@
       "preview_urls": true,
       "routes": [
         {
-          "pattern": "staging.hatarakibachi.com/*",
-          "zone_name": "hatarakibachi.com"
+          "pattern": "staging.hatarakibachi.com",
+          "custom_domain": true
         }
       ]
     },
@@ -27,8 +27,8 @@
       "preview_urls": true,
       "routes": [
         {
-          "pattern": "hatarakibachi.com/*",
-          "zone_name": "hatarakibachi.com"
+          "pattern": "hatarakibachi.com",
+          "custom_domain": true
         }
       ]
     }
