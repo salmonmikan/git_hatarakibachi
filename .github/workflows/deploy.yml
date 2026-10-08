@@ -1,6 +1,12 @@
 name: Deploy
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Staging commit SHA validated by the calling CI
+        required: true
+        type: string
   workflow_run:
     workflows:
       - CI
@@ -38,12 +44,12 @@ concurrency:
 
 env:
   DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
-  TARGET_REF: ${{ github.event_name == 'workflow_dispatch' && (inputs.ref || (inputs.environment == 'production' && 'main' || 'staging')) || github.event.workflow_run.head_sha }}
+  TARGET_REF: ${{ github.event_name == 'push' && github.ref == 'refs/heads/staging' && inputs.ref || github.event_name == 'workflow_dispatch' && (inputs.ref || (inputs.environment == 'production' && 'main' || 'staging')) || github.event.workflow_run.head_sha }}
 
 jobs:
   resolve-target:
     name: Resolve target SHA
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/staging') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -79,7 +85,7 @@ jobs:
   database:
     name: Database migrations
     needs: resolve-target
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/staging') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
@@ -103,6 +109,7 @@ jobs:
         run: npm ci
 
       - name: Link Supabase project
+        id: link
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
@@ -134,11 +141,17 @@ jobs:
         run: npx --no-install supabase migration list --password "$SUPABASE_DB_PASSWORD"
 
       - name: マイグレーション失敗時の復旧案内
-        if: ${{ failure() }}
+        if: ${{ failure() && steps.link.outcome == 'success' }}
         run: |
           echo "::error::Supabaseマイグレーションに失敗しました。マイグレーション履歴を自動修復しないでください。"
           echo "失敗したSQLを確認し、forward-fixマイグレーションで修正してください。必要な場合は、承認済みのSupabaseバックアップまたは復旧ポイントから復元してください。"
           echo "復旧方針の決定と対応が完了した後、同じ対象SHAを指定してこのワークフローを再実行してください。"
+
+      - name: Supabase接続失敗時の案内
+        if: ${{ failure() && steps.link.outcome == 'failure' }}
+        run: |
+          echo "::error::Supabase projectへの接続に失敗しました。DB停止やSQL不整合とは断定できません。"
+          echo "管理者がGitHub EnvironmentとSupabase Dashboardで対象project ref、認証設定、DB接続制限を確認してください。設定値をログやIssueへ貼り付けないでください。"
 
 
   worker-staging:
@@ -146,7 +159,7 @@ jobs:
     needs:
       - resolve-target
       - database
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging') || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging') }}
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/staging') || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging') || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging
@@ -248,7 +261,7 @@ jobs:
     needs:
       - resolve-target
       - database
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/staging') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     concurrency:

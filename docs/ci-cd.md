@@ -8,7 +8,13 @@ Workerはstaging既存の署名付きプレビューとサーバー側Sanity pro
 
 CIでは通常アクセス、有効な署名、偽造・改ざん・設定欠落、preview proxyのPOST制限を検証します。実環境smoke testでは公開ページとAPIを確認し、正当なプレビューはStudioからの確認が必要です。
 
-自動Deployのworkflow_runはmainにあるworkflow定義を使います。mainはこの統合の対象外なので、stagingのWorker配備にはstagingをworkflow refとするDeployの手動実行が必要です。Deploy対象SHAはstagingに含まれるSHAに限定します。
+stagingへのpushでは、CIの検証成功後に同じコミットのDeployをworkflow_callで呼び出します。呼び出されたworkflowのgithub contextは呼び出し元のpushを保持します。各配備ジョブはGitHub Environment stagingを指定し、そのVariables/Secretsを利用します。DB接続・migration失敗時にはWorkerとCMSを配備しません。Deploy対象SHAはstagingに含まれるSHAに限定します。
+
+staging側のCI名をCI and staging deployへ変更し、main側の旧workflow_run（CI監視）による二重配備を避けます。mainのファイルは変更しません。staging pushの実行は後続pushでキャンセルせず、Deployは既存のconcurrencyで直列化します。PRでは配備を実行しません。
+
+GitHubのSettings → Environments → stagingで、Worker用VariablesにCLOUDFLARE_ACCOUNT_ID、SUPABASE_PROJECT_REF、IMG_ORIGINを、SecretsにCLOUDFLARE_API_TOKEN、SUPABASE_ANON_KEY、SANITY_PREVIEW_SECRET、SANITY_PREVIEW_READ_TOKENを登録します。DB用SecretsはSUPABASE_ACCESS_TOKEN、SUPABASE_DB_PASSWORDです。CMS用は後述のSANITY_AUTH_TOKENとSANITY_STUDIO_APP_IDです。値や登録状態をエージェントへ共有しないでください。
+
+Link Supabase project失敗時は、管理者がstagingのSUPABASE_PROJECT_REFをhrecrzpxzvrjxhuiitrnと照合し、Supabase Dashboardでアクセストークンの対象projectへの権限、DB password、Network Restrictionsを確認してください。接続失敗だけではDB停止やSQL不整合を判断できません。設定を修正した場合は失敗したstaging実行を再実行します。認証値やログ全文をIssueへ貼り付けないでください。
 
 Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要な項目を記載します。
 
@@ -19,8 +25,8 @@ Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要
   - `.nvmrc` の Node.js 22.17.0 と npm 10.9.2 を使用し、rootと`sanity-studio`の`npm ci`、lint、build、Pages Functions bundle、Supabase migrationの命名・ローカル再適用を検証。
   - PRの古い実行は同じConcurrency group内でキャンセルする。
 - `.github/workflows/deploy.yml`
-  - `main` / `staging` のCI成功を受けた `workflow_run` と `workflow_dispatch` で実行。自動DeployはCI失敗時には起動しない。
-  - `database` → `cms` → `frontend` のジョブ依存で順序を固定する。各ジョブが失敗した場合、後続ジョブは実行しない。
+  - stagingではCI成功後の `workflow_call`、mainでは既存の `workflow_run`、手動では `workflow_dispatch` で実行。自動DeployはCI失敗時には起動しない。
+  - stagingでは `database` → `worker-staging` / `cms`、productionでは `database` → `cms` → `frontend` のジョブ依存で順序を固定する。各ジョブが失敗した場合、後続ジョブは実行しない。
   - `main` は `production`、`staging` は `staging` に割り当てる。手動実行ではEnvironmentを選択できる。
   - 最初に指定`ref`を実SHAへ解決し、database・cms・frontendの全ジョブは同じSHAをcheckoutする。`ref` にコミットSHAを指定すると、同じSHAの再実行ができる。適用済みのSupabase migrationは履歴により再適用されない。
   - 手動実行の対象SHAは、productionでは`main`、stagingでは`staging`に含まれるcommitだけを許可する。
@@ -28,7 +34,7 @@ Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要
 
 ## 初回有効化
 
-`workflow_run`と`workflow_dispatch`は、Deploy workflowが既定ブランチ`main`に存在する場合だけ起動します。初回導入では、4本のstacked PRを順番に`staging`へ統合し、GitHub Environmentと外部サービス設定を完了してから`staging`を`main`へリリースします。`main`へ入る前はstaging自動Deployと手動Deployを実行できません。
+`workflow_run`は既定ブランチmainのDeploy定義を使用します。stagingの自動配備はこの制約を避けて同じコミットのworkflowを呼び出すため、mainへの統合前にも実行できます。GitHub Environmentと外部サービス設定は配備前に管理者が登録してください。手動Deployも既定ブランチに存在するworkflowを選択し、stagingのrefを指定して実行できます。
 
 初回の`main`リリースはproduction Deployを起動するため、マージ前にproduction EnvironmentのRequired reviewersと全Secrets/Variablesを設定し、同じ変更内容がstagingで検証済みであることを承認者が確認します。
 
@@ -36,7 +42,7 @@ Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要
 
 GitHubリポジトリに `staging` と `production` Environmentを作成します。productionにはRequired reviewersを設定し、必要に応じてstagingにも設定します。各EnvironmentのSecrets/Variablesは、値をリポジトリへ記録せずGitHub UIで登録します。
 
-Deployの3ジョブはすべて対象Environmentに紐づくため、productionのRequired reviewerは保護対象ジョブごとに適用されます。承認済みEnvironmentのSecretsだけがそのジョブへ渡ります。
+Deployのdatabase・worker-staging・cms・frontendは対象Environmentに紐づくため、Required reviewerは保護対象ジョブごとに適用されます。EnvironmentのSecretsは各ジョブから利用します。
 
 ### Secrets
 

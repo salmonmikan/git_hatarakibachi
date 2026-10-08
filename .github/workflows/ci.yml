@@ -1,4 +1,4 @@
-name: CI
+name: CI and staging deploy
 
 on:
   pull_request:
@@ -15,9 +15,20 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  deploy-staging:
+    name: Deploy staging
+    needs:
+      - validate
+      - database
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/staging' }}
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: ${{ github.sha }}
+    secrets: inherit
+
   changes:
     name: Detect database migration changes
     runs-on: ubuntu-latest
