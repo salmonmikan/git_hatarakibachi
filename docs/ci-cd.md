@@ -1,5 +1,15 @@
 # CI/CD運用
 
+## Workers staging統合
+
+stagingではdatabase成功後にWorkerをdeployし、CMSも同じSHAからdeployします。既存のPages frontendジョブはproductionだけに限定し、staging Worker配信との二重deployを避けます。
+
+Workerはstaging既存の署名付きプレビューとサーバー側Sanity proxyを維持します。SANITY_PREVIEW_READ_TOKENはGitHub Environment stagingのSecretからWorker runtimeだけへ渡し、frontend buildへは渡しません。SANITY_DATASETはstagingを明示します。設定値や登録状態は参照していません。
+
+CIでは通常アクセス、有効な署名、偽造・改ざん・設定欠落、preview proxyのPOST制限を検証します。実環境smoke testでは公開ページとAPIを確認し、正当なプレビューはStudioからの確認が必要です。
+
+自動Deployのworkflow_runはmainにあるworkflow定義を使います。mainはこの統合の対象外なので、stagingのWorker配備にはstagingをworkflow refとするDeployの手動実行が必要です。Deploy対象SHAはstagingに含まれるSHAに限定します。
+
 Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要な項目を記載します。
 
 ## Workflow
