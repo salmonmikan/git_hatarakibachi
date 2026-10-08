@@ -140,6 +140,109 @@ jobs:
           echo "失敗したSQLを確認し、forward-fixマイグレーションで修正してください。必要な場合は、承認済みのSupabaseバックアップまたは復旧ポイントから復元してください。"
           echo "復旧方針の決定と対応が完了した後、同じ対象SHAを指定してこのワークフローを再実行してください。"
 
+
+  worker-staging:
+    name: Worker (staging)
+    needs:
+      - resolve-target
+      - database
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging') || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-target.outputs.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Worker deployment settings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
+          SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
+          IMG_ORIGIN: ${{ vars.IMG_ORIGIN }}
+        shell: bash
+        run: |
+          missing=0
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID SUPABASE_PROJECT_REF SUPABASE_ANON_KEY SANITY_PREVIEW_SECRET SANITY_PREVIEW_READ_TOKEN IMG_ORIGIN; do
+            if [ -z "${!name}" ]; then
+              echo "::error::GitHub Environment staging に $name が登録されていません。"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Build frontend for staging
+        env:
+          VITE_SUPABASE_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_SANITY_DATASET: staging
+        run: npm run build
+
+      - name: Prepare Worker secrets
+        env:
+          SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
+          SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
+          SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+          const payload = {
+            SANITY_PREVIEW_SECRET: process.env.SANITY_PREVIEW_SECRET,
+            SANITY_PREVIEW_READ_TOKEN: process.env.SANITY_PREVIEW_READ_TOKEN,
+          }
+          fs.writeFileSync(process.env.SECRETS_FILE, JSON.stringify(payload))
+          NODE
+
+      - name: Deploy staging Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          IMG_ORIGIN: ${{ vars.IMG_ORIGIN }}
+          SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
+        run: |
+          npx --no-install wrangler deploy \
+            --env staging \
+            --secrets-file "$SECRETS_FILE" \
+            --var "SUPABASE_URL:https://$SUPABASE_PROJECT_REF.supabase.co" \
+            --var "SUPABASE_ANON_KEY:$SUPABASE_ANON_KEY" \
+            --var "IMG_ORIGIN:$IMG_ORIGIN" \
+            --var "SANITY_DATASET:staging"
+
+      - name: Smoke test staging Worker
+        shell: bash
+        run: |
+          base_url="https://staging.hatarakibachi.com"
+          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/" >/dev/null
+          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/about" >/dev/null
+          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/api/web-members" >/dev/null
+          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/api/web-sitenews?limit=1" >/dev/null
+          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/about" >/dev/null
+
+      - name: Worker失敗時の案内
+        if: ${{ failure() }}
+        run: |
+          echo "::error::Staging Workerのbuild/deploy/smoke testに失敗しました。"
+          echo "Pages本番には影響しません。Cloudflare route・GitHub Environment設定・Worker logsを確認してください。"
   cms:
     name: Sanity Studio
     needs:
@@ -203,7 +306,7 @@ jobs:
     needs:
       - resolve-target
       - cms
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.environment == 'production') || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
