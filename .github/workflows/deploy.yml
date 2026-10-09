@@ -114,31 +114,70 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
-        run: npx --no-install supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ "$DEPLOY_ENV" = "staging" ]; then
+            node --input-type=module <<'NODE'
+          const url = new URL(process.env.SUPABASE_DB_URL)
+          if (!['postgres:', 'postgresql:'].includes(url.protocol) ||
+              !url.hostname.endsWith('.pooler.supabase.com') ||
+              url.port !== '5432' ||
+              url.username !== 'postgres.' + process.env.SUPABASE_PROJECT_REF ||
+              !url.password || url.pathname !== '/postgres') {
+            throw new Error('staging SUPABASE_DB_URL must target the staging session pooler on port 5432')
+          }
+          NODE
+          else
+            npx --no-install supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          fi
 
       - name: Check remote migration history
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: npx --no-install supabase migration list --password "$SUPABASE_DB_PASSWORD"
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ "$DEPLOY_ENV" = "staging" ]; then
+            npx --no-install supabase migration list --db-url "$SUPABASE_DB_URL"
+          else
+            npx --no-install supabase migration list --password "$SUPABASE_DB_PASSWORD"
+          fi
 
       - name: Preview pending migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: npx --no-install supabase db push --dry-run --linked --password "$SUPABASE_DB_PASSWORD"
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ "$DEPLOY_ENV" = "staging" ]; then
+            npx --no-install supabase db push --dry-run --db-url "$SUPABASE_DB_URL"
+          else
+            npx --no-install supabase db push --dry-run --linked --password "$SUPABASE_DB_PASSWORD"
+          fi
 
       - name: Apply migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: npx --no-install supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ "$DEPLOY_ENV" = "staging" ]; then
+            npx --no-install supabase db push --db-url "$SUPABASE_DB_URL" --yes
+          else
+            npx --no-install supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
+          fi
 
       - name: Verify remote migration history
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: npx --no-install supabase migration list --password "$SUPABASE_DB_PASSWORD"
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ "$DEPLOY_ENV" = "staging" ]; then
+            npx --no-install supabase migration list --db-url "$SUPABASE_DB_URL"
+          else
+            npx --no-install supabase migration list --password "$SUPABASE_DB_PASSWORD"
+          fi
 
       - name: マイグレーション失敗時の復旧案内
         if: ${{ failure() && steps.link.outcome == 'success' }}
