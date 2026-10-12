@@ -102,5 +102,9 @@ const isStagingEnvironment =
       window.location.hostname === 'staging.hatarakibachi.com'))
 
 export default defineConfig(
-  isStagingEnvironment ? [stagingWorkspace, productionWorkspace] : [productionWorkspace, stagingWorkspace]
+  process.env.SANITY_STUDIO_DEPLOY_ENV === 'staging'
+    ? [stagingWorkspace]
+    : process.env.SANITY_STUDIO_DEPLOY_ENV === 'production'
+      ? [productionWorkspace]
+      : isStagingEnvironment ? [stagingWorkspace, productionWorkspace] : [productionWorkspace, stagingWorkspace]
 )
