@@ -4,7 +4,6 @@ import { getSanityDataset, type SanityDatasetEnv } from '../_sanity'
 import type { FunctionContext } from '../_types'
 
 type Env = SanityDatasetEnv & {
-  SANITY_PREVIEW_SECRET?: string
   SANITY_PREVIEW_READ_TOKEN?: string
 }
 
@@ -18,7 +17,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export const onRequestPost = async ({ request, env }: FunctionContext<Env>) => {
-  if (!(await hasPreviewCookie(request, env.SANITY_PREVIEW_SECRET))) {
+  if (!(await hasPreviewCookie(request, env.SANITY_PREVIEW_READ_TOKEN))) {
     return new Response('Preview mode is not enabled', {
       status: 401,
       headers: withPreviewHeaders(),

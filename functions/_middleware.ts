@@ -2,13 +2,13 @@ import { hasPreviewCookie, withPreviewHeaders } from './_preview'
 import type { MiddlewareContext } from './_types'
 
 type Env = {
-  SANITY_PREVIEW_SECRET?: string
+  SANITY_PREVIEW_READ_TOKEN?: string
 }
 
 export const onRequest = async (context: MiddlewareContext<Env>) => {
   const response = await context.next()
 
-  if (!(await hasPreviewCookie(context.request, context.env.SANITY_PREVIEW_SECRET))) {
+  if (!(await hasPreviewCookie(context.request, context.env.SANITY_PREVIEW_READ_TOKEN))) {
     return response
   }
 

@@ -4,7 +4,7 @@
 
 stagingではdatabase成功後にWorkerをdeployし、CMSも同じSHAからdeployします。既存のPages frontendジョブはproductionだけに限定し、staging Worker配信との二重deployを避けます。
 
-Workerはstaging既存の署名付きプレビューとサーバー側Sanity proxyを維持します。SANITY_PREVIEW_SECRETとSANITY_PREVIEW_READ_TOKENはGitHub Environment stagingのSecretsで管理し、配備ジョブがrunnerの一時JSONファイルから--secrets-fileでWorker runtimeへ渡します。値は表示せず、frontend buildへは渡しません。IMG_ORIGINもGitHub VariableからWorkerへ渡します。SANITY_DATASETはstagingを明示します。--keep-varsで今回管理しないWorker側Variablesを保持し、GitHubから指定した項目を更新します。設定値や登録状態は参照していません。
+Workerは署名付きプレビューとサーバー側Sanity proxyを維持します。プレビューの登録SecretはSANITY_PREVIEW_READ_TOKENだけです。Cookie署名鍵はこの読取トークンからHKDF-SHA256で導出し、署名用途とrequest originを導出情報へ含めます。SANITY_PREVIEW_SECRETの登録・配備・参照は不要です。配備ジョブは読取トークンをrunnerの一時JSONから--secrets-fileでWorker runtimeへ渡し、値を表示せずfrontend buildへも渡しません。IMG_ORIGINもGitHub VariableからWorkerへ渡します。SANITY_DATASETはstagingを明示します。--keep-varsで今回管理しないWorker側Variablesを保持し、GitHubから指定した項目を更新します。設定値や登録状態は参照していません。
 
 CIでは通常アクセス、有効な署名、偽造・改ざん・設定欠落、preview proxyのPOST制限を検証します。実環境smoke testでは公開ページとAPIを確認し、正当なプレビューはStudioからの確認が必要です。
 
@@ -16,7 +16,7 @@ GitHubのSettings → Environments → stagingで、WorkerはSecret CLOUDFLARE_A
 
 ### stagingの登録項目
 
-以下は現在のstaging配備で必要な10項目です。IMG_KEYはSTG/PROD共通のGitHub Repository Secretに1回登録し、それ以外の9項目はGitHub Environment stagingに登録します。Cloudflareへの手動二重登録は不要です。
+以下は現在のstaging配備で必要な9項目です。IMG_KEYはSTG/PROD共通のGitHub Repository Secretに1回登録し、それ以外の8項目はGitHub Environment stagingに登録します。Cloudflareへの手動二重登録は不要です。
 
 | 名前 | 種別 | 取得先・用途 |
 | --- | --- | --- |
@@ -26,8 +26,7 @@ GitHubのSettings → Environments → stagingで、WorkerはSecret CLOUDFLARE_A
 | SUPABASE_DB_URL | Secret | Supabase STG projectのConnect → Session pooler。passwordを含む接続URL、port 5432 |
 | SANITY_AUTH_TOKEN | Secret | Sanity projectのStudio配備用token |
 | SANITY_STUDIO_APP_ID | Variable | Sanity projectのStudiosにあるSTG用Studio App ID |
-| SANITY_PREVIEW_SECRET | Secret | 手元で生成した十分に長いランダム値。preview cookieの署名用 |
-| SANITY_PREVIEW_READ_TOKEN | Secret | Sanity STGのdraftを読めるtoken |
+| SANITY_PREVIEW_READ_TOKEN | Secret | Sanity STGのdraft読取用token。Cookie署名鍵もこれからHKDFで導出 |
 | IMG_ORIGIN | Variable | 既存画像配信元URL。画像proxyの転送先 |
 | IMG_KEY | Repository Secret（共通） | 既存の画像配信元が要求する共通認証キー。名前を維持してWorker runtimeへ配備 |
 
@@ -41,7 +40,9 @@ IMG_KEYは`/img/*`の画像proxyで使用し、上流画像リクエストの認
 | TURNSTILE_SECRET_KEY | Secret | サーバー側Siteverifyの認証 |
 | SUPABASE_SERVICE_ROLE_KEY | Secret | 予約APIのサーバー専用認証。公開用anon keyと共有しない |
 
-PR #59統合後は登録13項目となります。Turnstileの公開キーとSecret、Supabase公開用とサーバー用、Sanity配備用とdraft読取用は用途・権限が異なるため共有しません。VITE_SANITY_READ_TOKENは現在のfrontendでは参照せず、draft読取はSANITY_PREVIEW_READ_TOKENを使用します。IMG_ORIGINは配信元が未確定のため推測せず、GitHub Variableのまま維持します。
+PR #59統合後は登録12項目となります。Turnstileの公開キーとSecret、Supabase公開用とサーバー用、Sanity配備用とdraft読取用は用途・権限が異なるため共有しません。VITE_SANITY_READ_TOKENは現在のfrontendでは参照せず、draft読取はSANITY_PREVIEW_READ_TOKENを使用します。IMG_ORIGINは配信元が未確定のため推測せず、GitHub Variableのまま維持します。
+
+HKDFは1つの秘密値から用途別の鍵を導出する標準の鍵導出方式です。導出鍵はexportせず署名にだけ使い、元トークンはSanity API認証に使います。元トークンの漏えいから両用途を守るものではありません。読取り専用・環境別tokenを使用してください。Cookie形式はversion 2へ変更し、旧Cookieとtoken更新前のCookieは無効になります。Studioからプレビューへ入り直してください。不要になった既存Secretを自動削除する操作は行いません。
 
 VITE_SUPABASE_URL、SUPABASE_URL、SUPABASE_ANON_KEY、SANITY_DATASETとSANITY_STUDIO_DEPLOY_ENVはworkflowが対応付け・設定するため、手動登録しません。stagingでは標準のhttps://<project-ref>.supabase.coを使用します。将来カスタムAPIドメインを採用する場合はURL生成を変更する必要があります。SANITY_DEPLOY_GRAPHQLは任意で、通常は未設定のままGraphQL配備を行いません。production Pagesの既存Account IDとURL設定はこの集約では変更しません。
 
@@ -106,7 +107,7 @@ GraphQLは既存の `sanity-studio/package.json` にある `deploy-graphql` scri
 
 Frontendジョブはルートの `dist/` をWranglerでPagesへ直接uploadします。preview時のSanity read tokenはVite buildへ渡さず、`/api/sanity-preview` Pages Functionのruntime secret `SANITY_PREVIEW_READ_TOKEN` だけで保持します。checkout後に解決した実SHAを `--commit-hash` へ渡し、production/stagingともEnvironmentの `CLOUDFLARE_PAGES_BRANCH` を `--branch` へ明示します。リポジトリ直下の `functions/` はPages Functionsの規約に従う配置なので、同じPages deployの対象になります。公開後は`PUBLIC_BASE_URL`のトップページと`/api/draft`を確認し、静的PagesとFunctionsの両方が応答することを成功条件にします。
 
-Preview用の `SANITY_PREVIEW_SECRET` と `SANITY_PREVIEW_READ_TOKEN` は、staging WorkerではGitHub Secretsから配備し、productionのCloudflare Pages Functionsではruntime secretとして設定します。frontend bundleへは値を渡しません。各Cloudflare Pages Environmentには、対象datasetを表すruntime Variable `SANITY_DATASET`（`staging` または `production`）を設定します。未知のPages hostnameではこのVariableなしにproductionへfallbackせず、previewを503で停止します。Sanity Presentation Toolが認証済みStudioセッションから生成したPreview URL Secretを `/api/draft` がSanity APIでサーバー側検証し、検証成功時だけ署名付き・期限付きpreview cookieを1時間発行します。`/api/sanity-preview` はそのcookieを検証してdraft queryをSanityへproxyします。再利用可能なPreview SecretをStudioの設定やclient bundleへ埋め込まないでください。
+この版のPreviewは `SANITY_PREVIEW_READ_TOKEN` だけをruntimeで使用します。staging WorkerではGitHub Secretsから配備し、Pagesへこの版をリリースする場合も同じ読取tokenをruntime secretとして設定します。Cookie署名鍵はHKDFで導出します。frontend bundleへは値を渡しません。各Cloudflare Pages Environmentには、対象datasetを表すruntime Variable `SANITY_DATASET`（`staging` または `production`）を設定します。未知のPages hostnameではこのVariableなしにproductionへfallbackせず、previewを503で停止します。Sanity Presentation Toolが認証済みStudioセッションから生成したPreview URL Secretを `/api/draft` がSanity APIでサーバー側検証し、検証成功時だけ署名付き・期限付きpreview cookieを1時間発行します。`/api/sanity-preview` はそのcookieを検証してdraft queryをSanityへproxyします。再利用可能なPreview SecretをStudioの設定やclient bundleへ埋め込まないでください。
 
 ## Supabase migrationの安全策
 
