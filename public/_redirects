@@ -1,2 +1,2 @@
 /api/*  /api/:splat  200
-/*      /index.html  200
+# SPA fallback is handled by Pages and Worker assets.not_found_handling.
