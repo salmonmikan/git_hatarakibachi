@@ -228,6 +228,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
           SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
+          # IMG_KEY is shared via a repository secret, not an environment secret.
           IMG_KEY: ${{ secrets.IMG_KEY }}
           IMG_ORIGIN: ${{ vars.IMG_ORIGIN }}
         shell: bash
@@ -235,7 +236,7 @@ jobs:
           missing=0
           for name in CLOUDFLARE_API_TOKEN SUPABASE_PROJECT_REF VITE_SUPABASE_ANON_KEY SANITY_PREVIEW_SECRET SANITY_PREVIEW_READ_TOKEN IMG_KEY IMG_ORIGIN; do
             if [ -z "${!name}" ]; then
-              echo "::error::GitHub Environment staging に $name が登録されていません。"
+              echo "::error::必要設定 $name が利用できません。IMG_KEYはRepository Secret、それ以外はEnvironment stagingの登録先を確認してください。"
               missing=1
             fi
           done
