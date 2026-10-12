@@ -13,8 +13,11 @@ export const onRequestGet = async ({ env, params }) => {
     const key = parts.map(p => encodeURIComponent(p)).join("/");
 
     const url = new URL(`${origin}/${key}`);
-    url.searchParams.set("k", "uhe89K89g2S4h27");
-    console.log(url.toString());
+    if (!env.IMG_KEY) {
+      return new Response("Image proxy is not configured", { status: 503 });
+    }
+    url.searchParams.set("k", env.IMG_KEY);
+    console.log("Image proxy request");
 
     const r = await fetch(url, {
         cf: { cacheEverything: true, cacheTtl: 3600 },

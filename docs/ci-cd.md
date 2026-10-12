@@ -31,6 +31,11 @@ GitHubのSettings → Environments → stagingで、Workerは既存SecretsのCLO
 | SANITY_PREVIEW_SECRET | Secret | 手元で生成した十分に長いランダム値。preview cookieの署名用 |
 | SANITY_PREVIEW_READ_TOKEN | Secret | Sanity STGのdraftを読めるtoken |
 | IMG_ORIGIN | Variable | 既存画像配信元URL。画像proxyの転送先 |
+| IMG_KEY | Secret | 既存の画像配信元が要求する認証キー。名前を維持してWorker runtimeへ配備 |
+
+IMG_KEYは`/img/*`の画像proxyで使用し、上流画像リクエストの認証にだけ渡します。欠落時は503で停止し、frontend buildへ渡しません。Cloudflareの既存IMG_KEYはGitHubではSecretに登録してください。
+
+現在のstagingのsrc/、functions/、worker/にはTurnstileの参照・検証処理がありません。TURNSTILE_SECRET_KEYとVITE_TURNSTILE_SITE_KEYは未使用設定のため配備対象・必須項目に追加しません。VITE_SANITY_READ_TOKENもfrontendで参照せず、draft読取はSANITY_PREVIEW_READ_TOKENを使用します。
 
 SUPABASE_URL、SUPABASE_ANON_KEY、SANITY_DATASETとSANITY_STUDIO_DEPLOY_ENVはworkflowが対応付け・設定するため、手動登録しません。SANITY_DEPLOY_GRAPHQLは任意で、通常は未設定のままGraphQL配備を行いません。
 

@@ -14,6 +14,7 @@ type AssetBinding = {
 type Env = {
   ASSETS: AssetBinding;
   IMG_ORIGIN?: string;
+  IMG_KEY?: string;
   SANITY_PREVIEW_SECRET?: string;
   SANITY_PREVIEW_READ_TOKEN?: string;
   SANITY_DATASET?: string;
