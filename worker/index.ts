@@ -15,7 +15,6 @@ type Env = {
   ASSETS: AssetBinding;
   IMG_ORIGIN?: string;
   IMG_KEY?: string;
-  SANITY_PREVIEW_SECRET?: string;
   SANITY_PREVIEW_READ_TOKEN?: string;
   SANITY_DATASET?: string;
   SUPABASE_URL: string;
@@ -92,7 +91,7 @@ async function runFunctionRoute(request: Request, env: Env, route: FunctionRoute
 }
 
 async function applyPreviewMiddleware(request: Request, response: Response, env: Env) {
-  if (!(await hasPreviewCookie(request, env.SANITY_PREVIEW_SECRET))) {
+  if (!(await hasPreviewCookie(request, env.SANITY_PREVIEW_READ_TOKEN))) {
     return response;
   }
 

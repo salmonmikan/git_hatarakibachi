@@ -5,14 +5,13 @@ import { getSanityDataset, type SanityDatasetEnv } from '../_sanity'
 import type { FunctionContext } from '../_types'
 
 type Env = SanityDatasetEnv & {
-  SANITY_PREVIEW_SECRET?: string
   SANITY_PREVIEW_READ_TOKEN?: string
 }
 
 const SANITY_PROJECT_ID = 'pz9uficf'
 
 export const onRequestGet = async ({ request, env }: FunctionContext<Env>) => {
-  if (!env.SANITY_PREVIEW_SECRET || !env.SANITY_PREVIEW_READ_TOKEN) {
+  if (!env.SANITY_PREVIEW_READ_TOKEN) {
     return new Response('Preview service is not configured', {
       status: 503,
       headers: withPreviewHeaders(),
@@ -50,7 +49,7 @@ export const onRequestGet = async ({ request, env }: FunctionContext<Env>) => {
   }
 
   const headers = withPreviewHeaders()
-  headers.set('Set-Cookie', await createPreviewCookie(request, env.SANITY_PREVIEW_SECRET))
+  headers.set('Set-Cookie', await createPreviewCookie(request, env.SANITY_PREVIEW_READ_TOKEN))
   headers.set('Location', getSafeRedirect(request))
 
   return new Response(null, {

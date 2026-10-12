@@ -226,7 +226,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-          SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
           SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
           # IMG_KEY is shared via a repository secret, not an environment secret.
           IMG_KEY: ${{ secrets.IMG_KEY }}
@@ -234,7 +233,7 @@ jobs:
         shell: bash
         run: |
           missing=0
-          for name in CLOUDFLARE_API_TOKEN SUPABASE_PROJECT_REF VITE_SUPABASE_ANON_KEY SANITY_PREVIEW_SECRET SANITY_PREVIEW_READ_TOKEN IMG_KEY IMG_ORIGIN; do
+          for name in CLOUDFLARE_API_TOKEN SUPABASE_PROJECT_REF VITE_SUPABASE_ANON_KEY SANITY_PREVIEW_READ_TOKEN IMG_KEY IMG_ORIGIN; do
             if [ -z "${!name}" ]; then
               echo "::error::必要設定 $name が利用できません。IMG_KEYはRepository Secret、それ以外はEnvironment stagingの登録先を確認してください。"
               missing=1
@@ -251,7 +250,6 @@ jobs:
 
       - name: Prepare Worker secrets
         env:
-          SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
           SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
           IMG_KEY: ${{ secrets.IMG_KEY }}
           SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
@@ -259,7 +257,6 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs'
           const payload = {
-            SANITY_PREVIEW_SECRET: process.env.SANITY_PREVIEW_SECRET,
             SANITY_PREVIEW_READ_TOKEN: process.env.SANITY_PREVIEW_READ_TOKEN,
             IMG_KEY: process.env.IMG_KEY,
           }
