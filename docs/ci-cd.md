@@ -12,17 +12,15 @@ stagingへのpushでは、CIの検証成功後に同じコミットのDeployをw
 
 staging側のCI名をCI and staging deployへ変更し、main側の旧workflow_run（CI監視）による二重配備を避けます。mainのファイルは変更しません。staging pushの実行は後続pushでキャンセルせず、Deployは既存のconcurrencyで直列化します。PRでは配備を実行しません。
 
-GitHubのSettings → Environments → stagingで、Workerは既存SecretsのCLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_IDと既存VariablesのVITE_SUPABASE_URL、VITE_SUPABASE_ANON_KEYを利用します。runtimeのSUPABASE_URL、SUPABASE_ANON_KEYへ同じ公開設定を対応付けます。Worker用プレビューSecretsとIMG_ORIGINも同じGitHub Environmentに登録します。staging DBはSUPABASE_DB_URLのSession pooler接続を使います。productionのlink経路ではSUPABASE_ACCESS_TOKEN、SUPABASE_DB_PASSWORDを使います。値や登録状態をエージェントへ共有しないでください。
+GitHubのSettings → Environments → stagingで、WorkerはSecret CLOUDFLARE_API_TOKENとVariables SUPABASE_PROJECT_REF、VITE_SUPABASE_ANON_KEYを利用します。Supabase URLはProject Refから生成し、buildのVITE_SUPABASE_URLとruntimeのSUPABASE_URLへ同じURLを渡します。Cloudflareの公開Account IDはwrangler.jsoncのenv.staging.account_idへ固定します。stagingでCLOUDFLARE_ACCOUNT_IDとVITE_SUPABASE_URLの手動登録は不要です。Worker用プレビューSecretsとIMG_ORIGINも同じGitHub Environmentに登録します。staging DBはSUPABASE_DB_URLのSession pooler接続を使います。productionのlink経路ではSUPABASE_ACCESS_TOKEN、SUPABASE_DB_PASSWORDを使います。値や登録状態をエージェントへ共有しないでください。
 
 ### stagingの登録項目
 
-以下は現在のstaging配備で必要な項目です。登録先はすべてGitHub Environment stagingです。Cloudflareへの手動二重登録は不要です。
+以下は現在のstaging配備で必要な10項目です。登録先はすべてGitHub Environment stagingです。Cloudflareへの手動二重登録は不要です。
 
 | 名前 | 種別 | 取得先・用途 |
 | --- | --- | --- |
 | CLOUDFLARE_API_TOKEN | Secret | Cloudflare API Tokens。Workerと対象zoneへ配備できるtoken |
-| CLOUDFLARE_ACCOUNT_ID | Secret | Cloudflare Workers & PagesのAccount ID。既存workflowの登録種別を維持 |
-| VITE_SUPABASE_URL | Variable | Supabase STG projectのConnectに表示されるProject URL |
 | VITE_SUPABASE_ANON_KEY | Variable | Supabase STG projectのSettings → API Keys。公開用anon key |
 | SUPABASE_PROJECT_REF | Variable | Supabase STG project ID |
 | SUPABASE_DB_URL | Secret | Supabase STG projectのConnect → Session pooler。passwordを含む接続URL、port 5432 |
@@ -35,9 +33,17 @@ GitHubのSettings → Environments → stagingで、Workerは既存SecretsのCLO
 
 IMG_KEYは`/img/*`の画像proxyで使用し、上流画像リクエストの認証にだけ渡します。欠落時は503で停止し、frontend buildへ渡しません。Cloudflareの既存IMG_KEYはGitHubではSecretに登録してください。
 
-現在のstagingのsrc/、functions/、worker/にはTurnstileの参照・検証処理がありません。TURNSTILE_SECRET_KEYとVITE_TURNSTILE_SITE_KEYは未使用設定のため配備対象・必須項目に追加しません。VITE_SANITY_READ_TOKENもfrontendで参照せず、draft読取はSANITY_PREVIEW_READ_TOKENを使用します。
+現在のstagingにはTurnstile実装は未統合ですが、Ticket予約統合PR #59で利用予定です。PR #59の統合時には、次の3項目をGitHub Environment stagingへ追加し、公開Site Keyをfrontend build、SecretsをWorker runtimeへ渡す必要があります。Workerの予約APIルートも統合対象です。設定の追加だけでは予約APIは動作しません。
 
-SUPABASE_URL、SUPABASE_ANON_KEY、SANITY_DATASETとSANITY_STUDIO_DEPLOY_ENVはworkflowが対応付け・設定するため、手動登録しません。SANITY_DEPLOY_GRAPHQLは任意で、通常は未設定のままGraphQL配備を行いません。
+| 統合時に追加する名前 | 種別 | 用途 |
+| --- | --- | --- |
+| VITE_TURNSTILE_SITE_KEY | Variable | Turnstile widgetの公開Site Key |
+| TURNSTILE_SECRET_KEY | Secret | サーバー側Siteverifyの認証 |
+| SUPABASE_SERVICE_ROLE_KEY | Secret | 予約APIのサーバー専用認証。公開用anon keyと共有しない |
+
+PR #59統合後は登録13項目となります。Turnstileの公開キーとSecret、Supabase公開用とサーバー用、Sanity配備用とdraft読取用は用途・権限が異なるため共有しません。VITE_SANITY_READ_TOKENは現在のfrontendでは参照せず、draft読取はSANITY_PREVIEW_READ_TOKENを使用します。IMG_ORIGINは配信元が未確定のため推測せず、GitHub Variableのまま維持します。
+
+VITE_SUPABASE_URL、SUPABASE_URL、SUPABASE_ANON_KEY、SANITY_DATASETとSANITY_STUDIO_DEPLOY_ENVはworkflowが対応付け・設定するため、手動登録しません。stagingでは標準のhttps://<project-ref>.supabase.coを使用します。将来カスタムAPIドメインを採用する場合はURL生成を変更する必要があります。SANITY_DEPLOY_GRAPHQLは任意で、通常は未設定のままGraphQL配備を行いません。production Pagesの既存Account IDとURL設定はこの集約では変更しません。
 
 Link Supabase project失敗時は、管理者がstagingのSUPABASE_PROJECT_REFをhrecrzpxzvrjxhuiitrnと照合し、Supabase Dashboardでアクセストークンの対象projectへの権限、DB password、Network Restrictionsを確認してください。接続失敗だけではDB停止やSQL不整合を判断できません。設定を修正した場合は失敗したstaging実行を再実行します。認証値やログ全文をIssueへ貼り付けないでください。
 
