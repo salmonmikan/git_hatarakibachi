@@ -224,8 +224,7 @@ jobs:
       - name: Validate Worker deployment settings
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
           SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
@@ -234,7 +233,7 @@ jobs:
         shell: bash
         run: |
           missing=0
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY SANITY_PREVIEW_SECRET SANITY_PREVIEW_READ_TOKEN IMG_KEY IMG_ORIGIN; do
+          for name in CLOUDFLARE_API_TOKEN SUPABASE_PROJECT_REF VITE_SUPABASE_ANON_KEY SANITY_PREVIEW_SECRET SANITY_PREVIEW_READ_TOKEN IMG_KEY IMG_ORIGIN; do
             if [ -z "${!name}" ]; then
               echo "::error::GitHub Environment staging に $name が登録されていません。"
               missing=1
@@ -244,7 +243,7 @@ jobs:
 
       - name: Build frontend for staging
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_SANITY_DATASET: staging
         run: npm run build
@@ -269,8 +268,7 @@ jobs:
       - name: Deploy staging Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SUPABASE_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           IMG_ORIGIN: ${{ vars.IMG_ORIGIN }}
           SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
