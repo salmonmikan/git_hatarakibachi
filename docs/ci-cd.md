@@ -16,7 +16,7 @@ GitHubのSettings → Environments → stagingで、WorkerはSecret CLOUDFLARE_A
 
 ### stagingの登録項目
 
-以下は現在のstaging配備で必要な10項目です。登録先はすべてGitHub Environment stagingです。Cloudflareへの手動二重登録は不要です。
+以下は現在のstaging配備で必要な10項目です。IMG_KEYはSTG/PROD共通のGitHub Repository Secretに1回登録し、それ以外の9項目はGitHub Environment stagingに登録します。Cloudflareへの手動二重登録は不要です。
 
 | 名前 | 種別 | 取得先・用途 |
 | --- | --- | --- |
@@ -29,9 +29,9 @@ GitHubのSettings → Environments → stagingで、WorkerはSecret CLOUDFLARE_A
 | SANITY_PREVIEW_SECRET | Secret | 手元で生成した十分に長いランダム値。preview cookieの署名用 |
 | SANITY_PREVIEW_READ_TOKEN | Secret | Sanity STGのdraftを読めるtoken |
 | IMG_ORIGIN | Variable | 既存画像配信元URL。画像proxyの転送先 |
-| IMG_KEY | Secret | 既存の画像配信元が要求する認証キー。名前を維持してWorker runtimeへ配備 |
+| IMG_KEY | Repository Secret（共通） | 既存の画像配信元が要求する共通認証キー。名前を維持してWorker runtimeへ配備 |
 
-IMG_KEYは`/img/*`の画像proxyで使用し、上流画像リクエストの認証にだけ渡します。欠落時は503で停止し、frontend buildへ渡しません。Cloudflareの既存IMG_KEYはGitHubではSecretに登録してください。
+IMG_KEYは`/img/*`の画像proxyで使用し、上流画像リクエストの認証にだけ渡します。欠落時は503で停止し、frontend buildへ渡しません。登録先はGitHub Settings → Secrets and variables → Actions → Repository secretsです。Cloudflareで使用している共通キーをIMG_KEYとして手元で登録してください。workflowのsecrets.IMG_KEYとruntimeのenv.IMG_KEYを共通名として維持します。Environmentに同名のSecretを登録するとそちらが優先されるため、staging/productionへ重複登録しません。既存Secretの値を取得・比較・コピーしたり、登録を削除したりする操作は行っていません。本番の配備経路は変更していません。
 
 現在のstagingにはTurnstile実装は未統合ですが、Ticket予約統合PR #59で利用予定です。PR #59の統合時には、次の3項目をGitHub Environment stagingへ追加し、公開Site Keyをfrontend build、SecretsをWorker runtimeへ渡す必要があります。Workerの予約APIルートも統合対象です。設定の追加だけでは予約APIは動作しません。
 
