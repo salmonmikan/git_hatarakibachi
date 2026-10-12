@@ -227,10 +227,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
+          SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
+          IMG_ORIGIN: ${{ vars.IMG_ORIGIN }}
         shell: bash
         run: |
           missing=0
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do
+          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY SANITY_PREVIEW_SECRET SANITY_PREVIEW_READ_TOKEN IMG_ORIGIN; do
             if [ -z "${!name}" ]; then
               echo "::error::GitHub Environment staging に $name が登録されていません。"
               missing=1
@@ -245,18 +248,37 @@ jobs:
           VITE_SANITY_DATASET: staging
         run: npm run build
 
+      - name: Prepare Worker secrets
+        env:
+          SANITY_PREVIEW_SECRET: ${{ secrets.SANITY_PREVIEW_SECRET }}
+          SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
+          SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+          const payload = {
+            SANITY_PREVIEW_SECRET: process.env.SANITY_PREVIEW_SECRET,
+            SANITY_PREVIEW_READ_TOKEN: process.env.SANITY_PREVIEW_READ_TOKEN,
+          }
+          fs.writeFileSync(process.env.SECRETS_FILE, JSON.stringify(payload), { mode: 0o600 })
+          NODE
+
       - name: Deploy staging Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          IMG_ORIGIN: ${{ vars.IMG_ORIGIN }}
+          SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
         run: |
           npx --no-install wrangler deploy \
             --env staging \
             --keep-vars \
+            --secrets-file "$SECRETS_FILE" \
             --var "SUPABASE_URL:$SUPABASE_URL" \
             --var "SUPABASE_ANON_KEY:$SUPABASE_ANON_KEY" \
+            --var "IMG_ORIGIN:$IMG_ORIGIN" \
             --var "SANITY_DATASET:staging"
 
       - name: Smoke test staging Worker
