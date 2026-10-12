@@ -4,7 +4,7 @@
 
 stagingではdatabase成功後にWorkerをdeployし、CMSも同じSHAからdeployします。既存のPages frontendジョブはproductionだけに限定し、staging Worker配信との二重deployを避けます。
 
-Workerはstaging既存の署名付きプレビューとサーバー側Sanity proxyを維持します。SANITY_PREVIEW_SECRETとSANITY_PREVIEW_READ_TOKENはCloudflareの対象Workerで管理し、GitHub Actionsやfrontend buildへは渡しません。SANITY_DATASETはstagingを明示します。配備は--keep-varsでWorker側の既存Variablesを保持し、既存Secretsも変更しません。Pagesの設定は別サービスであり、Workerへ自動移行されません。設定値や登録状態は参照していません。
+Workerはstaging既存の署名付きプレビューとサーバー側Sanity proxyを維持します。SANITY_PREVIEW_SECRETとSANITY_PREVIEW_READ_TOKENはGitHub Environment stagingのSecretsで管理し、配備ジョブがrunnerの一時JSONファイルから--secrets-fileでWorker runtimeへ渡します。値は表示せず、frontend buildへは渡しません。IMG_ORIGINもGitHub VariableからWorkerへ渡します。SANITY_DATASETはstagingを明示します。--keep-varsで今回管理しないWorker側Variablesを保持し、GitHubから指定した項目を更新します。設定値や登録状態は参照していません。
 
 CIでは通常アクセス、有効な署名、偽造・改ざん・設定欠落、preview proxyのPOST制限を検証します。実環境smoke testでは公開ページとAPIを確認し、正当なプレビューはStudioからの確認が必要です。
 
@@ -12,7 +12,27 @@ stagingへのpushでは、CIの検証成功後に同じコミットのDeployをw
 
 staging側のCI名をCI and staging deployへ変更し、main側の旧workflow_run（CI監視）による二重配備を避けます。mainのファイルは変更しません。staging pushの実行は後続pushでキャンセルせず、Deployは既存のconcurrencyで直列化します。PRでは配備を実行しません。
 
-GitHubのSettings → Environments → stagingで、Workerは既存SecretsのCLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_IDと既存VariablesのVITE_SUPABASE_URL、VITE_SUPABASE_ANON_KEYを利用します。runtimeのSUPABASE_URL、SUPABASE_ANON_KEYへ同じ公開設定を対応付けます。IMG_ORIGINはCloudflareの対象Worker側で管理します。DB用SecretsはSUPABASE_ACCESS_TOKEN、SUPABASE_DB_PASSWORDです。CMS用は後述のSANITY_AUTH_TOKENとSANITY_STUDIO_APP_IDです。値や登録状態をエージェントへ共有しないでください。
+GitHubのSettings → Environments → stagingで、Workerは既存SecretsのCLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_IDと既存VariablesのVITE_SUPABASE_URL、VITE_SUPABASE_ANON_KEYを利用します。runtimeのSUPABASE_URL、SUPABASE_ANON_KEYへ同じ公開設定を対応付けます。Worker用プレビューSecretsとIMG_ORIGINも同じGitHub Environmentに登録します。staging DBはSUPABASE_DB_URLのSession pooler接続を使います。productionのlink経路ではSUPABASE_ACCESS_TOKEN、SUPABASE_DB_PASSWORDを使います。値や登録状態をエージェントへ共有しないでください。
+
+### stagingの登録項目
+
+以下は現在のstaging配備で必要な項目です。登録先はすべてGitHub Environment stagingです。Cloudflareへの手動二重登録は不要です。
+
+| 名前 | 種別 | 取得先・用途 |
+| --- | --- | --- |
+| CLOUDFLARE_API_TOKEN | Secret | Cloudflare API Tokens。Workerと対象zoneへ配備できるtoken |
+| CLOUDFLARE_ACCOUNT_ID | Secret | Cloudflare Workers & PagesのAccount ID。既存workflowの登録種別を維持 |
+| VITE_SUPABASE_URL | Variable | Supabase STG projectのConnectに表示されるProject URL |
+| VITE_SUPABASE_ANON_KEY | Variable | Supabase STG projectのSettings → API Keys。公開用anon key |
+| SUPABASE_PROJECT_REF | Variable | Supabase STG project ID |
+| SUPABASE_DB_URL | Secret | Supabase STG projectのConnect → Session pooler。passwordを含む接続URL、port 5432 |
+| SANITY_AUTH_TOKEN | Secret | Sanity projectのStudio配備用token |
+| SANITY_STUDIO_APP_ID | Variable | Sanity projectのStudiosにあるSTG用Studio App ID |
+| SANITY_PREVIEW_SECRET | Secret | 手元で生成した十分に長いランダム値。preview cookieの署名用 |
+| SANITY_PREVIEW_READ_TOKEN | Secret | Sanity STGのdraftを読めるtoken |
+| IMG_ORIGIN | Variable | 既存画像配信元URL。画像proxyの転送先 |
+
+SUPABASE_URL、SUPABASE_ANON_KEY、SANITY_DATASETとSANITY_STUDIO_DEPLOY_ENVはworkflowが対応付け・設定するため、手動登録しません。SANITY_DEPLOY_GRAPHQLは任意で、通常は未設定のままGraphQL配備を行いません。
 
 Link Supabase project失敗時は、管理者がstagingのSUPABASE_PROJECT_REFをhrecrzpxzvrjxhuiitrnと照合し、Supabase Dashboardでアクセストークンの対象projectへの権限、DB password、Network Restrictionsを確認してください。接続失敗だけではDB停止やSQL不整合を判断できません。設定を修正した場合は失敗したstaging実行を再実行します。認証値やログ全文をIssueへ貼り付けないでください。
 
@@ -75,7 +95,7 @@ GraphQLは既存の `sanity-studio/package.json` にある `deploy-graphql` scri
 
 Frontendジョブはルートの `dist/` をWranglerでPagesへ直接uploadします。preview時のSanity read tokenはVite buildへ渡さず、`/api/sanity-preview` Pages Functionのruntime secret `SANITY_PREVIEW_READ_TOKEN` だけで保持します。checkout後に解決した実SHAを `--commit-hash` へ渡し、production/stagingともEnvironmentの `CLOUDFLARE_PAGES_BRANCH` を `--branch` へ明示します。リポジトリ直下の `functions/` はPages Functionsの規約に従う配置なので、同じPages deployの対象になります。公開後は`PUBLIC_BASE_URL`のトップページと`/api/draft`を確認し、静的PagesとFunctionsの両方が応答することを成功条件にします。
 
-Preview用の `SANITY_PREVIEW_SECRET` と `SANITY_PREVIEW_READ_TOKEN` はCloudflare Pages Functionsのruntime secretとして設定し、GitHub Actionsやfrontend bundleへ値を渡しません。各Cloudflare Pages Environmentには、対象datasetを表すruntime Variable `SANITY_DATASET`（`staging` または `production`）を設定します。未知のPages hostnameではこのVariableなしにproductionへfallbackせず、previewを503で停止します。Sanity Presentation Toolが認証済みStudioセッションから生成したPreview URL Secretを `/api/draft` がSanity APIでサーバー側検証し、検証成功時だけ署名付き・期限付きpreview cookieを1時間発行します。`/api/sanity-preview` はそのcookieを検証してdraft queryをSanityへproxyします。再利用可能なPreview SecretをStudioの設定やclient bundleへ埋め込まないでください。
+Preview用の `SANITY_PREVIEW_SECRET` と `SANITY_PREVIEW_READ_TOKEN` は、staging WorkerではGitHub Secretsから配備し、productionのCloudflare Pages Functionsではruntime secretとして設定します。frontend bundleへは値を渡しません。各Cloudflare Pages Environmentには、対象datasetを表すruntime Variable `SANITY_DATASET`（`staging` または `production`）を設定します。未知のPages hostnameではこのVariableなしにproductionへfallbackせず、previewを503で停止します。Sanity Presentation Toolが認証済みStudioセッションから生成したPreview URL Secretを `/api/draft` がSanity APIでサーバー側検証し、検証成功時だけ署名付き・期限付きpreview cookieを1時間発行します。`/api/sanity-preview` はそのcookieを検証してdraft queryをSanityへproxyします。再利用可能なPreview SecretをStudioの設定やclient bundleへ埋め込まないでください。
 
 ## Supabase migrationの安全策
 
