@@ -3,18 +3,15 @@ name: Deploy
 on:
   workflow_call:
     inputs:
+      environment:
+        description: GitHub Environment to deploy to
+        required: false
+        default: staging
+        type: string
       ref:
-        description: Staging commit SHA validated by the calling CI
+        description: Commit SHA validated by the calling CI
         required: true
         type: string
-  workflow_run:
-    workflows:
-      - CI
-    types:
-      - completed
-    branches:
-      - main
-      - staging
   workflow_dispatch:
     inputs:
       environment:
@@ -39,17 +36,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+  group: deploy-${{ inputs.environment || 'staging' }}
   cancel-in-progress: false
 
 env:
-  DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
-  TARGET_REF: ${{ github.event_name == 'push' && github.ref == 'refs/heads/staging' && inputs.ref || github.event_name == 'workflow_dispatch' && (inputs.ref || (inputs.environment == 'production' && 'main' || 'staging')) || github.event.workflow_run.head_sha }}
+  DEPLOY_ENV: ${{ inputs.environment || 'staging' }}
+  TARGET_REF: ${{ inputs.ref || (inputs.environment == 'production' && 'main' || 'staging') }}
 
 jobs:
   resolve-target:
     name: Resolve target SHA
-    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/staging') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -69,6 +65,10 @@ jobs:
         env:
           TARGET_SHA: ${{ steps.revision.outputs.sha }}
         run: |
+          if [ "$DEPLOY_ENV" != "staging" ] && [ "$DEPLOY_ENV" != "production" ]; then
+            echo "::error::environmentはstagingまたはproductionを指定してください。"
+            exit 1
+          fi
           expected_branch="staging"
           if [ "$DEPLOY_ENV" = "production" ]; then
             expected_branch="main"
@@ -77,18 +77,105 @@ jobs:
             echo "::error::指定したrefまたはSHAは${expected_branch}ブランチに含まれていません。"
             exit 1
           fi
+          if [ "${{ github.event_name }}" = "push" ] && [ "$TARGET_SHA" != "$(git rev-parse "origin/$expected_branch")" ]; then
+            echo "::error::この自動配備より新しいcommitがあります。最新commitのCI実行を使用してください。"
+            exit 1
+          fi
 
       - name: 対象SHA解決失敗時の案内
         if: ${{ failure() }}
         run: echo "::error::デプロイ対象SHAの解決に失敗しました。指定したrefまたはSHAを確認してください。"
 
+  validate-release:
+    name: Validate release before external changes
+    needs: resolve-target
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-target.outputs.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            sanity-studio/package-lock.json
+
+      - name: Pin npm
+        run: npm install --global npm@10.9.2
+
+      - name: Check required release settings
+        env:
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}
+          SANITY_STUDIO_APP_ID: ${{ vars.SANITY_STUDIO_APP_ID }}
+          SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          IMG_KEY: ${{ secrets.IMG_KEY }}
+          IMG_ORIGIN: ${{ vars.IMG_ORIGIN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          CLOUDFLARE_PAGES_BRANCH: ${{ vars.CLOUDFLARE_PAGES_BRANCH }}
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+        shell: bash
+        run: |
+          required=(SUPABASE_PROJECT_REF SUPABASE_DB_URL VITE_SUPABASE_ANON_KEY CLOUDFLARE_API_TOKEN SANITY_AUTH_TOKEN SANITY_STUDIO_APP_ID)
+          if [ "$DEPLOY_ENV" = "production" ]; then
+            required+=(CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_PAGES_PROJECT CLOUDFLARE_PAGES_BRANCH PUBLIC_BASE_URL VITE_SUPABASE_URL)
+          else
+            required+=(SANITY_PREVIEW_READ_TOKEN IMG_KEY IMG_ORIGIN CF_ACCESS_CLIENT_ID CF_ACCESS_CLIENT_SECRET)
+          fi
+          missing=0
+          for name in "${required[@]}"; do
+            if [ -z "${!name}" ]; then
+              echo "::error::必要設定 $name が利用できません。対象Environmentの登録を確認してください。"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      # Automatic calls already passed these checks in CI at this SHA.
+      - name: Validate manually selected release
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          npm ci
+          npm run lint
+          npm test
+          npm run build
+          npx --no-install wrangler pages functions build functions --outfile "$RUNNER_TEMP/pages-functions-worker.js"
+          npx --no-install wrangler deploy --env staging --dry-run --outdir "$RUNNER_TEMP/worker-staging-build"
+          npm ci --prefix sanity-studio
+          npm run build --prefix sanity-studio
+
+      - name: Validate manually selected migrations
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          npx --no-install supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector --yes
+          npx --no-install supabase db reset --local --no-seed
+
+      - name: Stop validation database
+        if: ${{ always() && github.event_name == 'workflow_dispatch' }}
+        run: npx --no-install supabase stop --no-backup
+
   database:
     name: Database migrations
-    needs: resolve-target
-    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/staging') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
+    needs:
+      - resolve-target
+      - validate-release
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+    environment: ${{ inputs.environment || 'staging' }}
     steps:
       - name: Checkout target SHA
         uses: actions/checkout@v4
@@ -108,76 +195,48 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Link Supabase project
+      - name: Validate Supabase connection target
         id: link
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          if [ "$DEPLOY_ENV" = "staging" ]; then
-            node --input-type=module <<'NODE'
-          const url = new URL(process.env.SUPABASE_DB_URL)
-          if (!['postgres:', 'postgresql:'].includes(url.protocol) ||
-              !url.hostname.endsWith('.pooler.supabase.com') ||
-              url.port !== '5432' ||
-              url.username !== 'postgres.' + process.env.SUPABASE_PROJECT_REF ||
-              !url.password || url.pathname !== '/postgres') {
-            throw new Error('staging SUPABASE_DB_URL must target the staging session pooler on port 5432')
+          node --input-type=module <<'NODE'
+          let valid = false
+          try {
+            const url = new URL(process.env.SUPABASE_DB_URL)
+            valid = ['postgres:', 'postgresql:'].includes(url.protocol) &&
+              url.hostname.endsWith('.pooler.supabase.com') && url.port === '5432' &&
+              url.username === 'postgres.' + process.env.SUPABASE_PROJECT_REF &&
+              Boolean(url.password) && url.pathname === '/postgres'
+          } catch {
+            // Never print the URL or the parser error: both may include credentials.
+          }
+          if (!valid) {
+            console.error('SUPABASE_DB_URL must target this environment project via the session pooler on port 5432')
+            process.exit(1)
           }
           NODE
-          else
-            npx --no-install supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
-          fi
 
       - name: Check remote migration history
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          if [ "$DEPLOY_ENV" = "staging" ]; then
-            npx --no-install supabase migration list --db-url "$SUPABASE_DB_URL"
-          else
-            npx --no-install supabase migration list --password "$SUPABASE_DB_PASSWORD"
-          fi
+        run: npx --no-install supabase migration list --db-url "$SUPABASE_DB_URL"
 
       - name: Preview pending migrations
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          if [ "$DEPLOY_ENV" = "staging" ]; then
-            npx --no-install supabase db push --dry-run --db-url "$SUPABASE_DB_URL"
-          else
-            npx --no-install supabase db push --dry-run --linked --password "$SUPABASE_DB_PASSWORD"
-          fi
+        run: npx --no-install supabase db push --dry-run --db-url "$SUPABASE_DB_URL"
 
       - name: Apply migrations
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          if [ "$DEPLOY_ENV" = "staging" ]; then
-            npx --no-install supabase db push --db-url "$SUPABASE_DB_URL" --yes
-          else
-            npx --no-install supabase db push --linked --password "$SUPABASE_DB_PASSWORD" --yes
-          fi
+        run: npx --no-install supabase db push --db-url "$SUPABASE_DB_URL" --yes
 
       - name: Verify remote migration history
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          if [ "$DEPLOY_ENV" = "staging" ]; then
-            npx --no-install supabase migration list --db-url "$SUPABASE_DB_URL"
-          else
-            npx --no-install supabase migration list --password "$SUPABASE_DB_PASSWORD"
-          fi
+        run: npx --no-install supabase migration list --db-url "$SUPABASE_DB_URL"
 
       - name: マイグレーション失敗時の復旧案内
         if: ${{ failure() && steps.link.outcome == 'success' }}
@@ -198,7 +257,7 @@ jobs:
     needs:
       - resolve-target
       - database
-    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/staging') || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging') || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'staging') }}
+    if: ${{ inputs.environment != 'production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: staging
@@ -280,15 +339,16 @@ jobs:
             --var "IMG_ORIGIN:$IMG_ORIGIN" \
             --var "SANITY_DATASET:staging"
 
+      - name: Remove temporary Worker secrets
+        if: ${{ always() }}
+        run: rm -f "$RUNNER_TEMP/worker-secrets.json"
+
       - name: Smoke test staging Worker
-        shell: bash
-        run: |
-          base_url="https://staging.hatarakibachi.com"
-          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/" >/dev/null
-          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/about" >/dev/null
-          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/api/web-members" >/dev/null
-          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/api/web-sitenews?limit=1" >/dev/null
-          curl --retry 8 --retry-delay 2 --retry-all-errors -fsS "$base_url/about" >/dev/null
+        env:
+          PUBLIC_BASE_URL: https://staging.hatarakibachi.com
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: npm run smoke
 
       - name: Worker失敗時の案内
         if: ${{ failure() }}
@@ -300,13 +360,12 @@ jobs:
     needs:
       - resolve-target
       - database
-    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/staging') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     concurrency:
       group: sanity-studio-deploy
       cancel-in-progress: false
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+    environment: ${{ inputs.environment || 'staging' }}
     defaults:
       run:
         working-directory: sanity-studio
@@ -356,6 +415,7 @@ jobs:
         if: ${{ vars.SANITY_DEPLOY_GRAPHQL == 'true' || inputs.deploy_graphql == true }}
         env:
           SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}
+          SANITY_STUDIO_DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
         run: npm run deploy-graphql
 
       - name: CMS失敗時の案内
@@ -367,10 +427,10 @@ jobs:
     needs:
       - resolve-target
       - cms
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.environment == 'production') || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    if: ${{ inputs.environment == 'production' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || github.event.workflow_run.head_branch == 'main' && 'production' || 'staging' }}
+    environment: ${{ inputs.environment || 'staging' }}
     steps:
       - name: Checkout target SHA
         uses: actions/checkout@v4
@@ -427,18 +487,8 @@ jobs:
       - name: Smoke test deployed Pages and Functions
         env:
           PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
-        run: |
-          set -eu
-          if [ -z "$PUBLIC_BASE_URL" ]; then
-            echo "::error::公開後確認にはPUBLIC_BASE_URLの設定が必要です。"
-            exit 1
-          fi
-          curl --fail --silent --show-error --retry 5 --retry-delay 5 "$PUBLIC_BASE_URL/" > /dev/null
-          preview_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$PUBLIC_BASE_URL/api/draft")"
-          if [ "$preview_status" != "401" ]; then
-            echo "::error::Pages Functionの確認に失敗しました。/api/draftのHTTP statusは${preview_status}でした。"
-            exit 1
-          fi
+        run: npm run smoke
+
       - name: Frontend失敗時の案内
         if: ${{ failure() }}
         run: echo "::error::FrontendまたはPages Functionsのビルド・デプロイに失敗しました。上記ログとCloudflareの認証・設定を確認してください。"

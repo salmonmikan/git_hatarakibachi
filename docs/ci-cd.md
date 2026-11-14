@@ -8,15 +8,15 @@ Workerは署名付きプレビューとサーバー側Sanity proxyを維持し�
 
 CIでは通常アクセス、有効な署名、偽造・改ざん・設定欠落、preview proxyのPOST制限を検証します。実環境smoke testでは公開ページとAPIを確認し、正当なプレビューはStudioからの確認が必要です。
 
-stagingへのpushでは、CIの検証成功後に同じコミットのDeployをworkflow_callで呼び出します。呼び出されたworkflowのgithub contextは呼び出し元のpushを保持します。各配備ジョブはGitHub Environment stagingを指定し、そのVariables/Secretsを利用します。DB接続・migration失敗時にはWorkerとCMSを配備しません。Deploy対象SHAはstagingに含まれるSHAに限定します。
+staging / mainへのpushでは、CIの検証成功後に同じコミットのDeployをworkflow_callで呼び出します。呼び出されたworkflowのgithub contextは呼び出し元のpushを保持します。各配備ジョブはGitHub Environment stagingを指定し、そのVariables/Secretsを利用します。DB接続・migration失敗時にはWorkerとCMSを配備しません。Deploy対象SHAはstagingに含まれるSHAに限定します。
 
-staging側のCI名をCI and staging deployへ変更し、main側の旧workflow_run（CI監視）による二重配備を避けます。mainのファイルは変更しません。staging pushの実行は後続pushでキャンセルせず、Deployは既存のconcurrencyで直列化します。PRでは配備を実行しません。
+CI名はCI and staging deployです。Deployのworkflow_runトリガーは廃止し、CIからのworkflow_callに統一します。この定義はmainへの統合後に本番にも有効になります。staging pushの実行は後続pushでキャンセルせず、Deployは既存のconcurrencyで直列化します。PRでは配備を実行しません。
 
-GitHubのSettings → Environments → stagingで、WorkerはSecret CLOUDFLARE_API_TOKENとVariables SUPABASE_PROJECT_REF、VITE_SUPABASE_ANON_KEYを利用します。Supabase URLはProject Refから生成し、buildのVITE_SUPABASE_URLとruntimeのSUPABASE_URLへ同じURLを渡します。Cloudflareの公開Account IDはwrangler.jsoncのenv.staging.account_idへ固定します。stagingでCLOUDFLARE_ACCOUNT_IDとVITE_SUPABASE_URLの手動登録は不要です。Worker用プレビューSecretsとIMG_ORIGINも同じGitHub Environmentに登録します。staging DBはSUPABASE_DB_URLのSession pooler接続を使います。productionのlink経路ではSUPABASE_ACCESS_TOKEN、SUPABASE_DB_PASSWORDを使います。値や登録状態をエージェントへ共有しないでください。
+GitHubのSettings → Environments → stagingで、WorkerはSecret CLOUDFLARE_API_TOKENとVariables SUPABASE_PROJECT_REF、VITE_SUPABASE_ANON_KEYを利用します。Supabase URLはProject Refから生成し、buildのVITE_SUPABASE_URLとruntimeのSUPABASE_URLへ同じURLを渡します。Cloudflareの公開Account IDはwrangler.jsoncのenv.staging.account_idへ固定します。stagingでCLOUDFLARE_ACCOUNT_IDとVITE_SUPABASE_URLの手動登録は不要です。Worker用プレビューSecretsとIMG_ORIGINも同じGitHub Environmentに登録します。staging / production DBは、それぞれのEnvironmentに登録したSUPABASE_DB_URLのSession pooler接続を使います。SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORDによるlink経路は使用しません。値や登録状態をエージェントへ共有しないでください。
 
 ### stagingの登録項目
 
-以下は現在のstaging配備で必要な9項目です。IMG_KEYはSTG/PROD共通のGitHub Repository Secretに1回登録し、それ以外の8項目はGitHub Environment stagingに登録します。Cloudflareへの手動二重登録は不要です。
+以下はstaging配備の基礎となる9項目です。これに加え、Accessで保護された現行stagingの自動確認用にCF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRETをEnvironment Secretsへ登録します（合計11項目）。IMG_KEYはSTG/PROD共通のGitHub Repository Secretに1回登録し、それ以外はGitHub Environment stagingに登録します。Cloudflareへの手動二重登録は不要です。
 
 | 名前 | 種別 | 取得先・用途 |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ HKDFは1つの秘密値から用途別の鍵を導出する標準の鍵導出方
 
 VITE_SUPABASE_URL、SUPABASE_URL、SUPABASE_ANON_KEY、SANITY_DATASETとSANITY_STUDIO_DEPLOY_ENVはworkflowが対応付け・設定するため、手動登録しません。stagingでは標準のhttps://<project-ref>.supabase.coを使用します。将来カスタムAPIドメインを採用する場合はURL生成を変更する必要があります。SANITY_DEPLOY_GRAPHQLは任意で、通常は未設定のままGraphQL配備を行いません。production Pagesの既存Account IDとURL設定はこの集約では変更しません。
 
-Link Supabase project失敗時は、管理者がstagingのSUPABASE_PROJECT_REFをhrecrzpxzvrjxhuiitrnと照合し、Supabase Dashboardでアクセストークンの対象projectへの権限、DB password、Network Restrictionsを確認してください。接続失敗だけではDB停止やSQL不整合を判断できません。設定を修正した場合は失敗したstaging実行を再実行します。認証値やログ全文をIssueへ貼り付けないでください。
+Supabase接続検証失敗時は、管理者が対象EnvironmentのSUPABASE_PROJECT_REFとSession pooler接続先の対応、DB password、Network Restrictionsを確認してください。接続失敗だけではDB停止やSQL不整合を判断できません。設定を修正した場合は失敗したstaging実行を再実行します。認証値やログ全文をIssueへ貼り付けないでください。
 
 Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要な項目を記載します。
 
@@ -57,7 +57,7 @@ Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要
   - `.nvmrc` の Node.js 22.17.0 と npm 10.9.2 を使用し、rootと`sanity-studio`の`npm ci`、lint、build、Pages Functions bundle、Supabase migrationの命名・ローカル再適用を検証。
   - PRの古い実行は同じConcurrency group内でキャンセルする。
 - `.github/workflows/deploy.yml`
-  - stagingではCI成功後の `workflow_call`、mainでは既存の `workflow_run`、手動では `workflow_dispatch` で実行。自動DeployはCI失敗時には起動しない。
+  - stagingではCI成功後の `workflow_call`、mainでもCI成功後の `workflow_call`、手動では `workflow_dispatch` で実行。自動DeployはCI失敗時には起動しない。
   - stagingでは `database` → `worker-staging` / `cms`、productionでは `database` → `cms` → `frontend` のジョブ依存で順序を固定する。各ジョブが失敗した場合、後続ジョブは実行しない。
   - `main` は `production`、`staging` は `staging` に割り当てる。手動実行ではEnvironmentを選択できる。
   - 最初に指定`ref`を実SHAへ解決し、database・cms・frontendの全ジョブは同じSHAをcheckoutする。`ref` にコミットSHAを指定すると、同じSHAの再実行ができる。適用済みのSupabase migrationは履歴により再適用されない。
@@ -66,7 +66,7 @@ Issue #41で追加したGitHub Actionsの運用境界と、初回設定に必要
 
 ## 初回有効化
 
-`workflow_run`は既定ブランチmainのDeploy定義を使用します。stagingの自動配備はこの制約を避けて同じコミットのworkflowを呼び出すため、mainへの統合前にも実行できます。GitHub Environmentと外部サービス設定は配備前に管理者が登録してください。手動Deployも既定ブランチに存在するworkflowを選択し、stagingのrefを指定して実行できます。
+自動配備はCIと同じコミットのDeploy定義をworkflow_callで使用します。GitHub Environmentと外部サービス設定は配備前に管理者が登録してください。手動実行では、この改修を含むブランチのDeploy workflowを選択してください。旧mainのworkflowへstagingのrefだけを渡しても、新しい配備定義は使用されません。
 
 初回の`main`リリースはproduction Deployを起動するため、マージ前にproduction EnvironmentのRequired reviewersと全Secrets/Variablesを設定し、同じ変更内容がstagingで検証済みであることを承認者が確認します。
 
@@ -81,8 +81,7 @@ Deployのdatabase・worker-staging・cms・frontendは対象Environmentに紐づ
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 - `SANITY_AUTH_TOKEN`
-- `SUPABASE_ACCESS_TOKEN`
-- `SUPABASE_DB_PASSWORD`
+- `SUPABASE_DB_URL`（対象EnvironmentのSession pooler接続URL、port 5432）
 
 ### Variables
 
@@ -95,7 +94,7 @@ Deployのdatabase・worker-staging・cms・frontendは対象Environmentに紐づ
 - `SANITY_STUDIO_APP_ID`（staging/productionで別々のSanity Studio deployment app IDを設定）
 - `SANITY_DEPLOY_GRAPHQL`（`true`の場合だけ自動Deploy時にもGraphQLをdeploy）
 
-CloudflareのアカウントIDとAPI token、Sanity token、Supabase token/passwordはSecretsからのみ受け取ります。Frontendへ配布するSupabase URLと公開用anon keyまたはpublishable keyはEnvironment Variablesからbuildへ渡します。workflowはSecretsの値をechoせず、権限も `contents: read` に限定しています。
+CloudflareのアカウントIDとAPI token、Sanity token、Supabase接続URLはSecretsからのみ受け取ります。Frontendへ配布するSupabase URLと公開用anon keyまたはpublishable keyはEnvironment Variablesからbuildへ渡します。workflowはSecretsの値をechoせず、権限も `contents: read` に限定しています。
 
 ## CMSとGraphQL
 
@@ -113,11 +112,11 @@ Frontendジョブはルートの `dist/` をWranglerでPagesへ直接uploadし�
 
 Databaseジョブは次の順で実行します。
 
-1. Environmentの認証情報で対象プロジェクトへlinkする。
-2. `supabase migration list --password` でリモートmigration履歴を表示する。
-3. `supabase db push --dry-run --linked --password` で適用候補を確認する。
-4. `supabase db push --linked --password --yes` で、成功済みdry-runの後にmigrationを非対話で適用する。
-5. `supabase migration list --password` を再実行し、適用後のリモート履歴を確認する。
+1. SUPABASE_DB_URLが対象EnvironmentのSUPABASE_PROJECT_REFと一致し、Session poolerのport 5432を指すことを値を表示せず検証する。
+2. `supabase migration list --db-url` でリモートmigration履歴を表示する。
+3. `supabase db push --dry-run --db-url` で適用候補を確認する。
+4. `supabase db push --db-url --yes` で、成功済みdry-runの後にmigrationを適用する。
+5. `supabase migration list --db-url` を再実行し、適用後のリモート履歴を確認する。
 
 Migration historyのrepairや自動rollbackはworkflowに組み込みません。失敗時はSQLと履歴を確認し、必要なら承認済みSupabase backup/recovery pointから復旧したうえで、履歴を壊さないforward-fix migrationを追加します。復旧判断後、`workflow_dispatch` の同じ `ref`（SHA）を指定して再実行します。migration適用前のバックアップ取得・保持期間・復旧操作はSupabase側の運用設定で別途確定してください。
 
@@ -135,4 +134,4 @@ npm ci
 npm run build
 ```
 
-Supabaseのmigrationファイルは `supabase/migrations/` に時系列で管理されています。リモート履歴は認証情報を参照しないローカル検証では確認できないため、Deploy workflowのlink後の `migration list` とdry-runを正本の確認手段とします。
+Supabaseのmigrationファイルは `supabase/migrations/` に時系列で管理されています。リモート履歴は認証情報を参照しないローカル検証では確認できないため、Deploy workflowの接続先検証後の `migration list` とdry-runを正本の確認手段とします。

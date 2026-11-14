@@ -29,6 +29,18 @@ jobs:
       ref: ${{ github.sha }}
     secrets: inherit
 
+  deploy-production:
+    name: Deploy production
+    needs:
+      - validate
+      - database
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+      ref: ${{ github.sha }}
+    secrets: inherit
+
   changes:
     name: Detect database migration changes
     runs-on: ubuntu-latest

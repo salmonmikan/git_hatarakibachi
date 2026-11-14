@@ -8,9 +8,9 @@ export default defineCliConfig({
   deployment: {
     appId: process.env.SANITY_STUDIO_APP_ID,
     /**
-     * Enable auto-updates for studios.
+     * Keep the deployed Studio on the versions tested from package-lock.json.
      * Learn more at https://www.sanity.io/docs/studio/latest-version-of-sanity#k47faf43faf56
      */
-    autoUpdates: true,
+    autoUpdates: false,
   }
 })
