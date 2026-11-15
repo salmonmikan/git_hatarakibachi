@@ -6,7 +6,7 @@ stagingではdatabase成功後にWorkerをdeployし、CMSも同じSHAからdeplo
 
 Workerは署名付きプレビューとサーバー側Sanity proxyを維持します。プレビューの登録SecretはSANITY_PREVIEW_READ_TOKENだけです。Cookie署名鍵はこの読取トークンからHKDF-SHA256で導出し、署名用途とrequest originを導出情報へ含めます。SANITY_PREVIEW_SECRETの登録・配備・参照は不要です。配備ジョブは読取トークンをrunnerの一時JSONから--secrets-fileでWorker runtimeへ渡し、値を表示せずfrontend buildへも渡しません。IMG_ORIGINもGitHub VariableからWorkerへ渡します。SANITY_DATASETはstagingを明示します。--keep-varsで今回管理しないWorker側Variablesを保持し、GitHubから指定した項目を更新します。設定値や登録状態は参照していません。
 
-CIでは通常アクセス、有効な署名、偽造・改ざん・設定欠落、preview proxyのPOST制限を検証します。実環境smoke testでは公開ページとAPIを確認し、正当なプレビューはStudioからの確認が必要です。
+CIでは通常アクセス、有効な署名、偽造・改ざん・設定欠落、preview proxyのPOST制限を検証します。stagingの実環境はAccessへログインして手動確認します。Worker配備後のActions Summaryへ未完了のチェックリストを出力し、自動smoke testは実行しません。正当なプレビューはstagingのStudioから確認してください。productionの公開後smoke testは従来どおり実行します。
 
 staging / mainへのpushでは、CIの検証成功後に同じコミットのDeployをworkflow_callで呼び出します。呼び出されたworkflowのgithub contextは呼び出し元のpushを保持します。各配備ジョブはGitHub Environment stagingを指定し、そのVariables/Secretsを利用します。DB接続・migration失敗時にはWorkerとCMSを配備しません。Deploy対象SHAはstagingに含まれるSHAに限定します。
 
@@ -16,7 +16,7 @@ GitHubのSettings → Environments → stagingで、WorkerはSecret CLOUDFLARE_A
 
 ### stagingの登録項目
 
-以下はstaging配備の基礎となる9項目です。これに加え、Accessで保護された現行stagingの自動確認用にCF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRETをEnvironment Secretsへ登録します（合計11項目）。IMG_KEYはSTG/PROD共通のGitHub Repository Secretに1回登録し、それ以外はGitHub Environment stagingに登録します。Cloudflareへの手動二重登録は不要です。
+以下はstaging配備で必要な9項目です。IMG_KEYはSTG/PROD共通のGitHub Repository Secretに1回登録し、それ以外はGitHub Environment stagingに登録します。stagingは手動確認するため、CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRETの登録は不要です。Cloudflareへの手動二重登録は不要です。
 
 | 名前 | 種別 | 取得先・用途 |
 | --- | --- | --- |
