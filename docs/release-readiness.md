@@ -9,15 +9,15 @@
 - 手動Deployは対象SHAのlint・テスト・ビルド・DB再構築を実行せずにDBを更新できました。手動実行では外部更新前にこれらを検証します。自動実行は呼び出し元CIの検証を使います。
 - productionのSupabase接続もSession poolerのport 5432に統一しました。対象project refとの一致を検証し、不正な接続URLや解析例外に含まれる秘密値は表示しません。
 - 外部更新前にDB・Cloudflare・Sanityの必須設定が利用可能か確認します。自動配備が古いSHAを配備しようとした場合は停止します。
-- 公開後はHTML、JSの配信、団員・ニュースAPIのJSON配列、未認証プレビュー401/no-storeを共通smoke testで確認します。SPAのHTMLを返すAPIやAccess認証への302を成功扱いしません。
-- stagingはCloudflare Accessで保護されています。サービス認証を使う場合に対応し、Access自体は変更していません。
+- productionの公開後はHTML、JSの配信、団員・ニュースAPIのJSON配列、未認証プレビュー401/no-storeをsmoke testで確認します。SPAのHTMLを返すAPIや認証への302を成功扱いしません。stagingはAccessへログインして手動確認し、自動配備成功と動作確認完了を区別します。
+- stagingはCloudflare Accessで保護されています。現在はサービス認証用Secretsを必須にせず、Worker配備後のActions Summaryに手動確認のチェックリストを記録します。Access自体は変更していません。
 - Sanity StudioはautoUpdatesを無効にし、ロックファイルで検証したバージョンを配備します。更新は依存更新と検証を通して実施します。
 
 ## 初回反映の準備
 
 1. GitHub Environment staging / productionに、対象環境の設定を登録します。秘密値をチャットへ送る必要はありません。productionにはRequired reviewersとmainのDeployment branch制限を設定します。
 2. productionへ `SUPABASE_DB_URL` Secretを追加します。Supabase Dashboard → Connect → Session poolerの接続URLを使用し、port 5432とproduction project refを確認します。パスワードの特殊文字はURLエンコードします。既存Secretは削除していません。
-3. stagingのAccessにsmoke test用のService Auth policyを設定し、同じEnvironmentへ `CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` Secretsを登録します。両方を反映前の必須検証に含めています。Accessを解除して検証を通す運用にはしません。対話的な認証だけの状態ではrunnerからのsmoke testは失敗します。
+3. stagingはサービス認証を追加せず、配備後にご本人がAccessへログインして手動確認します。`CF_ACCESS_CLIENT_ID` / `CF_ACCESS_CLIENT_SECRET` の登録は不要です。自動smoke testは実行せず、Actions Summaryのチェックリストを確認してください。Accessの保護は維持します。
 4. production PagesはFunctions側の `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SANITY_DATASET=production` / `SANITY_PREVIEW_READ_TOKEN` / `IMG_ORIGIN` / `IMG_KEY` をCloudflare側で設定します。フロントのVITE変数とは別です。現在のproduction Pagesジョブはruntime Secretを同期しません。既存値の取得・比較は実施していません。
 5. productionの `PUBLIC_BASE_URL` は `https://hatarakibachi.com`、Pages branchは既存プロジェクトのproduction branchと一致させます。管理画面が別ホストであるため、`https://admin.hatarakibachi.com/login` は公開サイトとは別に確認します。
 6. Cloudflare PagesのGit連携による自動production deployが有効なら、Actionsの検証・承認を迂回しないよう、管理者がproductionの配備経路をActionsに統一します。現在のCloudflare管理設定は未確認です。
@@ -26,7 +26,7 @@
 ## 反映手順
 
 1. この変更をstaging向けPRとして登録し、CIを通します。未完了の予約機能・Square統合PRや古いWorkers移行ブランチをまとめてマージしません。
-2. stagingでdatabase、Worker、CMS、smoke testの成功を確認します。Studioからstagingプレビューを開き、管理者ログイン・画像を手動確認します。認証済みの管理操作はこの作業では未実施です。
+2. stagingでdatabase、Worker、CMSの配備成功を確認し、その後AccessへログインしてActions Summaryの手動チェックリストを実施します。ページ表示・直接アクセス・再読み込み・APIのJSON・画像・Studioプレビュー・未認証プレビュー拒否を確認し、時間を置いて再確認します。配備成功だけでは安定稼働確認完了と扱いません。認証済みの管理操作はこの作業では未実施です。
 3. production設定とバックアップ確認後、staging→mainのPRをレビュー・マージします。mainのCIが同じSHAのproduction Deployを呼び出します。
 4. productionの承認者が対象SHAと変更内容を確認し、GitHub Environmentの保護ジョブを承認します。
 5. productionはDB→CMS→Pagesの順に配備し、公開後smoke testを実行します。stagingはWorkers、本番はPagesという既存構成を維持しています。本番Workersへの切替やPages削除は含みません。

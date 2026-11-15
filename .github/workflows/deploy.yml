@@ -119,8 +119,6 @@ jobs:
           SANITY_AUTH_TOKEN: ${{ secrets.SANITY_AUTH_TOKEN }}
           SANITY_STUDIO_APP_ID: ${{ vars.SANITY_STUDIO_APP_ID }}
           SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           IMG_KEY: ${{ secrets.IMG_KEY }}
           IMG_ORIGIN: ${{ vars.IMG_ORIGIN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -134,7 +132,7 @@ jobs:
           if [ "$DEPLOY_ENV" = "production" ]; then
             required+=(CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_PAGES_PROJECT CLOUDFLARE_PAGES_BRANCH PUBLIC_BASE_URL VITE_SUPABASE_URL)
           else
-            required+=(SANITY_PREVIEW_READ_TOKEN IMG_KEY IMG_ORIGIN CF_ACCESS_CLIENT_ID CF_ACCESS_CLIENT_SECRET)
+            required+=(SANITY_PREVIEW_READ_TOKEN IMG_KEY IMG_ORIGIN)
           fi
           missing=0
           for name in "${required[@]}"; do
@@ -343,17 +341,29 @@ jobs:
         if: ${{ always() }}
         run: rm -f "$RUNNER_TEMP/worker-secrets.json"
 
-      - name: Smoke test staging Worker
-        env:
-          PUBLIC_BASE_URL: https://staging.hatarakibachi.com
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: npm run smoke
+      - name: Record staging manual verification checklist
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## stagingの手動動作確認（未完了）
+
+          Workerの配備は完了しました。実環境の動作確認は、Accessへログインして実施してください。
+          自動配備の成功は、以下の確認完了を意味しません。
+
+          - [ ] https://staging.hatarakibachi.com/ でAccessへログインできる
+          - [ ] トップ・About・Memberが表示され、直接アクセス・再読み込みでも表示できる
+          - [ ] 団員・ニュースが表示され、画像が読み込める
+          - [ ] 開発者ツールで /api/web-members と /api/web-sitenews?limit=1 が200のJSONを返す
+          - [ ] stagingのSanity Studioからプレビューを開ける
+          - [ ] 未認証の /api/draft が401となる
+          - [ ] 時間を置いて再確認し、継続したエラーがない
+
+          このworkflowはAccessのサービス認証による自動smoke testを実行しません。
+          EOF
 
       - name: Worker失敗時の案内
         if: ${{ failure() }}
         run: |
-          echo "::error::Staging Workerのbuild/deploy/smoke testに失敗しました。"
+          echo "::error::Staging Workerのbuild/deployに失敗しました。"
           echo "Pages本番には影響しません。Cloudflare route・GitHub Environment設定・Worker logsを確認してください。"
   cms:
     name: Sanity Studio
