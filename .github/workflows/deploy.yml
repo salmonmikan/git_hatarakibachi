@@ -312,8 +312,6 @@ jobs:
           IMG_KEY: ${{ secrets.IMG_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
-          SQUARE_LOCATION_ID: ${{ secrets.SQUARE_LOCATION_ID }}
-          SQUARE_MEMBER_FEE_PLAN_VARIATION_ID: ${{ secrets.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID }}
           SQUARE_WEBHOOK_SIGNATURE_KEY: ${{ secrets.SQUARE_WEBHOOK_SIGNATURE_KEY }}
           SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
         run: |
@@ -325,8 +323,7 @@ jobs:
           }
           // Allow code deployment before Sandbox setup; retain existing optional bindings.
           for (const name of [
-            'SUPABASE_SERVICE_ROLE_KEY', 'SQUARE_ACCESS_TOKEN', 'SQUARE_LOCATION_ID',
-            'SQUARE_MEMBER_FEE_PLAN_VARIATION_ID', 'SQUARE_WEBHOOK_SIGNATURE_KEY',
+            'SUPABASE_SERVICE_ROLE_KEY', 'SQUARE_ACCESS_TOKEN', 'SQUARE_WEBHOOK_SIGNATURE_KEY',
           ]) {
             if (process.env[name]) payload[name] = process.env[name]
           }

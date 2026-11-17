@@ -27,13 +27,13 @@ Squareで月額1,000円・JPYのサブスクリプションプランバリエー
 | `SUPABASE_URL` | 自動 | 既存の `SUPABASE_PROJECT_REF` から生成 |
 | `SUPABASE_SERVICE_ROLE_KEY` | Secret | Webhook・登録APIから課金テーブルを更新するためのService Role Key |
 | `SQUARE_ACCESS_TOKEN` | Secret | Square API Access Token |
-| `SQUARE_LOCATION_ID` | Secret | SandboxのSquare Location ID |
-| `SQUARE_MEMBER_FEE_PLAN_VARIATION_ID` | Secret | Sandboxの月額1,000円プランのVariation ID |
 | `SQUARE_WEBHOOK_SIGNATURE_KEY` | Secret | Webhook endpointのSignature Key |
 | `SQUARE_ENVIRONMENT` | 固定 | `wrangler.jsonc` のstaging設定で `sandbox` を指定 |
 | `SQUARE_API_VERSION` | コード既定 | `2026-08-19` |
 
-`VITE_PUBLIC_SITE_URL` が未設定の場合、管理画面ホストの `admin.` または `admin-` 接頭辞を外したOriginを使用します。実際のドメイン構成がこの規則に合わない場合だけ設定してください。
+団員費機能のEnvironment Secretsは `SUPABASE_SERVICE_ROLE_KEY`、`SQUARE_ACCESS_TOKEN`、`SQUARE_WEBHOOK_SIGNATURE_KEY` の3つです。Location IDとPlan Variation IDはSecret・Variable・リポジトリ定数ではなく、以下のDB行で管理します。既存のID用Secretsはコード配備後には使用されません。この作業ではそれらを削除しません。
+
+`VITE_PUBLIC_SITE_URL` が未設定の場合、管理画面ホストの `admin.` または `admin-` 接頭辞を外したOriginを使用します。実際のドメイン構成がこの規則に合わない場合だけ設定してください。現workflowはこの値をビルドへ注入していないため、GitHub変数の追加だけでは反映されず、必要時はworkflowの変更も必要です。
 
 ## 3. Webhook設定
 
@@ -51,7 +51,7 @@ https://<公開サイト>/api/square/webhook
 - `invoice.scheduled_charge_failed`
 - `invoice.refunded`
 
-Developer Consoleに表示されるSignature KeyをGitHub Environment `staging` の `SQUARE_WEBHOOK_SIGNATURE_KEY` に設定します。署名検証には受信したrequest URLを使うため、stagingでは `https://staging.hatarakibachi.com/api/square/webhook` を登録します。既存Workerに `SQUARE_WEBHOOK_NOTIFICATION_URL` の手動上書きがある場合は、利用者が同じURLへ合わせてください。
+Developer Consoleに表示されるSignature KeyをGitHub Environment `staging` の `SQUARE_WEBHOOK_SIGNATURE_KEY` に設定します。署名検証のcanonical URLは通常、受信したrequest URLから導出するため、stagingでは `https://staging.hatarakibachi.com/api/square/webhook` を登録します。`SQUARE_WEBHOOK_NOTIFICATION_URL` は通常追加不要ですが、既存Workerに手動上書きがある場合はrequest URLより優先されるため、利用者がNotification URLと一致させてください。
 
 Cloudflare Accessでstagingを保護している場合は、Squareから届く `/api/square/webhook` がログイン画面へ転送されないよう、このパスに限定した例外を利用者が設定してください。Webhook自体は署名検証で保護します。Access設定の変更と実Webhook送信は今回のコード配備には含めません。
 
@@ -64,6 +64,26 @@ Webhook payloadは配送順を保証しない前提で処理します。Subscrip
 - `member_billing`: 団員とSquare Customer / Subscriptionの対応
 - `member_fee_payments`: 月別の団員費入金台帳
 - `square_webhook_events`: Webhookの重複処理防止・連携エラー監視
+- `member_fee_settings`: Square環境・Location ID・Plan Variation IDを保持する `id = 1` の単一設定行
+
+`member_fee_settings` はRLSと明示的な権限で保護し、`service_role` はSELECTのみ、`anon` / `authenticated` はアクセス不可とします。Migrationでは設定行を投入しません。利用者が信頼できるSQL管理経路で、対象環境のDBへ設定してください。
+
+以下は**利用者が手元でプレースホルダーを置き換えるSQLテンプレート**です。実IDをチャットやリポジトリへ記載しないでください。3項目とも空白だけの値は使用できません。
+
+```sql
+INSERT INTO public.member_fee_settings
+  (id, square_environment, square_location_id, square_plan_variation_id)
+VALUES
+  (1, 'sandbox', '<REPLACE_WITH_LOCATION_ID>', '<REPLACE_WITH_PLAN_VARIATION_ID>')
+ON CONFLICT (id) DO UPDATE SET
+  square_environment = EXCLUDED.square_environment,
+  square_location_id = EXCLUDED.square_location_id,
+  square_plan_variation_id = EXCLUDED.square_plan_variation_id;
+```
+
+このSQLは意図した初期設定・設定変更時にのみ実行します。productionとstagingは別DBで管理し、`square_environment` は `sandbox` または `production` を指定してWorkerの `SQUARE_ENVIRONMENT` と一致させます。stagingは `sandbox` です。DBコピー時はコピー元の環境・IDが残る点に注意してください。設定行の欠落や環境不一致時はAPIが503を返し、旧ID環境変数へのフォールバックは行いません。
+
+WebhookもこのPlan Variation IDで課金プランを選別するため、変更は既存契約の同期への影響を確認して慎重に行ってください。この機能のMigrationとコード配備後はDBのID変更だけなら再配備不要です。Secretsの変更には既存の配備手順による再配備が必要です。
 
 `member_billing.registration_attempt_token` は、各Checkout発行時に生成する変更不能な内部識別子です。Checkout APIの `payment_note` にこの値を埋め込み、Square Checkout上で購入者がメールアドレスを変更しても、初回Paymentから正しい団員へ紐付けられるようにします。メールアドレスは連絡・表示用であり、契約紐付けの主キーには使用しません。
 
@@ -97,5 +117,6 @@ Webhook payloadは配送順を保証しない前提で処理します。Subscrip
 
 - stagingへのpush後、CIでmigrationとpgTAPを検証し、同じSHAのDB migrationとWorker配備を既存workflowで実行します。
 - 取り込み元はPR #60の `8fab94984382de89e769d6a72c52a47d6a42ff7c` です。既存の課金処理をWorkerルートへ接続し、PR全体の履歴や運用ルール変更は取り込みません。
-- 外部設定を投入した後は、同じ設定を参照するstaging配備を再実行してください。
+- Environment Secretsを投入・変更した後は、同じ設定を参照するstaging配備を再実行してください。DBのIDだけの変更には再配備は不要です。
+- 今回は実際の設定値や決済を参照・検証していません。
 - 実Checkout、Webhook到達、入金・返金同期、Access認証後の管理画面は利用者による確認が必要です。コード配備成功と区別してください。

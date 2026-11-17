@@ -4,11 +4,13 @@ import {
   MEMBER_FEE_CURRENCY,
   isValidEmail,
   jsonResponse,
+  loadMemberFeeSettings,
   normalizeEmail,
   readJson,
   squareRequest,
   supabaseRequest,
   type MemberFeeEnv,
+  type MemberFeeSettings,
 } from "../../_memberFee"
 import {
   RequestBodyTooLargeError,
@@ -139,10 +141,16 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
       })
     }
 
-    if (!env.SQUARE_ACCESS_TOKEN || !env.SQUARE_LOCATION_ID || !env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
+    if (!env.SQUARE_ACCESS_TOKEN) {
       return jsonResponse({ error: "団員費の決済設定が完了していません。" }, 503)
     }
 
+    let settings: MemberFeeSettings
+    try {
+      settings = await loadMemberFeeSettings(env)
+    } catch {
+      return jsonResponse({ error: "団員費の決済設定を確認できません。時間をおいて再度お試しください。" }, 503)
+    }
     const claim = await claimRegistrationAttempt(env, row!.id, email)
 
     if (claim.result === "not_found") {
@@ -186,10 +194,10 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
             amount: MEMBER_FEE_AMOUNT,
             currency: MEMBER_FEE_CURRENCY,
           },
-          location_id: env.SQUARE_LOCATION_ID,
+          location_id: settings.square_location_id,
         },
         checkout_options: {
-          subscription_plan_id: env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID,
+          subscription_plan_id: settings.square_plan_variation_id,
           redirect_url: `${origin}/member-fee/complete`,
         },
         pre_populated_data: {

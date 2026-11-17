@@ -2,6 +2,8 @@ import type { FunctionContext } from "../../_types"
 import {
   firstDayOfMonth,
   jsonResponse,
+  loadMemberFeeSettings,
+  type MemberFeeSettings,
   readJson,
   squareRequest,
   supabaseRequest,
@@ -343,7 +345,7 @@ async function unlinkIfDifferentPlan(env: MemberFeeEnv, subscriptionId: string) 
   }
 }
 
-async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookEvent) {
+async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookEvent, settings: MemberFeeSettings) {
   const webhookSubscription = event.data?.object?.subscription
   if (!webhookSubscription?.id) {
     throw new Error("Subscription webhook does not contain a subscription ID")
@@ -353,7 +355,7 @@ async function processSubscriptionEvent(env: MemberFeeEnv, event: SquareWebhookE
   if (!subscription?.id || !subscription.customer_id) {
     throw new Error("Current Square subscription does not contain required identifiers")
   }
-  if (subscription.plan_variation_id !== env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID) {
+  if (subscription.plan_variation_id !== settings.square_plan_variation_id) {
     await unlinkIfDifferentPlan(env, subscription.id)
     return { status: "ignored" as const, detail: "Subscription currently uses another plan variation" }
   }
@@ -422,7 +424,7 @@ function shouldLinkSubscription(billing: BillingRow, subscriptionId: string) {
     || REREGISTERABLE_STATUSES.has(billing.subscription_status)
 }
 
-async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent) {
+async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent, settings: MemberFeeSettings) {
   const webhookInvoice = event.data?.object?.invoice
   if (!webhookInvoice?.id) {
     return { status: "ignored" as const, detail: "Invoice ID is missing" }
@@ -437,7 +439,7 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
   const subscription = await retrieveSubscription(env, invoice.subscription_id)
   if (!subscription) throw new Error("Current Square subscription could not be retrieved")
 
-  const isMemberFeePlan = subscription.plan_variation_id === env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID
+  const isMemberFeePlan = subscription.plan_variation_id === settings.square_plan_variation_id
   if (!isMemberFeePlan && !existingInvoicePayment) {
     await unlinkIfDifferentPlan(env, invoice.subscription_id)
     return { status: "ignored" as const, detail: "Invoice belongs to another subscription plan" }
@@ -571,7 +573,7 @@ async function processInvoiceEvent(env: MemberFeeEnv, event: SquareWebhookEvent)
 }
 
 export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeEnv>) => {
-  if (!env.SQUARE_WEBHOOK_SIGNATURE_KEY || !env.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID || !env.SQUARE_ACCESS_TOKEN) {
+  if (!env.SQUARE_WEBHOOK_SIGNATURE_KEY || !env.SQUARE_ACCESS_TOKEN) {
     return jsonResponse({ error: "Webhook configuration is incomplete" }, 503)
   }
 
@@ -608,6 +610,12 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
     return jsonResponse({ error: "Webhook event identifiers are missing" }, 400)
   }
 
+  let settings: MemberFeeSettings
+  try {
+    settings = await loadMemberFeeSettings(env)
+  } catch {
+    return jsonResponse({ error: "Member fee settings are unavailable" }, 503)
+  }
   try {
     const claimResult = await claimEvent(env, event)
     if (claimResult === "busy") {
@@ -626,8 +634,8 @@ export const onRequestPost = async ({ request, env }: FunctionContext<MemberFeeE
     }
 
     const result = event.type.startsWith("subscription.")
-      ? await processSubscriptionEvent(env, event)
-      : await processInvoiceEvent(env, event)
+      ? await processSubscriptionEvent(env, event, settings)
+      : await processInvoiceEvent(env, event, settings)
 
     await markEvent(env, event.event_id, result.status, result.detail)
     return jsonResponse({ ok: true })

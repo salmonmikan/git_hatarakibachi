@@ -2,8 +2,6 @@ export type MemberFeeEnv = {
   SUPABASE_URL: string
   SUPABASE_SERVICE_ROLE_KEY: string
   SQUARE_ACCESS_TOKEN?: string
-  SQUARE_LOCATION_ID?: string
-  SQUARE_MEMBER_FEE_PLAN_VARIATION_ID?: string
   SQUARE_WEBHOOK_SIGNATURE_KEY?: string
   SQUARE_WEBHOOK_NOTIFICATION_URL?: string
   SQUARE_ENVIRONMENT?: string
@@ -13,6 +11,25 @@ export type MemberFeeEnv = {
 export const MEMBER_FEE_AMOUNT = 1000
 export const MEMBER_FEE_CURRENCY = "JPY"
 export const SQUARE_API_VERSION = "2026-08-19"
+
+export type MemberFeeSettings = {
+  square_environment: "sandbox" | "production"
+  square_location_id: string
+  square_plan_variation_id: string
+}
+
+export async function loadMemberFeeSettings(env: MemberFeeEnv): Promise<MemberFeeSettings> {
+  const response = await supabaseRequest(env, "/rest/v1/member_fee_settings?select=square_environment,square_location_id,square_plan_variation_id&id=eq.1&limit=1")
+  const rows = await readJson<unknown>(response, "member fee settings lookup")
+  const row = Array.isArray(rows) ? rows[0] : null
+  if (!row || (row.square_environment !== "sandbox" && row.square_environment !== "production")
+    || row.square_environment !== env.SQUARE_ENVIRONMENT
+    || typeof row.square_location_id !== "string" || !row.square_location_id.trim()
+    || typeof row.square_plan_variation_id !== "string" || !row.square_plan_variation_id.trim()) {
+    throw new Error("Member fee settings are missing or invalid")
+  }
+  return row as MemberFeeSettings
+}
 
 export function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
