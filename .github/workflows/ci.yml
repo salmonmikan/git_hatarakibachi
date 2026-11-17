@@ -173,6 +173,9 @@ jobs:
       - name: Reapply all migrations
         run: npx --no-install supabase db reset --local --no-seed
 
+      - name: Run database tests
+        run: npx --no-install supabase test db --local
+
       - name: Stop local Supabase database
         if: ${{ always() }}
         run: npx --no-install supabase stop --no-backup

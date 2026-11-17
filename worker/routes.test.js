@@ -34,6 +34,17 @@ test("maps the optional catch-all image route and decodes segments", () => {
   });
 });
 
+test("routes member fee registration and Square webhooks without SPA fallback", () => {
+  for (const [path, id] of [
+    ["/api/member-fee/registration", "member-fee-registration"],
+    ["/api/square/webhook", "square-webhook"],
+  ]) {
+    assert.deepEqual(resolveWorkerRoute(path), { kind: "function", id, params: {} });
+    assert.deepEqual(resolveWorkerRoute(`${path}/`), { kind: "function", id, params: {} });
+  }
+  assert.deepEqual(resolveWorkerRoute("/api/member-fee/not-defined"), { kind: "api-not-found" });
+});
+
 test("accepts trailing slashes for migrated Pages API routes", () => {
   assert.deepEqual(resolveWorkerRoute("/api/disable-draft/"), {
     kind: "function",

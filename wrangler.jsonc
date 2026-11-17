@@ -16,6 +16,9 @@
       "account_id": "43a338e2e2075af58494a57d414abce7",
       "workers_dev": true,
       "preview_urls": true,
+      "vars": {
+        "SQUARE_ENVIRONMENT": "sandbox"
+      },
       "routes": [
         {
           "pattern": "staging.hatarakibachi.com/*",

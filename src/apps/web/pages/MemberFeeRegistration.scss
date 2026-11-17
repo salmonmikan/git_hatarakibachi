@@ -1,0 +1,99 @@
+.member-fee-page {
+    display: grid;
+    place-items: start center;
+}
+
+.member-fee-card {
+    width: min(100%, 680px);
+    box-sizing: border-box;
+    padding: 24px;
+    border: 1px solid var(--color-border, #ddd);
+    border-radius: 16px;
+    background: var(--color-bg, #fff);
+}
+
+.member-fee-card__eyebrow {
+    margin: 0 0 8px;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.member-fee-card h2 {
+    margin-top: 0;
+}
+
+.member-fee-card__member {
+    margin: 24px 0 12px;
+    font-weight: 700;
+}
+
+.member-fee-summary {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 24px;
+}
+
+.member-fee-summary > div {
+    display: grid;
+    grid-template-columns: minmax(80px, 0.35fr) 1fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-border, #eee);
+}
+
+.member-fee-summary dt,
+.member-fee-summary dd {
+    margin: 0;
+}
+
+.member-fee-summary dt {
+    font-weight: 700;
+}
+
+.member-fee-form {
+    display: grid;
+    gap: 12px;
+}
+
+.member-fee-form label {
+    font-weight: 700;
+}
+
+.member-fee-form input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--color-border, #ccc);
+    border-radius: 10px;
+    font: inherit;
+}
+
+.member-fee-form button {
+    justify-self: start;
+    padding: 12px 16px;
+    border: 1px solid var(--color-border, #333);
+    border-radius: 10px;
+    background: var(--color-bg, #fff);
+    color: var(--color-text, #111);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.member-fee-form button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+.member-fee-form__hint,
+.member-fee-notice {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+
+.member-fee-error {
+    margin-top: 16px;
+    font-weight: 700;
+}

@@ -5,6 +5,8 @@ const GET_ROUTES = new Map([
   ["/api/web-members", "web-members"],
   ["/api/web-sitenews", "web-sitenews"],
   ["/api/img-url", "img-url-disabled"],
+  ["/api/member-fee/registration", "member-fee-registration"],
+  ["/api/square/webhook", "square-webhook"],
 ]);
 
 function decodePathSegment(segment) {

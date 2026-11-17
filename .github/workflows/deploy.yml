@@ -161,6 +161,7 @@ jobs:
         run: |
           npx --no-install supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector --yes
           npx --no-install supabase db reset --local --no-seed
+          npx --no-install supabase test db --local
 
       - name: Stop validation database
         if: ${{ always() && github.event_name == 'workflow_dispatch' }}
@@ -309,6 +310,11 @@ jobs:
         env:
           SANITY_PREVIEW_READ_TOKEN: ${{ secrets.SANITY_PREVIEW_READ_TOKEN }}
           IMG_KEY: ${{ secrets.IMG_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SQUARE_ACCESS_TOKEN: ${{ secrets.SQUARE_ACCESS_TOKEN }}
+          SQUARE_LOCATION_ID: ${{ secrets.SQUARE_LOCATION_ID }}
+          SQUARE_MEMBER_FEE_PLAN_VARIATION_ID: ${{ secrets.SQUARE_MEMBER_FEE_PLAN_VARIATION_ID }}
+          SQUARE_WEBHOOK_SIGNATURE_KEY: ${{ secrets.SQUARE_WEBHOOK_SIGNATURE_KEY }}
           SECRETS_FILE: ${{ runner.temp }}/worker-secrets.json
         run: |
           node --input-type=module <<'NODE'
@@ -316,6 +322,13 @@ jobs:
           const payload = {
             SANITY_PREVIEW_READ_TOKEN: process.env.SANITY_PREVIEW_READ_TOKEN,
             IMG_KEY: process.env.IMG_KEY,
+          }
+          // Allow code deployment before Sandbox setup; retain existing optional bindings.
+          for (const name of [
+            'SUPABASE_SERVICE_ROLE_KEY', 'SQUARE_ACCESS_TOKEN', 'SQUARE_LOCATION_ID',
+            'SQUARE_MEMBER_FEE_PLAN_VARIATION_ID', 'SQUARE_WEBHOOK_SIGNATURE_KEY',
+          ]) {
+            if (process.env[name]) payload[name] = process.env[name]
           }
           fs.writeFileSync(process.env.SECRETS_FILE, JSON.stringify(payload), { mode: 0o600 })
           NODE

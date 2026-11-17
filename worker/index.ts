@@ -4,6 +4,9 @@ import { onRequestPost as sanityPreview } from "../functions/api/sanity-preview"
 import { onRequestGet as webMembers } from "../functions/api/web-members";
 import { onRequestGet as webSiteNews } from "../functions/api/web-sitenews";
 import { onRequestGet as imageProxy } from "../functions/img/[[path]].js";
+import { onRequestPost as memberFeeRegistration } from "../functions/api/member-fee/registration";
+import { onRequestPost as squareWebhook } from "../functions/api/square/webhook";
+import type { MemberFeeEnv } from "../functions/_memberFee";
 import { hasPreviewCookie, withPreviewHeaders } from "../functions/_preview";
 import { isGetLikeMethod, resolveWorkerRoute } from "./routes.js";
 
@@ -11,7 +14,7 @@ type AssetBinding = {
   fetch(request: Request): Promise<Response>;
 };
 
-type Env = {
+type Env = MemberFeeEnv & {
   ASSETS: AssetBinding;
   IMG_ORIGIN?: string;
   IMG_KEY?: string;
@@ -49,6 +52,14 @@ function withoutBodyForHead(request: Request, response: Response) {
 }
 
 async function runFunctionRoute(request: Request, env: Env, route: FunctionRoute) {
+  if (route.id === "member-fee-registration" || route.id === "square-webhook") {
+    if (request.method !== "POST") {
+      return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
+    }
+    return route.id === "member-fee-registration"
+      ? memberFeeRegistration({ request, env })
+      : squareWebhook({ request, env });
+  }
   if (route.id === "sanity-preview") {
     if (request.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
